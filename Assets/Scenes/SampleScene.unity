@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657874, g: 0.49641258, b: 0.574817, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -708,6 +708,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: Small rock
+      objectReference: {fileID: 0}
+    - target: {fileID: 5003662892446153075, guid: c46461e48e08645a0819f90d78fa5a03,
+        type: 3}
+      propertyPath: m_Layer
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 8298952391908690784, guid: c46461e48e08645a0819f90d78fa5a03,
         type: 3}
