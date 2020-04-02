@@ -28,6 +28,12 @@ using System.Collections.Generic;
 // input types to yield an expression of the output type.
 // expressions can also partially apply to some but not all of their inputs.
 public abstract class SemanticType {
+    // Removes this type from the input of the semantic type,
+    // or if no matching input type exists,
+    // return the type itself
+    public virtual SemanticType Remove(SemanticType type) {
+        return this;
+    }
     // references to the atomic types.
     public static readonly AtomicType INDIVIDUAL = new E();
     public static readonly AtomicType TRUTH_VALUE = new T();
@@ -45,8 +51,8 @@ public abstract class SemanticType {
 public abstract class AtomicType : SemanticType {}
 
 public class FunctionalType : SemanticType {
-    private SemanticType[] input;
-    public AtomicType output {get; private set;}
+    private SemanticType[] Input;
+    public AtomicType Output {get; private set;}
 
     public FunctionalType(SemanticType[] input, AtomicType output) {
         for (int i = 0; i < input.Length; i++) {
@@ -54,16 +60,42 @@ public class FunctionalType : SemanticType {
                 throw new ArgumentException("SemanticType constructor: inputs must not be null");
             }
         }
-        this.input  = input;
-        this.output = output;
+        Input  = input;
+        Output = output;
     }
 
     public int GetNumArgs() {
-        return input.Length;
+        return Input.Length;
     }
 
     public SemanticType GetInput(int index) {
-        return input[index];
+        return Input[index];
+    }
+
+    public override SemanticType Remove(SemanticType type) {
+        // if the functional type has only one argument,
+        // it reduces to an atomic type.
+        if (Input.Length == 1) {
+            return Output;
+        }
+
+        // otherwise we remove one instance of the input type
+        // from the input types.
+        SemanticType[] newInput = new SemanticType[Input.Length - 1];
+
+        for (int i = 0; i < Input.Length; i++) {
+            if (Input[i].Equals(type)) {
+                while (i < Input.Length - 1) {
+                    newInput[i] = Input[i + 1];
+                    i++;
+                }
+                return new FunctionalType(newInput, Output);
+            }
+            newInput[i] = Input[i];
+        }
+
+        // if there were none to remove, simply return the original type.
+        return this;
     }
 
     public override bool Equals(Object o) {
@@ -73,23 +105,23 @@ public class FunctionalType : SemanticType {
 
         FunctionalType that = (FunctionalType) o;
 
-        if (input.Length != that.GetNumArgs()) {
+        if (Input.Length != that.GetNumArgs()) {
             return false;
         }
         
-        for (int i = 0; i < input.Length; i++) {
-            if (input[i] != that.GetInput(i)) {
+        for (int i = 0; i < Input.Length; i++) {
+            if (Input[i] != that.GetInput(i)) {
                 return false;
             }
         }
 
-        return output.Equals(that.output);
+        return Output.Equals(that.Output);
     }
 
     public override int GetHashCode() {
-        int hash = 5381 * output.GetHashCode();
-        for (int i = 0; i < input.Length; i++) {
-            hash = 33 * hash + (input[i] == null ? i : input[i].GetHashCode());
+        int hash = 5381 * Output.GetHashCode();
+        for (int i = 0; i < Input.Length; i++) {
+            hash = 33 * hash + (Input[i] == null ? i : Input[i].GetHashCode());
         }
         return hash;
     }
@@ -98,8 +130,8 @@ public class FunctionalType : SemanticType {
         StringBuilder s = new StringBuilder();
         s.Append("(");
 
-        for (int i = 0; i < input.Length; i++) {
-            s.Append(input[i].ToString());
+        for (int i = 0; i < Input.Length; i++) {
+            s.Append(Input[i].ToString());
             s.Append(", ");
         }
 
@@ -107,7 +139,7 @@ public class FunctionalType : SemanticType {
             s.Remove(s.Length - 2, 2);
         }
 
-        s.Append(" -> " + output.ToString() + ")");
+        s.Append(" -> " + Output.ToString() + ")");
 
         return s.ToString();
     }
