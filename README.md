@@ -1,6 +1,30 @@
 # entale
 An open-world game with autonomous agents that the player can freely talk to using a robust language system.
 
+## Developement
+
+### Source control
+
+We're using git and [git-lfs](https://git-lfs.github.com/) for source control.
+Make sure to have git-lfs installed to pull large files such as models.
+
+#### Pushing changes
+Since we still haven't figured out how to merge branches with unity projects, if a branch has a merge conflict with master we're completely overwriting master.
+To replace master with your branch you can run:
+```
+git checkout your_branch
+git merge -s ours master
+git checkout master
+git merge your_branch
+```
+See related [stackoverflow post](https://stackoverflow.com/questions/2862590/how-to-replace-master-branch-in-git-entirely-from-another-branch)
+
+#### Pulling changes
+After pulling make sure:
+- You have all lfs files by running `git lfs fetch && git lfs checkout`
+- All the asset linking is working properly by right clicking on the Assets folder in the Project tab and choosing "Reimport All".
+
+
 ## Features
 
 ### Movement
