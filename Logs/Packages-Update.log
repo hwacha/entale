@@ -51,3 +51,11 @@ Update Mode: updateDependencies
 
 The following packages were updated:
   com.unity.test-framework from version 1.1.9 to 1.1.11
+
+=== Fri Apr  3 12:41:11 2020
+
+Packages were changed.
+Update Mode: resetToDefaultDependencies
+
+The following packages were updated:
+  com.unity.timeline from version 1.2.10 to 1.2.13
