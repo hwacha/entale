@@ -5,11 +5,18 @@ using static Expression;
 using static ProofType;
 using static BeliefRevisionPolicy;
 
+// The prover and the planner each use the same inference mechanism,
+// so this enum specifies some parameters to it.
 public enum ProofType {
     Proof,
     Plan
 }
 
+// Simple placeholder policies for how to revise beliefs.
+// Can be set with the mental state.
+// If there is a conflict between new and old information,
+// A conversation policy rejects new information, and
+// a liberal policy discards old information to accommodate the new.
 public enum BeliefRevisionPolicy {
     Liberal,
     Conservative
@@ -106,11 +113,13 @@ public class MentalState {
     // ====
     //
     public HashSet<List<Expression>> Basis(Expression goal, ProofType proofType) {
-        // goal should be type
+        // goal should be type t.
         if (!goal.Type.Equals(TRUTH_VALUE)) {
             throw new ArgumentException("Basis: goal/conclusion must be a sentence (type t)");
         }
 
+        // @TODO change to an array/list of goals, and account for variables.
+        // May require having implemented unification.
         if (Contains(goal)) {
             List<Expression> basis = new List<Expression>();
             basis.Add(goal);
@@ -121,7 +130,7 @@ public class MentalState {
 
         // INFERENCES
         // ====
-        // There are no inferences implemented yet.
+        // There are no inferences implemented yet. @TODO
 
         return null;
     }

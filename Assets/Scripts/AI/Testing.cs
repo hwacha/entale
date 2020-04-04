@@ -74,7 +74,6 @@ public class Testing : MonoBehaviour {
         Log("Testing mental state.");
         Log("QUERY");
         MentalState testState = new MentalState(
-            BeliefRevisionPolicy.Conservative,
             new Expression(RED, ALICE),
             new Expression(BLUE, BOB),
             new Expression(AT, ALICE, BOB));
@@ -83,6 +82,9 @@ public class Testing : MonoBehaviour {
         Log(testState.Query(new Expression(BLUE, BOB)));
         Log(!testState.Query(new Expression(RED, BOB)));
         Log(!testState.Query(new Expression(BLUE, ALICE)));
+
+        // @TODO Print out and test Basis().
+        // @TODO Test Assert().
     }
 
     private String Verbose(Expression e) {
