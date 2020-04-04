@@ -18,6 +18,20 @@ public abstract class Atom {
     public override String ToString() {
         return ID;
     }
+
+    public override bool Equals(Object o) {
+        if (!(o is Atom)) {
+            return false;
+        }
+
+        Atom that = o as Atom;
+
+        return this.Type.Equals(that.Type) && this.ID.Equals(that.ID);
+    }
+
+    public override int GetHashCode() {
+        return Type.GetHashCode() * ID.GetHashCode();
+    }
 }
 
 // A constant. Just a regular symbol.
@@ -45,6 +59,10 @@ public class Empty : Argument {
 
     public override String ToString() {
         return "_";
+    }
+
+    public override int GetHashCode() {
+        return Type.GetHashCode();
     }
 }
 
@@ -112,12 +130,12 @@ public class Expression : Argument {
                         "type mismatch with " + argumentToPlace);
                 }
 
-                // otherwise, replace the slot with the inputted expression
-                // @Note this also might not to be copied
-                // to avoid weird modification bugs.
-                Args[i] = argumentToPlace;
                 // reduce the type if it's not an empty slot
                 if (argumentToPlace is Expression) {
+                    // otherwise, replace the slot with the inputted expression
+                    // @Note this also might not to be copied
+                    // to avoid weird modification bugs.
+                    Args[i] = argumentToPlace;
                     Type = Type.Remove(argumentToPlace.Type);
                 }
 
@@ -128,8 +146,6 @@ public class Expression : Argument {
         // if there were more arguments than slots to fill, exit with an error.
         while (inputIndex < args.Length) {
             if (args[inputIndex] is Expression) {
-                // UnityEngine.Debug.Log(inputIndex);
-                // UnityEngine.Debug.Log(args[inputIndex]);
                 throw new ArgumentException("Expression phrase constructor: " +
                     "arity mismatch. Too many arguments were applied.");
             }
@@ -162,6 +178,37 @@ public class Expression : Argument {
         s.Append(")");
 
         return s.ToString();
+    }
+
+    public override bool Equals(Object o) {
+        if (!(o is Expression)) {
+            return false;
+        }
+        Expression that = o as Expression;
+
+        if (!this.Head.Equals(that.Head)) {
+            return false;
+        }
+
+        if (this.Args.Length != that.Args.Length) {
+            return false;
+        }
+
+        for (int i = 0; i < Args.Length; i++) {
+            if (!this.Args[i].Equals(that.Args[i])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public override int GetHashCode() {
+        int hash = 5381 * Head.GetHashCode();
+        for (int i = 0; i < Args.Length; i++) {
+            hash = 33 * hash + Args[i].GetHashCode();
+        }
+        return hash;
     }
 
     // Individual constants
@@ -197,5 +244,8 @@ public class Expression : Argument {
 
     // 2-place relation variables
     public static readonly Expression REET = new Expression(new Variable(RELATION_2, "R"));
+
+    // 1-place truth functions
+    public static readonly Expression NOT = new Expression(new Constant(TRUTH_FUNCTION, "not"));
 
 }

@@ -10,7 +10,6 @@ public class Testing : MonoBehaviour {
             "To turn these off, " +
             "deactivate the 'AITesting' object in the heirarchy.");
 
-
         Log("SEMANTIC TYPES: ");
         Log("testing constructors.");
         Log("individual: " + INDIVIDUAL);
@@ -68,6 +67,22 @@ public class Testing : MonoBehaviour {
         } catch (ArgumentException e) {
             Log("Got expected error: " + e);
         }
+
+        // @TODO Test potential bug in mutating expressions
+        
+        // Testing mental state.
+        Log("Testing mental state.");
+        Log("QUERY");
+        MentalState testState = new MentalState(
+            BeliefRevisionPolicy.Conservative,
+            new Expression(RED, ALICE),
+            new Expression(BLUE, BOB),
+            new Expression(AT, ALICE, BOB));
+
+        Log(testState.Query(new Expression(RED, ALICE)));
+        Log(testState.Query(new Expression(BLUE, BOB)));
+        Log(!testState.Query(new Expression(RED, BOB)));
+        Log(!testState.Query(new Expression(BLUE, ALICE)));
     }
 
     private String Verbose(Expression e) {
