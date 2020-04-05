@@ -90,15 +90,23 @@ public class Highlighter : MonoBehaviour {
 
         // Unhighlight all other game objects in this highlight index
         foreach (GameObject o in highlightedGameObjects[highlightIndex]) {
-            o.GetComponent<Renderer>().material.SetInt("_IsHighlighted", 0);
+            setMaterialProperties(o, 0, null);
         }
         highlightedGameObjects[highlightIndex].Clear();
         highlightedGameObjects[highlightIndex].Add(gameObject);
 
         // Highlight this game object
         Color highlightColor = highlightColors[highlightIndex];
-        Renderer gameObjectRenderer = gameObject.GetComponent<Renderer>();
-        gameObjectRenderer.material.SetInt("_IsHighlighted", 1);
-        gameObjectRenderer.material.SetColor("_HighlightColor", highlightColor);
+        setMaterialProperties(gameObject, 1, highlightColor);
+    }
+
+    void setMaterialProperties(GameObject gameObject, int isHighlighted, Color? highlightColor) {
+        var renderer = gameObject.GetComponent<Renderer>();
+        Color color = highlightColor ?? Color.white;
+        for (int m = 0; m < renderer.materials.Length; m++)
+        {
+            renderer.materials[m].SetInt("_IsHighlighted", isHighlighted);
+            renderer.materials[m].SetColor("_HighlightColor", color);
+        }
     }
 }

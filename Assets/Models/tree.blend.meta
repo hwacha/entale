@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 2705175c037d54da8a6e02e3e441b117
+guid: a9fd18d6f708ee24db75523564fb9504
 ModelImporter:
   serializedVersion: 19300
   internalIDToNameTable: []
@@ -8,12 +8,12 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Brown
-    second: {fileID: 2100000, guid: 623c3f9fa595942f2ba3354ba2aa3328, type: 2}
+    second: {fileID: 2100000, guid: 91f92489ce163bf459ee6778e531f924, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Green
-    second: {fileID: 2100000, guid: 060566ad217f5491a961eaad592ab348, type: 2}
+    second: {fileID: 2100000, guid: d6ec086510fdf614c91d0e82b818ef46, type: 2}
   materials:
     materialImportMode: 1
     materialName: 0
