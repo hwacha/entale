@@ -153,6 +153,10 @@ public class Expression : Argument {
         }
     }
 
+    public Argument GetArg(int i) {
+        return Args[i];
+    }
+
     public override String ToString() {
         StringBuilder s = new StringBuilder();
 
@@ -212,6 +216,7 @@ public class Expression : Argument {
     }
 
     // Individual constants
+    public static readonly Expression SELF    = new Expression(new Constant(INDIVIDUAL, "self"));
     public static readonly Expression ALICE   = new Expression(new Constant(INDIVIDUAL, "alice"));
     public static readonly Expression BOB     = new Expression(new Constant(INDIVIDUAL, "bob"));
     public static readonly Expression CHARLIE = new Expression(new Constant(INDIVIDUAL, "charlie"));
@@ -248,4 +253,17 @@ public class Expression : Argument {
     // 1-place truth functions
     public static readonly Expression NOT = new Expression(new Constant(TRUTH_FUNCTION, "not"));
 
+    // 2-place truth functions
+    public static readonly Expression AND = new Expression(new Constant(TRUTH_FUNCTION_2, "and"));
+    public static readonly Expression OR  = new Expression(new Constant(TRUTH_FUNCTION_2, "or"));
+
+    // truth-conformity relations
+    // "will" is interpreted as an instruction for the actuator in LOT
+    // and is interpreted as a promise when expression in public language
+    public static readonly Expression WILL  = new Expression(new Constant(TRUTH_CONFORMITY_FUNCTION, "will"));
+    public static readonly Expression WOULD = new Expression(new Constant(TRUTH_CONFORMITY_FUNCTION, "would"));
+
+    // individual-truth relations
+    public static readonly Expression BELIEVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "believe"));
+    public static readonly Expression ABLE    = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "able"));
 }
