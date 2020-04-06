@@ -49,6 +49,8 @@ public abstract class SemanticType {
 
     public static readonly FunctionalType TRUTH_FUNCTION =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE}, TRUTH_VALUE);
+    public static readonly FunctionalType TRUTH_FUNCTION_2 =
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE, TRUTH_VALUE}, TRUTH_VALUE);
 }
 
 public abstract class AtomicType : SemanticType {}

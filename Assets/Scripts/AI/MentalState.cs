@@ -22,7 +22,7 @@ public enum BeliefRevisionPolicy {
     Conservative
 }
 
-// a model of the mental state of an NPC.
+// A model of the mental state of an NPC.
 // Includes their beliefs, preferences, goals, etc.,
 // for use by perception and in inference and action.
 // 
@@ -87,7 +87,9 @@ public class MentalState {
     // Why a set of lists?
     // 
     // This returns the set of alternative bases that
-    // each independently prove the goal.
+    // each independently prove the goal. If the set
+    // is empty, that means this mental state doesn't
+    // prove the goal.
     // 
     // ====
     // 
@@ -118,26 +120,83 @@ public class MentalState {
             throw new ArgumentException("Basis: goal/conclusion must be a sentence (type t)");
         }
 
+        // the set of alternative bases for the goal
+        HashSet<List<Expression>> alternativeBases = new HashSet<List<Expression>>();
+
         // @TODO change to an array/list of goals, and account for variables.
         // May require having implemented unification.
         if (Contains(goal)) {
             List<Expression> basis = new List<Expression>();
             basis.Add(goal);
-            HashSet<List<Expression>> alternativeBases = new HashSet<List<Expression>>();
             alternativeBases.Add(basis);
+
+            // @Note if a belief is found in the belief base,
+            // then should we also try to find other supporting
+            // premises? This may lead to an infinite loop.
+            // So, I'll return prematurely for now, on the assumption
+            // that the belief base, as an invariant, doesn't
+            // include any beliefs that could be derived elsewhere.
             return alternativeBases;
         }
 
+
         // INFERENCES
         // ====
-        // There are no inferences implemented yet. @TODO
+        // Double negation elimination
+        // S |- not(not(S))
+        if (goal.Head.Equals(NOT.Head)) {
+            Expression subExpression = goal.GetArg(0) as Expression;
+            if (subExpression.Head.Equals(NOT.Head)) {
+                subExpression = subExpression.GetArg(0) as Expression;
+                alternativeBases.UnionWith(Basis(subExpression, proofType));
+            }
+        }
 
-        return null;
+        // disjunction introduction
+        // A |- A v B; B |- A v B
+        if (goal.Head.Equals(OR.Head)) {
+            Expression leftDisjunct = goal.GetArg(0) as Expression;
+            Expression rightDisjunct = goal.GetArg(0) as Expression;
+
+            alternativeBases.UnionWith(Basis(leftDisjunct,  proofType));
+            alternativeBases.UnionWith(Basis(rightDisjunct, proofType));
+        }
+
+        // conjunction introduction
+        // A, B |- A & B
+        if (goal.Head.Equals(AND.Head)) {
+            Expression leftConjunct = goal.GetArg(0) as Expression;
+            HashSet<List<Expression>> leftConjunctBases = Basis(leftConjunct, proofType);
+            if (leftConjunctBases.Count != 0) {
+                Expression rightConjunct = goal.GetArg(1) as Expression;
+                HashSet<List<Expression>> rightConjunctBases = Basis(rightConjunct, proofType);
+
+                if (rightConjunctBases.Count != 0) {
+                    // if both conjuncts have proofs, then the set of all possible
+                    // proofs is the set of all combinations of the proofs of A and
+                    // the proofs of B.
+                    foreach (List<Expression> leftConjunctBasis in leftConjunctBases) {
+                        foreach (List<Expression> rightConjunctBasis in rightConjunctBases) {
+                            // @Note assumption is that for a plan, the left conjunct
+                            // should be performed before the right conjunct.
+                            // Ultimately, both conjuncts need to be true simultaneously,
+                            // and so this is a faulty assumption to make when it comes to plans.
+                            List<Expression> conjunctionBasis = new List<Expression>();
+                            conjunctionBasis.AddRange(leftConjunctBasis);
+                            conjunctionBasis.AddRange(rightConjunctBasis);
+                            alternativeBases.Add(conjunctionBasis);
+                        }
+                    }
+                }
+            }
+        }
+
+        return alternativeBases;
     }
 
     // Asks if the expression is proven by this belief base.
     public bool Query(Expression query) {
-        return Basis(query, Proof) != null;
+        return Basis(query, Proof).Count != 0;
     }
 
     // Asserts a sentence to this mental state.
@@ -156,14 +215,14 @@ public class MentalState {
     public bool Assert(Expression assertion) {
         // We already believe assertion A.
         // We accept it, but don't change our belief state.
-        if (Basis(assertion, Proof) != null) {
+        if (Query(assertion)) {
             return true;
         }
 
         HashSet<List<Expression>> notAssertionBases = Basis(new Expression(NOT, assertion), Proof);
 
         // We believe ~A. This is inconsistent with the assertion.
-        if (notAssertionBases != null) {
+        if (notAssertionBases.Count != 0) {
             // if our belief revision policy is conservative,
             // we reject the new information in favor of the old.
             if (beliefRevisionPolicy == Conservative) {

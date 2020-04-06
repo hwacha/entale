@@ -153,6 +153,10 @@ public class Expression : Argument {
         }
     }
 
+    public Argument GetArg(int i) {
+        return Args[i];
+    }
+
     public override String ToString() {
         StringBuilder s = new StringBuilder();
 
@@ -248,4 +252,7 @@ public class Expression : Argument {
     // 1-place truth functions
     public static readonly Expression NOT = new Expression(new Constant(TRUTH_FUNCTION, "not"));
 
+    // 2-place truth functions
+    public static readonly Expression AND = new Expression(new Constant(TRUTH_FUNCTION_2, "and"));
+    public static readonly Expression OR  = new Expression(new Constant(TRUTH_FUNCTION_2, "or"));
 }

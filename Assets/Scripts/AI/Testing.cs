@@ -6,67 +6,69 @@ using static Expression;
 
 public class Testing : MonoBehaviour {
     void Start() {
-        Log("Running tests from AI/Testing.cs. " +
-            "To turn these off, " +
-            "deactivate the 'AITesting' object in the heirarchy.");
+        // Log("Running tests from AI/Testing.cs. " +
+        //     "To turn these off, " +
+        //     "deactivate the 'AITesting' object in the heirarchy.");
 
-        Log("SEMANTIC TYPES: ");
-        Log("testing constructors.");
-        Log("individual: " + INDIVIDUAL);
-        Log("truth value: " + TRUTH_VALUE);
-        Log("predicate: " + PREDICATE);
-        Log("2-place relation: " + RELATION_2);
+        // Log("SEMANTIC TYPES: ");
+        // Log("testing constructors.");
+        // Log("individual: " + INDIVIDUAL);
+        // Log("truth value: " + TRUTH_VALUE);
+        // Log("predicate: " + PREDICATE);
+        // Log("2-place relation: " + RELATION_2);
 
-        Log("testing removal");
-        Log("@TODO");
+        // Log("testing removal");
+        // Log("@TODO");
 
-        Log("EXPRESSIONS: ");
+        // Log("EXPRESSIONS: ");
 
-        Log("word constructors: ");
-        Log("alice: " + ALICE);
-        Log("bob: " + BOB);
-        Log("charlie: " + CHARLIE);
-        Log("x: " + XE);
-        Log("y: " + YE);
-        Log("z: " + ZE);
-        Log("verum: " + VERUM);
-        Log("falsum: " + FALSUM);
-        Log("S: " + ST);
-        Log("T: " + TT);
-        Log("red: " + RED);
-        Log("blue: " + BLUE);
-        Log("F: " + FET);
-        Log("G: " + GET);
-        Log("=: " + IDENTITY);
-        Log("at: " + AT);
-        Log("R: " + REET);
+        // Log("word constructors: ");
+        // Log("alice: " + ALICE);
+        // Log("bob: " + BOB);
+        // Log("charlie: " + CHARLIE);
+        // Log("x: " + XE);
+        // Log("y: " + YE);
+        // Log("z: " + ZE);
+        // Log("verum: " + VERUM);
+        // Log("falsum: " + FALSUM);
+        // Log("S: " + ST);
+        // Log("T: " + TT);
+        // Log("red: " + RED);
+        // Log("blue: " + BLUE);
+        // Log("F: " + FET);
+        // Log("G: " + GET);
+        // Log("=: " + IDENTITY);
+        // Log("at: " + AT);
+        // Log("R: " + REET);
 
-        Log("phrase constructors: ");
-        Log(Verbose(new Expression(RED, ALICE)));
-        Log(Verbose(new Expression(BLUE, BOB)));
-        Log(Verbose(new Expression(IDENTITY, ALICE, ALICE)));
-        Log(Verbose(new Expression(AT, ALICE, BOB)));
-        Log(Verbose(new Expression(IDENTITY, ALICE)));
-        Log(Verbose(new Expression(IDENTITY, new Empty(INDIVIDUAL), BOB)));
-        Log(Verbose(new Expression(new Expression(IDENTITY, new Empty(INDIVIDUAL), BOB), ALICE)));
+        // Log("phrase constructors: ");
+        // Log(Verbose(new Expression(RED, ALICE)));
+        // Log(Verbose(new Expression(BLUE, BOB)));
+        // Log(Verbose(new Expression(IDENTITY, ALICE, ALICE)));
+        // Log(Verbose(new Expression(AT, ALICE, BOB)));
+        // Log(Verbose(new Expression(IDENTITY, ALICE)));
+        // Log(Verbose(new Expression(IDENTITY, new Empty(INDIVIDUAL), BOB)));
+        // Log(Verbose(new Expression(new Expression(IDENTITY, new Empty(INDIVIDUAL), BOB), ALICE)));
 
-        try {
-            Log("Failed to catch error: " + Verbose(new Expression(RED, ALICE, BOB)));
-        } catch (ArgumentException e) {
-            Log("Got expected error: " + e);
-        }
+        // try {
+        //     Log("Failed to catch error: " + Verbose(new Expression(RED, ALICE, BOB)));
+        // } catch (ArgumentException e) {
+        //     Log("Got expected error: " + e);
+        // }
 
-        try {
-            Log("Failed to catch error: " + new Expression(IDENTITY, ALICE, BOB, CHARLIE));
-        } catch (ArgumentException e) {
-            Log("Got expected error: " + e);
-        }
+        // try {
+        //     Log("Failed to catch error: " + new Expression(IDENTITY, ALICE, BOB, CHARLIE));
+        // } catch (ArgumentException e) {
+        //     Log("Got expected error: " + e);
+        // }
 
-        try {
-            Log("Failed to catch error: " + new Expression(new Expression(IDENTITY, ALICE), BOB, CHARLIE));
-        } catch (ArgumentException e) {
-            Log("Got expected error: " + e);
-        }
+        // try {
+        //     Log("Failed to catch error: " + new Expression(new Expression(IDENTITY, ALICE), BOB, CHARLIE));
+        // } catch (ArgumentException e) {
+        //     Log("Got expected error: " + e);
+        // }
+        Log("equality");
+        Log(NOT.Equals(NOT));
 
         // @TODO Test potential bug in mutating expressions
         
@@ -82,6 +84,25 @@ public class Testing : MonoBehaviour {
         Log(testState.Query(new Expression(BLUE, BOB)));
         Log(!testState.Query(new Expression(RED, BOB)));
         Log(!testState.Query(new Expression(BLUE, ALICE)));
+
+        Log("Double Negation Elimination");
+        Log(testState.Query(new Expression(NOT,
+            new Expression(NOT, new Expression(RED, ALICE)))));
+        Log(testState.Query(new Expression(NOT,
+            new Expression(NOT, new Expression(NOT,
+                new Expression(NOT, new Expression(RED, ALICE)))))));
+        Log(testState.Query(
+            new Expression(NOT, new Expression(NOT,
+            new Expression(NOT, new Expression(NOT, new Expression(NOT,
+                new Expression(NOT, new Expression(RED, ALICE)))))))));
+        Log(!testState.Query(new Expression(NOT, new Expression(NOT,
+            new Expression(RED, BOB)))));
+
+        // @TODO test disjunction introduction.
+        Log("Disjunction Introduction");
+
+        // @TODO test conjunction introduction.
+        Log("Conjunction Introduction");
 
         // @TODO Print out and test Basis().
         // @TODO Test Assert().
