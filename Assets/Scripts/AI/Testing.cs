@@ -1,8 +1,11 @@
 using UnityEngine;
 using System;
+using System.Text;
+using System.Collections.Generic;
 using static UnityEngine.Debug;
 using static SemanticType;
 using static Expression;
+using static ProofType;
 
 public class Testing : MonoBehaviour {
     void Start() {
@@ -68,47 +71,89 @@ public class Testing : MonoBehaviour {
         //     Log("Got expected error: " + e);
         // }
         Log("equality");
-        Log(NOT.Equals(NOT));
+        // Log(NOT.Equals(NOT));
 
         // @TODO Test potential bug in mutating expressions
         
         // Testing mental state.
         Log("Testing mental state.");
         Log("QUERY");
-        MentalState testState = new MentalState(
-            new Expression(RED, ALICE),
-            new Expression(BLUE, BOB),
-            new Expression(AT, ALICE, BOB));
+        Expression aliceIsRed   = new Expression(RED, ALICE);
+        Expression bobIsBlue    = new Expression(BLUE, BOB);
+        Expression aliceIsAtBob = new Expression(AT, ALICE, BOB);
+        Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
+        Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
+        Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
 
-        Log(testState.Query(new Expression(RED, ALICE)));
-        Log(testState.Query(new Expression(BLUE, BOB)));
-        Log(!testState.Query(new Expression(RED, BOB)));
-        Log(!testState.Query(new Expression(BLUE, ALICE)));
+        Expression bobIsRed     = new Expression(RED, BOB);
+        Expression aliceIsBlue  = new Expression(BLUE, ALICE);
 
-        Log("Double Negation Elimination");
-        Log(testState.Query(new Expression(NOT,
-            new Expression(NOT, new Expression(RED, ALICE)))));
-        Log(testState.Query(new Expression(NOT,
-            new Expression(NOT, new Expression(NOT,
-                new Expression(NOT, new Expression(RED, ALICE)))))));
-        Log(testState.Query(
-            new Expression(NOT, new Expression(NOT,
-            new Expression(NOT, new Expression(NOT, new Expression(NOT,
-                new Expression(NOT, new Expression(RED, ALICE)))))))));
-        Log(!testState.Query(new Expression(NOT, new Expression(NOT,
-            new Expression(RED, BOB)))));
+        MentalState testState = new MentalState(aliceIsRed, bobIsBlue, aliceIsAtBob, aliceIsAlice, bobIsBob, iCanMakeCharlieBlue);
 
-        // @TODO test disjunction introduction.
+        // Log(testState.Query(aliceIsRed));
+        Log(BasesString(testState.Bases(aliceIsRed, ProofType.Proof)));
+        // Log(testState.Query(bobIsBlue));
+        // Log(!testState.Query(bobIsRed));
+        // Log(!testState.Query(aliceIsBlue));
+
+        // Log("Double Negation Elimination");
+        // Log(testState.Query(new Expression(NOT,
+        //     new Expression(NOT, aliceIsRed))));
+        // Log(testState.Query(new Expression(NOT,
+        //     new Expression(NOT, new Expression(NOT,
+        //         new Expression(NOT, aliceIsRed))))));
+        // Log(testState.Query(
+        //     new Expression(NOT, new Expression(NOT,
+        //     new Expression(NOT, new Expression(NOT, new Expression(NOT,
+        //         new Expression(NOT, aliceIsRed))))))));
+        // Log(!testState.Query(new Expression(NOT, new Expression(NOT, bobIsRed))));
+
         Log("Disjunction Introduction");
+        Log(BasesString(testState.Bases(new Expression(OR, aliceIsRed, bobIsBlue),  Proof)));
+        Log(BasesString(testState.Bases(new Expression(OR, aliceIsRed, bobIsRed),   Proof)));
+        Log(BasesString(testState.Bases(new Expression(OR, aliceIsBlue, bobIsBlue), Proof)));
+        Log(BasesString(testState.Bases(new Expression(OR, aliceIsBlue, bobIsRed),  Proof)));
 
-        // @TODO test conjunction introduction.
         Log("Conjunction Introduction");
+        Log(BasesString(testState.Bases(new Expression(AND, aliceIsRed,  bobIsBlue), Proof)));
+        Log(BasesString(testState.Bases(new Expression(AND, aliceIsRed,  bobIsRed), Proof)));
+        Log(BasesString(testState.Bases(new Expression(AND, aliceIsBlue, bobIsBlue), Proof)));
+        Log(BasesString(testState.Bases(new Expression(AND, aliceIsBlue, bobIsRed), Proof)));
 
-        // @TODO Print out and test Basis().
+        Log(BasesString(
+            testState.Bases(new Expression(AND,
+                new Expression(OR, aliceIsRed, bobIsBlue),
+                new Expression(OR, aliceIsAlice, bobIsBob)),
+            ProofType.Proof)));
+
+        Log("Planning");
+        Log(BasesString(testState.Bases(new Expression(BLUE, CHARLIE), Proof)));
+        Log(BasesString(testState.Bases(new Expression(BLUE, CHARLIE), Plan)));
+        Log(BasesString(testState.Bases(new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue), Plan)));
+        Log(BasesString(testState.Bases(new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE)), Plan)));
+        // @TODO Print out and test Bases().
         // @TODO Test Assert().
     }
 
     private String Verbose(Expression e) {
         return e.ToString() + " : " + e.Type.ToString();
+    }
+
+    private String BasesString(HashSet<List<Expression>> bases) {
+        StringBuilder s = new StringBuilder();
+        s.Append("{");
+        foreach (List<Expression> basis in bases) {
+            s.Append("\n<");
+            if (basis.Count > 0) {
+                s.Append(basis[0]);
+                for (int i = 1; i < basis.Count; i++) {
+                    s.Append(", ");
+                    s.Append(basis[i]);
+                }
+            }
+            s.Append(">");
+        }
+        s.Append("\n}");
+        return s.ToString();
     }
 }

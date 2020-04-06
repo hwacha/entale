@@ -114,10 +114,10 @@ public class MentalState {
     // 
     // ====
     //
-    public HashSet<List<Expression>> Basis(Expression goal, ProofType proofType) {
+    public HashSet<List<Expression>> Bases(Expression goal, ProofType proofType) {
         // goal should be type t.
         if (!goal.Type.Equals(TRUTH_VALUE)) {
-            throw new ArgumentException("Basis: goal/conclusion must be a sentence (type t)");
+            throw new ArgumentException("Bases: goal/conclusion must be a sentence (type t)");
         }
 
         // the set of alternative bases for the goal
@@ -139,7 +139,6 @@ public class MentalState {
             return alternativeBases;
         }
 
-
         // INFERENCES
         // ====
         // Double negation elimination
@@ -148,7 +147,7 @@ public class MentalState {
             Expression subExpression = goal.GetArg(0) as Expression;
             if (subExpression.Head.Equals(NOT.Head)) {
                 subExpression = subExpression.GetArg(0) as Expression;
-                alternativeBases.UnionWith(Basis(subExpression, proofType));
+                alternativeBases.UnionWith(Bases(subExpression, proofType));
             }
         }
 
@@ -156,20 +155,20 @@ public class MentalState {
         // A |- A v B; B |- A v B
         if (goal.Head.Equals(OR.Head)) {
             Expression leftDisjunct = goal.GetArg(0) as Expression;
-            Expression rightDisjunct = goal.GetArg(0) as Expression;
+            Expression rightDisjunct = goal.GetArg(1) as Expression;
 
-            alternativeBases.UnionWith(Basis(leftDisjunct,  proofType));
-            alternativeBases.UnionWith(Basis(rightDisjunct, proofType));
+            alternativeBases.UnionWith(Bases(leftDisjunct,  proofType));
+            alternativeBases.UnionWith(Bases(rightDisjunct, proofType));
         }
 
         // conjunction introduction
         // A, B |- A & B
         if (goal.Head.Equals(AND.Head)) {
             Expression leftConjunct = goal.GetArg(0) as Expression;
-            HashSet<List<Expression>> leftConjunctBases = Basis(leftConjunct, proofType);
+            HashSet<List<Expression>> leftConjunctBases = Bases(leftConjunct, proofType);
             if (leftConjunctBases.Count != 0) {
                 Expression rightConjunct = goal.GetArg(1) as Expression;
-                HashSet<List<Expression>> rightConjunctBases = Basis(rightConjunct, proofType);
+                HashSet<List<Expression>> rightConjunctBases = Bases(rightConjunct, proofType);
 
                 if (rightConjunctBases.Count != 0) {
                     // if both conjuncts have proofs, then the set of all possible
@@ -177,8 +176,9 @@ public class MentalState {
                     // the proofs of B.
                     foreach (List<Expression> leftConjunctBasis in leftConjunctBases) {
                         foreach (List<Expression> rightConjunctBasis in rightConjunctBases) {
-                            // @Note assumption is that for a plan, the left conjunct
-                            // should be performed before the right conjunct.
+                            // @Note assumption is that for a plan, a plan to
+                            // enact the left conjunct should be performed before
+                            // the plan to independently enact the right conjunct.
                             // Ultimately, both conjuncts need to be true simultaneously,
                             // and so this is a faulty assumption to make when it comes to plans.
                             List<Expression> conjunctionBasis = new List<Expression>();
@@ -191,12 +191,30 @@ public class MentalState {
             }
         }
 
+        // PLANNING
+        // ====
+        // @Note right now, I only resort to planning if there is
+        // no proof of G. This is because you shouldn't try to
+        // enact something you already believe to be true.
+        if (proofType == Plan && alternativeBases.Count == 0) {
+            Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
+
+            HashSet<List<Expression>> abilityBases = Bases(ableToEnactGoal, Plan);
+
+            if (abilityBases.Count != 0) {
+                foreach (List<Expression> abilityBasis in abilityBases) {
+                    abilityBasis.Add(new Expression(WILL, goal));
+                    alternativeBases.Add(abilityBasis);
+                }
+            }
+        }
+
         return alternativeBases;
     }
 
     // Asks if the expression is proven by this belief base.
     public bool Query(Expression query) {
-        return Basis(query, Proof).Count != 0;
+        return Bases(query, Proof).Count != 0;
     }
 
     // Asserts a sentence to this mental state.
@@ -219,7 +237,7 @@ public class MentalState {
             return true;
         }
 
-        HashSet<List<Expression>> notAssertionBases = Basis(new Expression(NOT, assertion), Proof);
+        HashSet<List<Expression>> notAssertionBases = Bases(new Expression(NOT, assertion), Proof);
 
         // We believe ~A. This is inconsistent with the assertion.
         if (notAssertionBases.Count != 0) {
