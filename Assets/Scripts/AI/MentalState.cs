@@ -191,11 +191,22 @@ public class MentalState {
             }
         }
 
+        // @NOTE FOR SOUREN: Implement the following rules
+        // contraposition of conjunction elimination
+        // ~A |- ~(A & B); ~B |- ~(A & B)
+
+        // contraposition of disjunction elimination
+        // ~A, ~B |- ~(A v B)
+
+        // @Note my assumption is: because removing premises
+        // occurs within the belief base, it's okay to have
+        // duplicate premises, even in a standard proof.
+
         // PLANNING
         // ====
-        // @Note right now, I only resort to planning if there is
-        // no proof of G. This is because you shouldn't try to
-        // enact something you already believe to be true.
+        // @Note we might in the future add a check to see if there is
+        // no other proof of G. THis is because you don't want to enact
+        // something you already believe to be true.
         if (proofType == Plan && alternativeBases.Count == 0) {
             Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
 
@@ -253,7 +264,7 @@ public class MentalState {
                 // to discard from each basis.
                 var random = new Random();
                 int index = random.Next(basis.Count);
-                basis.RemoveAt(index);
+                Remove(basis[index]);
             }
             Add(assertion);
             return true;
