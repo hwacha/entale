@@ -47,6 +47,11 @@ public abstract class SemanticType {
     public static readonly FunctionalType RELATION_2 =
         new FunctionalType(new SemanticType[]{INDIVIDUAL, INDIVIDUAL}, TRUTH_VALUE);
 
+    public static readonly FunctionalType QUANTIFER_PHRASE =
+        new FunctionalType(new SemanticType[]{PREDICATE}, TRUTH_VALUE);
+    public static readonly FunctionalType QUANTIFIER =
+        new FunctionalType(new SemanticType[]{PREDICATE, PREDICATE}, TRUTH_VALUE);
+
     public static readonly FunctionalType TRUTH_FUNCTION =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE}, TRUTH_VALUE);
     public static readonly FunctionalType TRUTH_FUNCTION_2 =

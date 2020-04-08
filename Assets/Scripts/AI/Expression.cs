@@ -269,6 +269,8 @@ public class Expression : Argument {
     // 2-place truth functions
     public static readonly Expression AND = new Expression(new Constant(TRUTH_FUNCTION_2, "and"));
     public static readonly Expression OR  = new Expression(new Constant(TRUTH_FUNCTION_2, "or"));
+    public static readonly Expression NORMALLY = new Expression(new Constant(TRUTH_FUNCTION_2, "normally"));
+    public static readonly Expression NORMAL = new Expression(new Constant(TRUTH_FUNCTION_2, "normal"));
 
     // truth-conformity relations
     // "will" is interpreted as an instruction for the actuator in LOT
@@ -279,4 +281,9 @@ public class Expression : Argument {
     // individual-truth relations
     public static readonly Expression BELIEVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "believe"));
     public static readonly Expression ABLE    = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "able"));
+    public static readonly Expression PERCEIVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceive"));
+
+    // quantifiers
+    public static readonly Expression SOME = new Expression(new Constant(QUANTIFIER, "some"));
+    public static readonly Expression ALL  = new Expression(new Constant(QUANTIFIER, "all"));
 }

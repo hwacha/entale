@@ -78,13 +78,6 @@ public class MentalState {
         return false;
     }
 
-    // gives a set of all the satisfiers
-    // of the input formula, if any
-    private HashSet<Dictionary<Variable, Expression>> BaseSatisfiers(Expression formula) {
-        // TODO
-        return null;
-    }
-
     // if this mental state, S, can prove the goal
     // directly or via inference, then Basis(goal)
     // returns the set of bases of goal, relative to S:
@@ -235,8 +228,24 @@ public class MentalState {
             Expression notNotGoal = new Expression(NOT, new Expression(NOT, goal));
             alternativeBases.UnionWith(Bases(notNotGoal, triedExpressions));
 
-            // belief elimination (testimonial evidence)
-            // believes(x, S) |- 
+            // @Note eventually replace this with
+            // normality
+            // normally(A, B) | normal(A, B), A |- B
+            // plus a sentence normally(perceive(self, S), S) in the belief base
+            // (quantify over sentences?)
+            // 
+            // perceptual belief
+            // normally(perceive(self, any(S)), any(S))
+            // perceive(self, S) | normal(perceive(self, S), S) |- S
+            Expression iPerceiveGoal = new Expression(PERCEIVE, SELF, goal);
+            Expression veridicalityAssumption = new Expression(NORMAL, iPerceiveGoal, goal);
+            if (Bases(new Expression(NOT, veridicalityAssumption), triedExpressions).Count == 0) {
+                HashSet<List<Expression>> perceptionBases = Bases(iPerceiveGoal, triedExpressions);
+                foreach (List<Expression> perceptionBasis in perceptionBases) {
+                    perceptionBasis.Add(veridicalityAssumption);
+                    alternativeBases.Add(perceptionBasis);
+                }
+            }
 
             // PLANNING
             // ====

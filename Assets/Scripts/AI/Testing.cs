@@ -84,14 +84,18 @@ public class Testing : MonoBehaviour {
         Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
         Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
         Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
+        Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
 
         Expression bobIsRed     = new Expression(RED, BOB);
         Expression aliceIsBlue  = new Expression(BLUE, ALICE);
 
-        MentalState testState = new MentalState(aliceIsRed, bobIsBlue, aliceIsAtBob, aliceIsAlice, bobIsBob, iCanMakeCharlieBlue);
+        MentalState testState = new MentalState(
+            aliceIsRed, bobIsBlue, aliceIsAtBob,
+            aliceIsAlice, bobIsBob,
+            iCanMakeCharlieBlue, iSeeCharlieAsRed);
 
         // Log(testState.Query(aliceIsRed));
-        Log(BasesString(testState.Bases(aliceIsRed)));
+        Log(BasesString(testState, aliceIsRed));
         // Log(testState.Query(bobIsBlue));
         // Log(!testState.Query(bobIsRed));
         // Log(!testState.Query(aliceIsBlue));
@@ -101,24 +105,25 @@ public class Testing : MonoBehaviour {
         Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
         Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
         Log(Verbose(notNotAliceIsRed));
-        Log(BasesString(testState.Bases(notNotAliceIsRed)));
+        Log(BasesString(testState, notNotAliceIsRed));
         Log(Verbose(notNotNotNotAliceIsRed));
-        Log(BasesString(testState.Bases(notNotNotNotAliceIsRed)));
+        Log(BasesString(testState, notNotNotNotAliceIsRed));
         Log(Verbose(notNotNotNotNotNotAliceIsRed));
-        Log(BasesString(testState.Bases(notNotNotNotNotNotAliceIsRed)));
-        Log(BasesString(testState.Bases(new Expression(NOT, new Expression(NOT, bobIsRed)))));
+        Log(BasesString(testState, notNotNotNotNotNotAliceIsRed));
+        Log(BasesString(testState, new Expression(NOT, new Expression(NOT, bobIsRed))));
+        Log(BasesString(testState, new Expression(NOT, bobIsBlue)));
 
         Log("Disjunction Introduction");
-        Log(BasesString(testState.Bases(new Expression(OR, aliceIsRed, bobIsBlue))));
-        Log(BasesString(testState.Bases(new Expression(OR, aliceIsRed, bobIsRed))));
-        Log(BasesString(testState.Bases(new Expression(OR, aliceIsBlue, bobIsBlue))));
-        Log(BasesString(testState.Bases(new Expression(OR, aliceIsBlue, bobIsRed))));
+        Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsBlue)));
+        Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsRed)));
+        Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsBlue)));
+        Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsRed)));
 
         Log("Conjunction Introduction");
-        Log(BasesString(testState.Bases(new Expression(AND, aliceIsRed,  bobIsBlue))));
-        Log(BasesString(testState.Bases(new Expression(AND, aliceIsRed,  bobIsRed))));
-        Log(BasesString(testState.Bases(new Expression(AND, aliceIsBlue, bobIsBlue))));
-        Log(BasesString(testState.Bases(new Expression(AND, aliceIsBlue, bobIsRed))));
+        Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsBlue)));
+        Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsRed)));
+        Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsBlue)));
+        Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsRed)));
 
         Expression conjunctionOfDisjunctions = new Expression(AND,
                 new Expression(OR, aliceIsRed, bobIsBlue),
@@ -126,14 +131,16 @@ public class Testing : MonoBehaviour {
 
         Log(Verbose(conjunctionOfDisjunctions));
 
-        Log(BasesString(testState.Bases(conjunctionOfDisjunctions)));
+        Log(BasesString(testState, conjunctionOfDisjunctions));
+
+        Log(BasesString(testState, new Expression(RED, CHARLIE)));
 
         Log("Planning");
-        Log(BasesString(testState.Bases(new Expression(BLUE, CHARLIE))));
+        Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
         testState.ProofMode = Plan;
-        Log(BasesString(testState.Bases(new Expression(BLUE, CHARLIE))));
-        Log(BasesString(testState.Bases(new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue))));
-        Log(BasesString(testState.Bases(new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE)))));
+        Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
+        Log(BasesString(testState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
+        Log(BasesString(testState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
         // @TODO Print out and test Bases().
         // @TODO Test Assert().
     }
@@ -142,9 +149,12 @@ public class Testing : MonoBehaviour {
         return e.ToString() + " : " + e.Type.ToString() + " #" + e.Depth;
     }
 
-    private String BasesString(HashSet<List<Expression>> bases) {
+    private String BasesString(MentalState m, Expression e) {
         StringBuilder s = new StringBuilder();
-        s.Append("{");
+        s.Append(Verbose(e));
+        s.Append(" is proved by: ");
+        s.Append("\n{");
+        HashSet<List<Expression>> bases = m.Bases(e);
         foreach (List<Expression> basis in bases) {
             s.Append("\n<");
             if (basis.Count > 0) {
