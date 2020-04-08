@@ -38,14 +38,16 @@ public enum BeliefRevisionPolicy {
 // inconsistencies can be resolved.
 // 
 public class MentalState {
-    private HashSet<Expression> beliefBase = new HashSet<Expression>();
-    private BeliefRevisionPolicy beliefRevisionPolicy;
+    public BeliefRevisionPolicy BeliefRevisionPolicy = Conservative;
+    public ProofType ProofMode = Proof;
+
+    private HashSet<Expression> BeliefBase = new HashSet<Expression>();
+    int MaxDepth = 0;
 
     // @Note this doesn't check to see if
     // the initial belief set is inconsistent.
     // Assume, for now, as an invariant, that it is.
-    public MentalState(BeliefRevisionPolicy beliefRevisionPolicy, params Expression[] initialBeliefs) {
-        this.beliefRevisionPolicy = beliefRevisionPolicy;
+    public MentalState(params Expression[] initialBeliefs) {
         for (int i = 0; i < initialBeliefs.Length; i++) {
             if (!Add(initialBeliefs[i])) {
                 throw new ArgumentException("MentalState(): expected sentences for belief base.");
@@ -53,26 +55,34 @@ public class MentalState {
         }
     }
 
-    public MentalState(params Expression[] initialBeliefs) : this(Conservative, initialBeliefs) {}
-
     private bool Contains(Expression belief) {
-        return beliefBase.Contains(belief);
+        return BeliefBase.Contains(belief);
     }
 
     private bool Add(Expression belief) {
         if (belief.Type.Equals(TRUTH_VALUE)) {
-            beliefBase.Add(belief);
+            BeliefBase.Add(belief);
+            if (belief.Depth > MaxDepth) {
+                MaxDepth = belief.Depth;
+            }
             return true;
         }
         return false;
     }
 
     private bool Remove(Expression belief) {
-        if (beliefBase.Contains(belief)) {
-            beliefBase.Remove(belief);
+        if (BeliefBase.Contains(belief)) {
+            BeliefBase.Remove(belief);
             return true;
         }
         return false;
+    }
+
+    // gives a set of all the satisfiers
+    // of the input formula, if any
+    private HashSet<Dictionary<Variable, Expression>> BaseSatisfiers(Expression formula) {
+        // TODO
+        return null;
     }
 
     // if this mental state, S, can prove the goal
@@ -114,7 +124,7 @@ public class MentalState {
     // 
     // ====
     //
-    public HashSet<List<Expression>> Bases(Expression goal, ProofType proofType) {
+    public HashSet<List<Expression>> Bases(Expression goal, HashSet<Expression> triedExpressions) {
         // goal should be type t.
         if (!goal.Type.Equals(TRUTH_VALUE)) {
             throw new ArgumentException("Bases: goal/conclusion must be a sentence (type t)");
@@ -122,6 +132,13 @@ public class MentalState {
 
         // the set of alternative bases for the goal
         HashSet<List<Expression>> alternativeBases = new HashSet<List<Expression>>();
+
+        // here, we eliminate repeated attempts to prove the same
+        // goal within the same session.
+        if (triedExpressions.Contains(goal)) {
+            return alternativeBases;    
+        }
+        triedExpressions.Add(goal);
 
         // @TODO change to an array/list of goals, and account for variables.
         // May require having implemented unification.
@@ -147,28 +164,32 @@ public class MentalState {
             Expression subExpression = goal.GetArg(0) as Expression;
             if (subExpression.Head.Equals(NOT.Head)) {
                 subExpression = subExpression.GetArg(0) as Expression;
-                alternativeBases.UnionWith(Bases(subExpression, proofType));
+                alternativeBases.UnionWith(Bases(subExpression, triedExpressions));
             }
         }
 
+        // @NOTE FOR SOUREN:
+        // contraposition of conjunction elimination will look a lot like this
         // disjunction introduction
         // A |- A v B; B |- A v B
         if (goal.Head.Equals(OR.Head)) {
             Expression leftDisjunct = goal.GetArg(0) as Expression;
             Expression rightDisjunct = goal.GetArg(1) as Expression;
 
-            alternativeBases.UnionWith(Bases(leftDisjunct,  proofType));
-            alternativeBases.UnionWith(Bases(rightDisjunct, proofType));
+            alternativeBases.UnionWith(Bases(leftDisjunct, triedExpressions));
+            alternativeBases.UnionWith(Bases(rightDisjunct, triedExpressions));
         }
 
+        // @NOTE FOR SOUREN
+        // contraposition of disjunction elimination will look a lot like this
         // conjunction introduction
         // A, B |- A & B
         if (goal.Head.Equals(AND.Head)) {
             Expression leftConjunct = goal.GetArg(0) as Expression;
-            HashSet<List<Expression>> leftConjunctBases = Bases(leftConjunct, proofType);
+            HashSet<List<Expression>> leftConjunctBases = Bases(leftConjunct, triedExpressions);
             if (leftConjunctBases.Count != 0) {
                 Expression rightConjunct = goal.GetArg(1) as Expression;
-                HashSet<List<Expression>> rightConjunctBases = Bases(rightConjunct, proofType);
+                HashSet<List<Expression>> rightConjunctBases = Bases(rightConjunct, triedExpressions);
 
                 if (rightConjunctBases.Count != 0) {
                     // if both conjuncts have proofs, then the set of all possible
@@ -191,6 +212,9 @@ public class MentalState {
             }
         }
 
+        // conjunction elimination
+        // A & B |- A; A & B |- B
+
         // @NOTE FOR SOUREN: Implement the following rules
         // contraposition of conjunction elimination
         // ~A |- ~(A & B); ~B |- ~(A & B)
@@ -198,34 +222,58 @@ public class MentalState {
         // contraposition of disjunction elimination
         // ~A, ~B |- ~(A v B)
 
-        // @Note my assumption is: because removing premises
-        // occurs within the belief base, it's okay to have
-        // duplicate premises, even in a standard proof.
+        // @Note put all contractive rules here
+        // (rules whose premises are more complex than their conclusions,
+        //  and for which a premise may match the rule as a conclusion)
+        //  the depth check only applies if we don't want the size
+        //  of the premise to explode. It's fine to prove conclusions
+        //  that are very large (i.e. with DNE).
+        if (goal.Depth <= MaxDepth) {
+            // @TEST for loop prevention
+            // Double negation introduction
+            // not(not(S)) |- S
+            Expression notNotGoal = new Expression(NOT, new Expression(NOT, goal));
+            alternativeBases.UnionWith(Bases(notNotGoal, triedExpressions));
 
-        // PLANNING
-        // ====
-        // @Note we might in the future add a check to see if there is
-        // no other proof of G. THis is because you don't want to enact
-        // something you already believe to be true.
-        if (proofType == Plan && alternativeBases.Count == 0) {
-            Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
+            // belief elimination (testimonial evidence)
+            // believes(x, S) |- 
 
-            HashSet<List<Expression>> abilityBases = Bases(ableToEnactGoal, Plan);
+            // PLANNING
+            // ====
+            // @Note we might in the future add a check to see if there is
+            // no other proof of G. This is because you don't want to enact
+            // something you already believe to be true.
+            if (ProofMode == Plan && alternativeBases.Count == 0) {
+                Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
 
-            if (abilityBases.Count != 0) {
-                foreach (List<Expression> abilityBasis in abilityBases) {
-                    abilityBasis.Add(new Expression(WILL, goal));
-                    alternativeBases.Add(abilityBasis);
+                HashSet<List<Expression>> abilityBases = Bases(ableToEnactGoal, triedExpressions);
+
+                if (abilityBases.Count != 0) {
+                    foreach (List<Expression> abilityBasis in abilityBases) {
+                        abilityBasis.Add(new Expression(WILL, goal));
+                        alternativeBases.Add(abilityBasis);
+                    }
                 }
             }
         }
 
+        // @Note my assumption is: because removing premises
+        // occurs within the belief base, it's okay to have
+        // duplicate premises, even in a standard proof.
+        // If that turns out to be a faulty assumption,
+        // we can check if the proof mode is Proof, and
+        // if it is go through the list and remove duplicates.
+
         return alternativeBases;
+    }
+
+    public HashSet<List<Expression>> Bases(Expression goal) {
+        return Bases(goal, new HashSet<Expression>());
     }
 
     // Asks if the expression is proven by this belief base.
     public bool Query(Expression query) {
-        return Bases(query, Proof).Count != 0;
+        return Bases(query).Count != 0;
     }
 
     // Asserts a sentence to this mental state.
@@ -248,13 +296,13 @@ public class MentalState {
             return true;
         }
 
-        HashSet<List<Expression>> notAssertionBases = Bases(new Expression(NOT, assertion), Proof);
+        HashSet<List<Expression>> notAssertionBases = Bases(new Expression(NOT, assertion));
 
         // We believe ~A. This is inconsistent with the assertion.
         if (notAssertionBases.Count != 0) {
             // if our belief revision policy is conservative,
             // we reject the new information in favor of the old.
-            if (beliefRevisionPolicy == Conservative) {
+            if (BeliefRevisionPolicy == Conservative) {
                 return false;
             }
             // otherwise, the belief revision policy is liberal.

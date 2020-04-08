@@ -48,6 +48,7 @@ public class Variable : Atom {
 // argument position in an expression.
 public abstract class Argument {
     public SemanticType Type { get; protected set; }
+    public int Depth { get; protected set; }
 }
 
 // A typed empty argument slot.
@@ -55,6 +56,7 @@ public abstract class Argument {
 public class Empty : Argument {
     public Empty(SemanticType type) {
         Type = type;
+        Depth = 1;
     }
 
     public override String ToString() {
@@ -84,6 +86,7 @@ public class Expression : Argument {
         // if it does, then we just initialize an empty array
         // since this expression doesn't take any arguments.
         if (Head.Type is AtomicType) {
+            Depth = 1;
             Args = new Argument[0];
             return;
         }
@@ -91,6 +94,7 @@ public class Expression : Argument {
         // we're going to populate the argument array with
         // empty slots that are typed according to the
         // semantic type of the functional head expression.
+        Depth = 2;
         FunctionalType fType = head.Type as FunctionalType;
         int fNumArgs = fType.GetNumArgs();
         Args = new Argument[fNumArgs];
@@ -151,6 +155,15 @@ public class Expression : Argument {
             }
             inputIndex++;
         }
+
+        int maxDepth = 0;
+        for (int i = 0; i < Args.Length; i++) {
+            int argDepth = Args[i].Depth;
+            if (argDepth > maxDepth) {
+                maxDepth = argDepth;
+            }
+        }
+        Depth = maxDepth + 1;
     }
 
     public Argument GetArg(int i) {
