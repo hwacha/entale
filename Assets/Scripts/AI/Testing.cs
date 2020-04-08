@@ -7,6 +7,9 @@ using static SemanticType;
 using static Expression;
 using static ProofType;
 
+using Substitution = System.Collections.Generic.Dictionary<Variable, Expression>;
+using Basis = System.Collections.Generic.KeyValuePair<System.Collections.Generic.List<Expression>, System.Collections.Generic.Dictionary<Variable, Expression>>;
+
 public class Testing : MonoBehaviour {
     void Start() {
         // Log("Running tests from AI/Testing.cs. " +
@@ -79,10 +82,14 @@ public class Testing : MonoBehaviour {
         Log("Testing mental state.");
         Log("QUERY");
         Expression aliceIsRed   = new Expression(RED, ALICE);
+        Expression aliceIsAnApple = new Expression(APPLE, ALICE);
         Expression bobIsBlue    = new Expression(BLUE, BOB);
         Expression aliceIsAtBob = new Expression(AT, ALICE, BOB);
         Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
         Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
+        Expression allMacintoshesAreApples = new Expression(ALL, new Expression(new Constant(PREDICATE, "macintosh")), APPLE);
+        Expression allApplesAreRed = new Expression(ALL, APPLE, RED);
+        Expression charlieIsAMacintosh = new Expression(new Expression(new Constant(PREDICATE, "macintosh")), CHARLIE);
         Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
         Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
 
@@ -90,9 +97,11 @@ public class Testing : MonoBehaviour {
         Expression aliceIsBlue  = new Expression(BLUE, ALICE);
 
         MentalState testState = new MentalState(
-            aliceIsRed, bobIsBlue, aliceIsAtBob,
-            aliceIsAlice, bobIsBob,
-            iCanMakeCharlieBlue, iSeeCharlieAsRed);
+            aliceIsRed, aliceIsAnApple, bobIsBlue,
+            aliceIsAtBob, aliceIsAlice, bobIsBob,
+            charlieIsAMacintosh, allApplesAreRed,
+            allMacintoshesAreApples, iCanMakeCharlieBlue,
+            iSeeCharlieAsRed);
 
         // Log(testState.Query(aliceIsRed));
         Log(BasesString(testState, aliceIsRed));
@@ -141,6 +150,19 @@ public class Testing : MonoBehaviour {
         Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
         Log(BasesString(testState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
         Log(BasesString(testState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
+
+        Log("Formula satisfaction");
+        Expression xIsBlue = new Expression(BLUE, XE);
+        testState.ProofMode = Proof;
+        Log(BasesString(testState, xIsBlue));
+        Log(BasesString(testState, new Expression(OR, aliceIsBlue, xIsBlue)));
+
+        Log("existential introduction");
+        Log(BasesString(testState, new Expression(SOME, APPLE, RED)));
+
+        Log("universal elimination");
+        Log(BasesString(testState, new Expression(RED, CHARLIE)));
+
         // @TODO Print out and test Bases().
         // @TODO Test Assert().
     }
@@ -154,17 +176,26 @@ public class Testing : MonoBehaviour {
         s.Append(Verbose(e));
         s.Append(" is proved by: ");
         s.Append("\n{");
-        HashSet<List<Expression>> bases = m.Bases(e);
-        foreach (List<Expression> basis in bases) {
+        HashSet<Basis> bases = m.Bases(e);
+        foreach (Basis basis in bases) {
+            List<Expression> premises = basis.Key;
             s.Append("\n<");
-            if (basis.Count > 0) {
-                s.Append(basis[0]);
-                for (int i = 1; i < basis.Count; i++) {
+            if (premises.Count > 0) {
+                s.Append(premises[0]);
+                for (int i = 1; i < premises.Count; i++) {
                     s.Append(", ");
-                    s.Append(basis[i]);
+                    s.Append(premises[i]);
                 }
             }
-            s.Append(">");
+            s.Append("> with {");
+            Substitution substitution = basis.Value;
+            foreach (KeyValuePair<Variable, Expression> assignments in substitution) {
+                s.Append(assignments.Key);
+                s.Append(" -> ");
+                s.Append(assignments.Value);
+                s.Append(", ");
+            }
+            s.Append("}");
         }
         s.Append("\n}");
         return s.ToString();

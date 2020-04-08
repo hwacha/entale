@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Collections.Generic;
 using static SemanticType;
 
 // a wrapper for simple symbols.
@@ -28,7 +29,7 @@ public abstract class Atom {
 
         return this.Type.Equals(that.Type) && this.ID.Equals(that.ID);
     }
-
+ 
     public override int GetHashCode() {
         return Type.GetHashCode() * ID.GetHashCode();
     }
@@ -57,6 +58,16 @@ public class Empty : Argument {
     public Empty(SemanticType type) {
         Type = type;
         Depth = 1;
+    }
+
+    public override bool Equals(Object o) {
+        if (!(o is Empty)) {
+            return false;
+        }
+
+        Empty that = (Empty) o;
+
+        return this.Type.Equals(that.Type);
     }
 
     public override String ToString() {
@@ -170,6 +181,24 @@ public class Expression : Argument {
         return Args[i];
     }
 
+    public Expression Substitute(Dictionary<Variable, Expression> s) {
+        Argument[] substitutedArgs = new Expression[Args.Length];
+        for (int i = 0; i < Args.Length; i++) {
+            if (Args[i] is Expression) {
+                substitutedArgs[i] = ((Expression) Args[i]).Substitute(s);
+            } else {
+                substitutedArgs[i] = Args[i];
+            }
+        }
+
+        Expression newHead = new Expression(Head);
+        if (Head is Variable && s.ContainsKey((Variable) Head)) {
+             newHead = s[(Variable) Head];
+        }
+
+        return new Expression(newHead, substitutedArgs);
+    }
+
     public override String ToString() {
         StringBuilder s = new StringBuilder();
 
@@ -201,7 +230,7 @@ public class Expression : Argument {
         if (!(o is Expression)) {
             return false;
         }
-        Expression that = o as Expression;
+        Expression that = (Expression) o;
 
         if (!this.Head.Equals(that.Head)) {
             return false;
@@ -250,6 +279,7 @@ public class Expression : Argument {
     // Predicate constants
     public static readonly Expression RED  = new Expression(new Constant(PREDICATE, "red"));
     public static readonly Expression BLUE = new Expression(new Constant(PREDICATE, "blue"));
+    public static readonly Expression APPLE = new Expression(new Constant(PREDICATE, "apple"));
 
     // Predicate variables
     public static readonly Expression FET = new Expression(new Variable(PREDICATE, "F"));
