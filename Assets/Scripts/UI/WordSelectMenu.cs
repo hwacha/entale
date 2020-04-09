@@ -11,13 +11,14 @@ public class WordSelectMenu : MonoBehaviour {
     public RadialMenuItem radialMenuItemPrefab;
     const double RADIUS = 100;
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
+    bool semanticMenuOpen = false;
+    bool constantMenuOpen = false;
 
     Dictionary<SemanticType, HashSet<Constant>> Lexicon = new Dictionary<SemanticType, HashSet<Constant>> {
         [INDIVIDUAL] = new HashSet<Constant> { ALICE.Head as Constant, BOB.Head as Constant },
         [PREDICATE] = new HashSet<Constant> { RED.Head as Constant, BLUE.Head as Constant },
         [TRUTH_VALUE] = new HashSet<Constant> { VERUM.Head as Constant },
         [RELATION_2] = new HashSet<Constant> { AT.Head as Constant, IDENTITY.Head as Constant },
-        [TRUTH_FUNCTION] = new HashSet<Constant> { AT.Head as Constant, IDENTITY.Head as Constant }
     };
 
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
@@ -26,28 +27,81 @@ public class WordSelectMenu : MonoBehaviour {
 
     // Start is called before the first frame update
     void Start() {
-        DrawMenu(INITIAL_ANGLE_OFFSET, RADIUS);
     }
 
-    void DrawMenu(double initial_angle_offset, double radius) {
-        double sliceTheta = 2.0 * Math.PI / Lexicon.Keys.Count;
-        double theta = initial_angle_offset;
+    // Update is called once per frame
+    void Update() {
+        HandleMenuOpen();
+        if (semanticMenuOpen || constantMenuOpen) {
+            HighlightMenuItems();
+            HandleMenuItemClick();
+        }
+    }
+
+    void HandleMenuOpen() {
+        if (Input.GetKeyDown(KeyCode.M)) {
+            if (!semanticMenuOpen && !constantMenuOpen) {
+                OpenSemanticMenu();
+            } else {
+                CloseSemanticMenu();
+                CloseConstantMenu();
+            }
+        }
+    }
+
+    void OpenSemanticMenu() {
+        semanticMenuOpen = true;
+        double sliceTheta = 2.0 * Math.PI / Lexicon.Count;
+        double theta = INITIAL_ANGLE_OFFSET;
         foreach (SemanticType semanticType in Lexicon.Keys) {
             theta = theta % (Math.PI * 2);
             var radialMenuItem = Instantiate(radialMenuItemPrefab);
             radialMenuItem.GetComponent<Transform>().SetParent(gameObject.transform);
             radialMenuItem.GetComponent<Transform>().localPosition = new Vector2(
-                (float)(Math.Cos(theta) * radius),
-                (float)(Math.Sin(theta) * radius)
+                (float)(Math.Cos(theta) * RADIUS),
+                (float)(Math.Sin(theta) * RADIUS)
             );
-            radialMenuItem.setIcon(semanticType);
+            radialMenuItem.setSemanticType(semanticType);
             radialMenuItems.Add(radialMenuItem);
             theta += sliceTheta;
         }
     }
 
-    // Update is called once per frame
-    void Update() {
+    void CloseSemanticMenu() {
+        semanticMenuOpen = false;
+        foreach(var rmi in radialMenuItems) {
+            Destroy(rmi.gameObject);
+        }
+        radialMenuItems.Clear();
+    }
+
+    void OpenConstantMenu(SemanticType semanticType) {
+        constantMenuOpen = true;
+        double sliceTheta = 2.0 * Math.PI / Lexicon[semanticType].Count;
+        double theta = INITIAL_ANGLE_OFFSET;
+        foreach (Constant constant in Lexicon[semanticType]) {
+            theta = theta % (Math.PI * 2);
+            var radialMenuItem = Instantiate(radialMenuItemPrefab);
+            radialMenuItem.GetComponent<Transform>().SetParent(gameObject.transform);
+            radialMenuItem.GetComponent<Transform>().localPosition = new Vector2(
+                (float)(Math.Cos(theta) * RADIUS),
+                (float)(Math.Sin(theta) * RADIUS)
+            );
+            radialMenuItem.setConstant(constant);
+            radialMenuItems.Add(radialMenuItem);
+            theta += sliceTheta;
+        }
+    }
+
+    void CloseConstantMenu() {
+        constantMenuOpen = false;
+        foreach(var rmi in radialMenuItems) {
+            Destroy(rmi.gameObject);
+        }
+        radialMenuItems.Clear();
+    }
+
+    void HighlightMenuItems() {
         int sliceIndex = GetSliceIndex(radialMenuItems.Count, INITIAL_ANGLE_OFFSET, GetMouseAngle());
         if (sliceIndex != currentSliceIndex) {
             foreach(var rmi in radialMenuItems) {
@@ -56,6 +110,20 @@ public class WordSelectMenu : MonoBehaviour {
             currentSliceIndex = sliceIndex;
         }
         radialMenuItems[currentSliceIndex].Highlight();
+    }
+
+    void HandleMenuItemClick() {
+        if (Input.GetMouseButtonDown(0)) {
+            int sliceIndex = GetSliceIndex(radialMenuItems.Count, INITIAL_ANGLE_OFFSET, GetMouseAngle());
+            var rmi = radialMenuItems[currentSliceIndex];
+            if(semanticMenuOpen) {
+                CloseSemanticMenu();
+                OpenConstantMenu(rmi.semanticType);
+            } else {
+                CloseConstantMenu();
+                Debug.Log(rmi.constant);
+            }
+        }
     }
 
     // Returns the mouse angle from the cetner of the screen relative to the x axis in counter clockwise
