@@ -34,6 +34,7 @@ public abstract class SemanticType {
     public virtual SemanticType Remove(SemanticType type) {
         return this;
     }
+
     // references to the atomic types.
     public static readonly AtomicType INDIVIDUAL = new E();
     public static readonly AtomicType TRUTH_VALUE = new T();
@@ -46,6 +47,11 @@ public abstract class SemanticType {
         new FunctionalType(new SemanticType[]{INDIVIDUAL}, TRUTH_VALUE);
     public static readonly FunctionalType RELATION_2 =
         new FunctionalType(new SemanticType[]{INDIVIDUAL, INDIVIDUAL}, TRUTH_VALUE);
+
+    public static readonly FunctionalType QUANTIFER_PHRASE =
+        new FunctionalType(new SemanticType[]{PREDICATE}, TRUTH_VALUE);
+    public static readonly FunctionalType QUANTIFIER =
+        new FunctionalType(new SemanticType[]{PREDICATE, PREDICATE}, TRUTH_VALUE);
 
     public static readonly FunctionalType TRUTH_FUNCTION =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE}, TRUTH_VALUE);
