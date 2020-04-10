@@ -98,25 +98,31 @@ public class MentalState {
 
     // returns satisfiers in the belief base for this formula
     private HashSet<Basis> Satisfiers(Expression formula) {
+        // first, we get the domain to search through.
+        // this is going to correspond to all sentences
+        // that are structural candidates for matching
+        // the formula, given the structure of the formula's
+        // variables and semantic types.
         HashSet<Expression> domain = new HashSet<Expression>();
         if (formula.Head is Constant) {
             if (BeliefBase.ContainsKey(formula.Head.Type) &&
                 BeliefBase[formula.Head.Type].ContainsKey(formula.Head)) {
                 domain.UnionWith(BeliefBase[formula.Head.Type][formula.Head]);
             }
-        } else if (BeliefBase.ContainsKey(formula.Head.Type)) {
-            Dictionary<Atom, HashSet<Expression>> beliefBaseByHeadType = BeliefBase[formula.Head.Type];
-            foreach (var beliefBaseByHead in beliefBaseByHeadType) {
-                domain.UnionWith(beliefBaseByHead.Value);
-            }
-        } else if (formula.Type.Equals(TRUTH_VALUE) && formula.Head.Type.Equals(TRUTH_VALUE)) {
-            foreach (var typeMap in BeliefBase.Values) {
-                foreach (var prefixMap in typeMap.Values) {
-                    domain.UnionWith(prefixMap);
+        }
+
+        foreach (var typeMap in BeliefBase) {
+            if (formula.Head.Type.IsPartialApplicationOf(typeMap.Key)) {
+                foreach (var beliefsByPrefix in typeMap.Value.Values) {
+                    domain.UnionWith(beliefsByPrefix);
                 }
             }
         }
 
+        // then, we iterate through the domain and pattern match (unify)
+        // the formula against the sentences in the belief base.
+        // any sentences that match get added, along with the
+        // unifying substitution, to the basis set.
         HashSet<Basis> satisfiers = new HashSet<Basis>();
         foreach (Expression belief in domain) {
             HashSet<Substitution> unifiers = formula.Unify(belief);
@@ -130,6 +136,8 @@ public class MentalState {
         return satisfiers;
     }
 
+    // composes two substitutions together a * b,
+    // according the rule that the A[a * b] = (A[a])[b] 
     private static Substitution Compose(Substitution a, Substitution b) {
         Substitution composition = new Substitution();
         foreach (KeyValuePair<Variable, Expression> aAssignment in a) {
@@ -185,18 +193,6 @@ public class MentalState {
     // discarded, in case a belief is discard to resolve an inconsistency.
     // 
     // ====
-    // 
-    // @Note the semantics of the substitution outputted is somewhat unclear,
-    // as variables are reused at different stages of the proof. Should switch
-    // to a way of incrementing variable expressions, either with a Church-like
-    // encoding or by changing the variables to have an integer identifier which
-    // can be incremented?
-    // TODO make this well-defined by incrementing variables at each recursive step,
-    // add maxVariable parameter to Bases()?
-    // OR, instead of incrementing variables, could the variables be recycled
-    // by trimming the substitutions to only those variable assignments for
-    // variables which still occur in goal?
-    //
     public HashSet<Basis> Bases(Expression goal, HashSet<Expression> triedExpressions) {
         // goal should be type t.
         if (!goal.Type.Equals(TRUTH_VALUE)) {
@@ -300,7 +296,7 @@ public class MentalState {
 
         // gets a variable that's unused in the goal
         Variable GetUnusedVariable(SemanticType t) {
-            Variable x = new Variable(t, "x");
+            Variable x = new Variable(t, "x_" + t);
             while (goal.HasOccurenceOf(x)) {
                 x = new Variable(t, x.ID + "'");
             }
@@ -382,6 +378,23 @@ public class MentalState {
             // not(not(S)) |- S
             Expression notNotGoal = new Expression(NOT, new Expression(NOT, goal));
             alternativeBases.UnionWith(Bases(notNotGoal, triedExpressions));
+
+            // Modus Ponens (conditional elimination)
+            // A -> B, A |- B
+            Variable a = GetUnusedVariable(TRUTH_VALUE);
+            Expression ifAThenGoal = new Expression(IF, new Expression(a), goal);
+            var ifAThenGoalBases = Bases(ifAThenGoal, triedExpressions);
+            foreach (var ifAThenGoalBasis in ifAThenGoalBases) {
+                Expression antecedent = ifAThenGoalBasis.Value[a];
+                var antecedentBases = Bases(antecedent);
+                foreach (var antecedentBasis in antecedentBases) {
+                    var premises = new List<Expression>();
+                    premises.AddRange(ifAThenGoalBasis.Key);
+                    premises.AddRange(antecedentBasis.Key);
+                    alternativeBases.Add(new Basis(premises,
+                        DiscardUnusedAssignments(Compose(ifAThenGoalBasis.Value, antecedentBasis.Value))));
+                }
+            }
 
             // @Note eventually replace this with
             // normality

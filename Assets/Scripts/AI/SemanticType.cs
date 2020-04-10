@@ -35,6 +35,13 @@ public abstract class SemanticType {
         return this;
     }
 
+    // if you can partially apply arguments to an expression with that type
+    // and get an expression of this type, then return true.
+    // 
+    // e -> t is a parital application of e, e -> t
+    // 
+    public abstract bool IsPartialApplicationOf(SemanticType that);
+
     // references to the atomic types.
     public static readonly AtomicType INDIVIDUAL = new E();
     public static readonly AtomicType TRUTH_VALUE = new T();
@@ -65,7 +72,15 @@ public abstract class SemanticType {
         new FunctionalType(new SemanticType[]{INDIVIDUAL, TRUTH_VALUE}, TRUTH_VALUE);
 }
 
-public abstract class AtomicType : SemanticType {}
+public abstract class AtomicType : SemanticType {
+    public override bool IsPartialApplicationOf(SemanticType that) {
+        if (that is AtomicType) {
+            return this.Equals(that);
+        }
+
+        return this.Equals(((FunctionalType) that).Output);
+    }
+}
 
 public class FunctionalType : SemanticType {
     private SemanticType[] Input;
@@ -113,6 +128,29 @@ public class FunctionalType : SemanticType {
 
         // if there were none to remove, simply return the original type.
         return this;
+    }
+
+    public override bool IsPartialApplicationOf(SemanticType that) {
+        if (that is AtomicType) {
+            return false;
+        }
+
+        var thatFunctional = (FunctionalType) that;
+
+        bool thatContainsThisFirstInput = false;
+        for (int i = 0; i < thatFunctional.Input.Length; i++) {
+            if (thatFunctional.Input[i].Equals(this.Input[0])) {
+                thatContainsThisFirstInput = true;
+                break;
+            }
+        }
+
+        if (thatContainsThisFirstInput) {
+            return this.Remove(this.Input[0])
+                .IsPartialApplicationOf(thatFunctional.Remove(this.Input[0]));
+        }
+
+        return false;
     }
 
     public override bool Equals(Object o) {

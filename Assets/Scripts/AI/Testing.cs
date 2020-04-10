@@ -22,6 +22,15 @@ public class Testing : MonoBehaviour {
         // Log("truth value: " + TRUTH_VALUE);
         // Log("predicate: " + PREDICATE);
         // Log("2-place relation: " + RELATION_2);
+        // Log("Testing semantic type partial application predicate.");
+        // Log(TRUTH_VALUE.IsPartialApplicationOf(TRUTH_VALUE));
+        // Log(TRUTH_VALUE.IsPartialApplicationOf(PREDICATE));
+        // Log(TRUTH_VALUE.IsPartialApplicationOf(RELATION_2));
+        // Log(PREDICATE.IsPartialApplicationOf(PREDICATE));
+        // Log(PREDICATE.IsPartialApplicationOf(RELATION_2));
+        // Log(PREDICATE.IsPartialApplicationOf(INDIVIDUAL_TRUTH_RELATION));
+        // Log(!RELATION_2.IsPartialApplicationOf(PREDICATE));
+        // Log(!INDIVIDUAL_TRUTH_RELATION.IsPartialApplicationOf(PREDICATE));
 
         // Log("testing removal");
         // Log("@TODO");
@@ -121,12 +130,18 @@ public class Testing : MonoBehaviour {
         Expression aliceIsBlue  = new Expression(BLUE, ALICE);
         Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
 
+        Expression ifCharlieIsBlueIAmGreen =
+            new Expression(IF, charlieIsBlue, new Expression(GREEN, SELF));
+
+        Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
+
         MentalState testState = new MentalState(
             aliceIsRed, aliceIsAnApple, bobIsBlue,
             aliceIsAtBob, aliceIsAlice, bobIsBob,
             charlieIsAMacintosh, allApplesAreRed,
             allMacintoshesAreApples, iCanMakeCharlieBlue, charlieIsBlue,
-            iSeeCharlieAsRed);
+            iSeeCharlieAsRed, ifCharlieIsBlueIAmGreen,
+            bobIsAtCharlie);
 
         // // Log(testState.Query(aliceIsRed));
         // Log(BasesString(testState, aliceIsRed));
@@ -195,6 +210,9 @@ public class Testing : MonoBehaviour {
 
         Log("variable coordination in conjunctions: TODO");
         Log(BasesString(testState, new Expression(AND, new Expression(RED, XE), new Expression(BLUE, XE))));
+
+        Log("Modus ponens");
+        Log(BasesString(testState, new Expression(GREEN, SELF)));
 
     }
 

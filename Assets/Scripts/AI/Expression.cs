@@ -538,6 +538,7 @@ public class Expression : Argument {
     // Predicate constants
     public static readonly Expression RED  = new Expression(new Constant(PREDICATE, "red"));
     public static readonly Expression BLUE = new Expression(new Constant(PREDICATE, "blue"));
+    public static readonly Expression GREEN = new Expression(new Constant(PREDICATE, "green"));
     public static readonly Expression APPLE = new Expression(new Constant(PREDICATE, "apple"));
 
     // Predicate variables
@@ -558,6 +559,7 @@ public class Expression : Argument {
     // 2-place truth functions
     public static readonly Expression AND = new Expression(new Constant(TRUTH_FUNCTION_2, "and"));
     public static readonly Expression OR  = new Expression(new Constant(TRUTH_FUNCTION_2, "or"));
+    public static readonly Expression IF  = new Expression(new Constant(TRUTH_FUNCTION_2, "if"));
     public static readonly Expression NORMALLY = new Expression(new Constant(TRUTH_FUNCTION_2, "normally"));
     public static readonly Expression NORMAL = new Expression(new Constant(TRUTH_FUNCTION_2, "normal"));
 
