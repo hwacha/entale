@@ -47,14 +47,14 @@ public class Testing : MonoBehaviour {
         // Log("at: " + AT);
         // Log("R: " + REET);
 
-        // Log("phrase constructors: ");
-        Log(Verbose(new Expression(RED, ALICE)));
-        Log(Verbose(new Expression(BLUE, BOB)));
-        Log(Verbose(new Expression(IDENTITY, ALICE, ALICE)));
-        Log(Verbose(new Expression(AT, ALICE, BOB)));
-        Log(Verbose(new Expression(IDENTITY, ALICE)));
-        Log(Verbose(new Expression(IDENTITY, new Empty(INDIVIDUAL), BOB)));
-        Log(Verbose(new Expression(new Expression(IDENTITY, new Empty(INDIVIDUAL), BOB), ALICE)));
+        // // Log("phrase constructors: ");
+        // Log(Verbose(new Expression(RED, ALICE)));
+        // Log(Verbose(new Expression(BLUE, BOB)));
+        // Log(Verbose(new Expression(IDENTITY, ALICE, ALICE)));
+        // Log(Verbose(new Expression(AT, ALICE, BOB)));
+        // Log(Verbose(new Expression(IDENTITY, ALICE)));
+        // Log(Verbose(new Expression(IDENTITY, new Empty(INDIVIDUAL), BOB)));
+        // Log(Verbose(new Expression(new Expression(IDENTITY, new Empty(INDIVIDUAL), BOB), ALICE)));
 
         // try {
         //     Log("Failed to catch error: " + Verbose(new Expression(RED, ALICE, BOB)));
@@ -75,6 +75,30 @@ public class Testing : MonoBehaviour {
         // }
         Log("equality");
         // Log(NOT.Equals(NOT));
+        Log("Unification");
+        // Log(UnificationString(ALICE, ALICE));
+        // Log(UnificationString(XE, ALICE));
+        // Log(UnificationString(ALICE, XE));
+        // Log(UnificationString(XE, XE));
+        Log(UnificationString(ST, new Expression(AT, ALICE, BOB)));
+
+        // Log(UnificationString(new Expression(RED, XE), new Expression(RED, ALICE)));
+        // Log(UnificationString(new Expression(RED, ALICE), new Expression(RED, XE)));
+
+        // Log(UnificationString(new Expression(AT, XE, YE), new Expression(AT, ALICE, BOB)));
+        // Log(UnificationString(new Expression(AT, XE, XE), new Expression(AT, ALICE, ALICE)));
+        // Log(UnificationString(new Expression(AT, XE, XE), new Expression(AT, ALICE, BOB)));
+
+        Log(UnificationString(new Expression(FET, ALICE), new Expression(AT, ALICE, BOB)));
+        Log(UnificationString(new Expression(FET, BOB), new Expression(AT, ALICE, BOB)));
+
+        Log(UnificationString(new Expression(AT, ALICE, BOB), new Expression(FET, ALICE)));
+        Log(UnificationString(new Expression(AT, ALICE, BOB), new Expression(FET, BOB)));
+
+        Log(UnificationString(new Expression(AT, XE, BOB), new Expression(AT, ALICE, YE)));
+
+        Log(UnificationString(new Expression(FET, XE), new Expression(REET, ALICE, BOB)));
+        Log(UnificationString(new Expression(FET, XE), new Expression(GET, YE)));
 
         // @TODO Test potential bug in mutating expressions
         
@@ -95,61 +119,62 @@ public class Testing : MonoBehaviour {
 
         Expression bobIsRed     = new Expression(RED, BOB);
         Expression aliceIsBlue  = new Expression(BLUE, ALICE);
+        Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
 
         MentalState testState = new MentalState(
             aliceIsRed, aliceIsAnApple, bobIsBlue,
             aliceIsAtBob, aliceIsAlice, bobIsBob,
             charlieIsAMacintosh, allApplesAreRed,
-            allMacintoshesAreApples, iCanMakeCharlieBlue,
+            allMacintoshesAreApples, iCanMakeCharlieBlue, charlieIsBlue,
             iSeeCharlieAsRed);
 
-        // Log(testState.Query(aliceIsRed));
-        Log(BasesString(testState, aliceIsRed));
-        // Log(testState.Query(bobIsBlue));
-        // Log(!testState.Query(bobIsRed));
-        // Log(!testState.Query(aliceIsBlue));
+        // // Log(testState.Query(aliceIsRed));
+        // Log(BasesString(testState, aliceIsRed));
+        // // Log(testState.Query(bobIsBlue));
+        // // Log(!testState.Query(bobIsRed));
+        // // Log(!testState.Query(aliceIsBlue));
 
-        Log("Double Negation Elimination");
-        Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
-        Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
-        Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
-        Log(Verbose(notNotAliceIsRed));
-        Log(BasesString(testState, notNotAliceIsRed));
-        Log(Verbose(notNotNotNotAliceIsRed));
-        Log(BasesString(testState, notNotNotNotAliceIsRed));
-        Log(Verbose(notNotNotNotNotNotAliceIsRed));
-        Log(BasesString(testState, notNotNotNotNotNotAliceIsRed));
-        Log(BasesString(testState, new Expression(NOT, new Expression(NOT, bobIsRed))));
-        Log(BasesString(testState, new Expression(NOT, bobIsBlue)));
+        // Log("Double Negation Elimination");
+        // Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
+        // Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
+        // Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
+        // Log(Verbose(notNotAliceIsRed));
+        // Log(BasesString(testState, notNotAliceIsRed));
+        // Log(Verbose(notNotNotNotAliceIsRed));
+        // Log(BasesString(testState, notNotNotNotAliceIsRed));
+        // Log(Verbose(notNotNotNotNotNotAliceIsRed));
+        // Log(BasesString(testState, notNotNotNotNotNotAliceIsRed));
+        // Log(BasesString(testState, new Expression(NOT, new Expression(NOT, bobIsRed))));
+        // Log(BasesString(testState, new Expression(NOT, bobIsBlue)));
 
-        Log("Disjunction Introduction");
-        Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsBlue)));
-        Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsRed)));
-        Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsBlue)));
-        Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsRed)));
+        // Log("Disjunction Introduction");
+        // Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsBlue)));
+        // Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsRed)));
+        // Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsBlue)));
+        // Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsRed)));
 
-        Log("Conjunction Introduction");
-        Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsBlue)));
-        Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsRed)));
-        Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsBlue)));
-        Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsRed)));
+        // Log("Conjunction Introduction");
+        // Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsBlue)));
+        // Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsRed)));
+        // Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsBlue)));
+        // Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsRed)));
 
-        Expression conjunctionOfDisjunctions = new Expression(AND,
-                new Expression(OR, aliceIsRed, bobIsBlue),
-                new Expression(OR, aliceIsAlice, bobIsBob));
+        // Expression conjunctionOfDisjunctions = new Expression(AND,
+        //         new Expression(OR, aliceIsRed, bobIsBlue),
+        //         new Expression(OR, aliceIsAlice, bobIsBob));
 
-        Log(Verbose(conjunctionOfDisjunctions));
+        // Log(Verbose(conjunctionOfDisjunctions));
 
-        Log(BasesString(testState, conjunctionOfDisjunctions));
+        // Log(BasesString(testState, conjunctionOfDisjunctions));
 
-        Log(BasesString(testState, new Expression(RED, CHARLIE)));
+        // Log(BasesString(testState, new Expression(RED, CHARLIE)));
 
-        Log("Planning");
-        Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
-        testState.ProofMode = Plan;
-        Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
-        Log(BasesString(testState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
-        Log(BasesString(testState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
+        // Log("Planning");
+        // Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
+        // testState.ProofMode = Plan;
+        // Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
+        // Log(BasesString(testState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
+        // Log(BasesString(testState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
 
         Log("Formula satisfaction");
         Expression xIsBlue = new Expression(BLUE, XE);
@@ -162,16 +187,44 @@ public class Testing : MonoBehaviour {
 
         Log("universal elimination");
         Log(BasesString(testState, new Expression(RED, CHARLIE)));
+        Log(BasesString(testState, new Expression(FET, CHARLIE)));
 
-        // @TODO Print out and test Bases().
-        // @TODO Test Assert().
+        Log("variable coordination in disjunctions: TODO");
+        Log(BasesString(testState, new Expression(OR, ST, new Expression(NOT, ST))));
+        Log(BasesString(testState, new Expression(OR, new Expression(RED, XE), new Expression(BLUE, XE))));
+
+        Log("variable coordination in conjunctions: TODO");
+        Log(BasesString(testState, new Expression(AND, new Expression(RED, XE), new Expression(BLUE, XE))));
+
     }
 
-    private String Verbose(Expression e) {
+    public static String Verbose(Expression e) {
         return e.ToString() + " : " + e.Type.ToString() + " #" + e.Depth;
     }
 
-    private String BasesString(MentalState m, Expression e) {
+    public static String SubstitutionString(HashSet<Substitution> subs) {
+        StringBuilder s = new StringBuilder();
+        s.Append("{\n");
+        foreach (var sub in subs) {
+            s.Append("\t{\n");
+            foreach (KeyValuePair<Variable, Expression> assignments in sub) {
+                s.Append("\t\t");
+                s.Append(assignments.Key);
+                s.Append(" -> ");
+                s.Append(assignments.Value);
+                s.Append(",\n");
+            }
+            s.Append("\t}\n");
+        }
+        s.Append("}");
+        return s.ToString();
+    }
+
+    public static String UnificationString(Expression a, Expression b) {
+        return a + ", " + b + ": " + SubstitutionString(a.Unify(b));
+    }
+
+    public static String BasesString(MentalState m, Expression e) {
         StringBuilder s = new StringBuilder();
         s.Append(Verbose(e));
         s.Append(" is proved by: ");

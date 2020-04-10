@@ -92,6 +92,7 @@ public class Expression : Argument {
     public Expression(Atom head) {
         Type = head.Type;
         Head = head;
+        
 
         // we check if the head expression has an atomic type.
         // if it does, then we just initialize an empty array
@@ -177,12 +178,49 @@ public class Expression : Argument {
         Depth = maxDepth + 1;
     }
 
+    public Expression RemoveAt(int index) {
+        if (index > Args.Length) {
+            throw new ArgumentException("RemoveAt(): index must be within range of arguments");
+        }
+        if (Args[index] is Empty) {
+            return this;
+        }
+
+        Argument[] newArgs = new Argument[Args.Length];
+        for (int i = 0; i < Args.Length; i++) {
+            if (i == index) {
+                newArgs[i] = new Empty(Args[i].Type);
+            } else {
+                newArgs[i] = Args[i];
+            }
+        }
+
+        return new Expression(new Expression(Head), newArgs);
+    }
+
     public Argument GetArg(int i) {
         return Args[i];
     }
 
+    // returns true if x occurs in this expression
+    public bool HasOccurenceOf(Variable x) {
+        if (Head.Equals(x)) {
+            return true;
+        }
+
+        for (int i = 0; i < Args.Length; i++) {
+            if (Args[i] is Expression && ((Expression) Args[i]).HasOccurenceOf(x)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // replaces all occurances of the variables within s with the
+    // associated expression in s.
     public Expression Substitute(Dictionary<Variable, Expression> s) {
-        Argument[] substitutedArgs = new Expression[Args.Length];
+        Argument[] substitutedArgs = new Argument[Args.Length];
         for (int i = 0; i < Args.Length; i++) {
             if (Args[i] is Expression) {
                 substitutedArgs[i] = ((Expression) Args[i]).Substitute(s);
@@ -197,6 +235,227 @@ public class Expression : Argument {
         }
 
         return new Expression(newHead, substitutedArgs);
+    }
+
+    // find the mgu (most general unifier) between this expression
+    // and that expression. A unifier is a variable substitution that,
+    // when applied to both expressions, leads the expressions to
+    // be syntactically equal
+    private HashSet<Dictionary<Variable, Expression>> Unify(Expression that,
+        HashSet<Dictionary<Variable, Expression>> substitutions) {
+        // if the types don't match or the substitutions are empty, we fail.
+        if (substitutions.Count == 0 || !this.Type.Equals(that.Type)) {
+            return new HashSet<Dictionary<Variable, Expression>>();
+        }
+
+        // Adds an assignment of x to e into a given set of substitutions.
+        HashSet<Dictionary<Variable, Expression>> AddAssignment(Variable x, Expression e,
+            HashSet<Dictionary<Variable, Expression>> sub) {
+            // first, we check if x occurs in e.
+            // if it does, then unification fails.
+            if (e.HasOccurenceOf(x) && !e.Equals(new Expression(x))) {
+                return new HashSet<Dictionary<Variable, Expression>>();
+            }
+
+            // otherwise, we're good to try and assign x to e in the substitution.
+            var newSubstitutions = new HashSet<Dictionary<Variable, Expression>>();
+
+            foreach (Dictionary<Variable, Expression> substitution in sub) {
+                // now, substitute the substitution in for e, and
+                // also substitute the substituted e for all occurences of x
+                // on the right hand side of the substitution.
+                Expression eWithSubstitution = e.Substitute(substitution);
+                var xBoundToE = new Dictionary<Variable, Expression>();
+                xBoundToE[x] = eWithSubstitution;
+                var newSubstitution = new Dictionary<Variable, Expression>();
+                foreach (var assignment in substitution) {
+                    newSubstitution[assignment.Key] = assignment.Value.Substitute(xBoundToE);
+                }
+
+                // filter out substitutions that are incompatible with this variable assignment.
+                if (newSubstitution.ContainsKey(x) && !substitution[x].Equals(e)) {
+                    continue;
+                }
+
+                // Finally, add the assignment of this to e to the new substitution
+                newSubstitution[x] = eWithSubstitution;
+                newSubstitutions.Add(newSubstitution);
+            }
+
+            return newSubstitutions;
+        }
+
+        // we have a singular variable. Do variable assignment here.
+        if (this.Head is Variable && this.Head.Type.Equals(this.Type)) {
+            return AddAssignment((Variable) this.Head, that, substitutions);
+        }
+
+        // same case as above, but reversed.
+        if (that.Head is Variable && that.Head.Type.Equals(that.Type)) {
+            return AddAssignment((Variable) that.Head, this, substitutions);
+        }
+
+        // both head symbols are constants. We need to recur on arguments and
+        // collect results of unifying them.
+        if (this.Head is Constant && that.Head is Constant) {
+            if (!this.Head.Equals(that.Head)) {
+                return new HashSet<Dictionary<Variable, Expression>>();
+            }
+
+            var currentSubstitutions = substitutions;
+            
+            // we now know they're the same head symbol, and that the overall
+            // expression has the same type, so we can safely say they
+            // have the same number of arguments, although some may
+            // be empty in different positions, in which case unification fails
+            for (int i = 0; i < Args.Length; i++) {
+                // @Note not strictly necessary. But may be more efficient.
+                if (currentSubstitutions.Count == 0) {
+                    break;
+                }
+
+                // pass over empty argument slots
+                if (Args[i] is Empty && that.Args[i] is Empty) {
+                    continue;
+                }
+
+                // if one is empty and the other is not, fail
+                if (Args[i] is Empty || that.Args[i] is Empty) {
+                    return new HashSet<Dictionary<Variable, Expression>>();
+                }
+
+                // otherwise, we have two expressions
+                // @Note: should we be substituting the expressions when we
+                // first call Unify() with a substitution?
+                // It shouldn't be, because we're checking to see
+                // if x is bound to anything 
+                // Let see if it's necessary in testing.
+                currentSubstitutions = ((Expression) this.Args[i]).Unify((Expression) that.Args[i], currentSubstitutions);
+            }
+
+            return currentSubstitutions;
+        }
+        
+        // 
+        // @Note this is a naive implementation with O(2^n) complexity.
+        // Is there a way to improve this?
+        // 
+        // decomposes an expression with respect to another pattern to match
+        // 
+        // e.g. R(a, b) will decompose into R(a,_)(b) and R(_, b)(a) w/r/t F(x)
+        // 
+        Dictionary<Expression, Argument[]> DecomposeExpression(int patternIndex, int expressionIndex,
+            SemanticType patternHeadType, Expression f, Argument[] args) {
+            var decompositions = new Dictionary<Expression, Argument[]>();
+            // if there aren't enough arguments to match the pattern,
+            // then this arrangement is no good.
+            if (f.Args.Length - expressionIndex < args.Length - patternIndex) {
+                return decompositions;
+            }
+
+            // if there are no more argument patterns to fill,
+            // then this decomposition is good to go.
+            if (patternIndex == args.Length) {
+                if (f.Type.Equals(patternHeadType)) {
+                    decompositions.Add(f, args);
+                }
+                return decompositions;
+            }
+
+            // otherwise, select each of the arguments to move, if applicable,
+            // into the decomposed slot, and recur.
+            for (int i = expressionIndex; i < f.Args.Length; i++) {
+                if (args[patternIndex].Type.Equals(f.Args[i].Type)) {
+                    Argument[] nextArgs = new Argument[args.Length];
+                    for (int j = 0; j < patternIndex; j++) {
+                        nextArgs[j] = args[j];
+                    }
+
+                    nextArgs[patternIndex] = f.Args[i];
+
+                    var partialDecompositions = DecomposeExpression(patternIndex + 1, i + 1,
+                        patternHeadType, f.RemoveAt(i), nextArgs);
+
+                    foreach (var partialDecomposition in partialDecompositions) {
+                        decompositions[partialDecomposition.Key] = partialDecomposition.Value;
+                    }
+                }
+            }
+
+            return decompositions;
+        }
+
+        List<HashSet<Dictionary<Variable, Expression>>> patternMatch(Expression pattern, Expression match) {
+            Argument[] initialArguments = new Argument[pattern.Args.Length];
+            for (int i = 0; i < initialArguments.Length; i++) {
+                initialArguments[i] = new Empty(pattern.Args[i].Type);
+            }
+
+            Dictionary<Expression, Argument[]> decompositionsOfMatch =
+                DecomposeExpression(0, 0, pattern.Head.Type, match, initialArguments);
+
+            var alternativeSubstitutions = new List<HashSet<Dictionary<Variable, Expression>>>();
+
+            // similar logic to that found in the code with two constants, except with
+            // the decomposed expressions instead of the expressions themselves.
+            foreach (var decompositionOfMatch in decompositionsOfMatch) {
+                var currentSubstitutions = (new Expression(pattern.Head)).Unify(decompositionOfMatch.Key, substitutions);
+                for (int i = 0; i < pattern.Args.Length; i++) {
+                    if (currentSubstitutions.Count == 0) {
+                        break;
+                    }
+
+                    Argument matchArg = decompositionOfMatch.Value[i];
+
+                    if (pattern.Args[i] is Empty && matchArg is Empty) {
+                        continue;
+                    }
+
+                    if (pattern.Args[i] is Empty || matchArg is Empty) {
+                        break;
+                    }
+
+                    currentSubstitutions = ((Expression) pattern.Args[i]).Unify((Expression) matchArg, currentSubstitutions);
+                }
+
+                if (currentSubstitutions.Count != 0) {
+                    alternativeSubstitutions.Add(currentSubstitutions);    
+                }
+            }
+
+            return alternativeSubstitutions;
+        }
+
+        var patternSubstitutions = new HashSet<Dictionary<Variable, Expression>>();
+
+        // the only other option, one of the heads is a variable, but has arguments too.
+        // we need to do a partial application decomposition of the
+        // two expressions to try to fit the two patterns against one another.
+        if (this.Head is Variable) {
+            // we get all of the decompositions of that, and check them against this.
+            var thisMatchThatSubstitutions = patternMatch(this, that);
+
+            foreach (var thisMatchThatSubstitution in thisMatchThatSubstitutions) {
+                patternSubstitutions.UnionWith(thisMatchThatSubstitution);
+            }
+        }
+
+        if (patternSubstitutions.Count == 0) {
+            var thatMatchThisSubstitutions = patternMatch(that, this);
+
+            foreach (var thatMatchThisSubstitution in thatMatchThisSubstitutions) {
+                patternSubstitutions.UnionWith(thatMatchThisSubstitution);
+            }            
+        }
+
+        return patternSubstitutions;
+    }
+
+    public HashSet<Dictionary<Variable, Expression>> Unify(Expression that) {
+        var initialSubstitution = new Dictionary<Variable, Expression>();
+        var initialSubstitutions = new HashSet<Dictionary<Variable, Expression>>();
+        initialSubstitutions.Add(initialSubstitution);
+        return Unify(that, initialSubstitutions);
     }
 
     public override String ToString() {

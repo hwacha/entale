@@ -97,9 +97,37 @@ public class MentalState {
     }
 
     // returns satisfiers in the belief base for this formula
-    private static Substitution Satisfiers(Expression formula) {
-        // TODO
-        return null;
+    private HashSet<Basis> Satisfiers(Expression formula) {
+        HashSet<Expression> domain = new HashSet<Expression>();
+        if (formula.Head is Constant) {
+            if (BeliefBase.ContainsKey(formula.Head.Type) &&
+                BeliefBase[formula.Head.Type].ContainsKey(formula.Head)) {
+                domain.UnionWith(BeliefBase[formula.Head.Type][formula.Head]);
+            }
+        } else if (BeliefBase.ContainsKey(formula.Head.Type)) {
+            Dictionary<Atom, HashSet<Expression>> beliefBaseByHeadType = BeliefBase[formula.Head.Type];
+            foreach (var beliefBaseByHead in beliefBaseByHeadType) {
+                domain.UnionWith(beliefBaseByHead.Value);
+            }
+        } else if (formula.Type.Equals(TRUTH_VALUE) && formula.Head.Type.Equals(TRUTH_VALUE)) {
+            foreach (var typeMap in BeliefBase.Values) {
+                foreach (var prefixMap in typeMap.Values) {
+                    domain.UnionWith(prefixMap);
+                }
+            }
+        }
+
+        HashSet<Basis> satisfiers = new HashSet<Basis>();
+        foreach (Expression belief in domain) {
+            HashSet<Substitution> unifiers = formula.Unify(belief);
+            foreach (Substitution unifier in unifiers) {
+                List<Expression> premiseContainer = new List<Expression>();
+                premiseContainer.Add(belief);
+                satisfiers.Add(new Basis(premiseContainer, unifier));
+            }
+        }
+
+        return satisfiers;
     }
 
     private static Substitution Compose(Substitution a, Substitution b) {
@@ -165,6 +193,9 @@ public class MentalState {
     // can be incremented?
     // TODO make this well-defined by incrementing variables at each recursive step,
     // add maxVariable parameter to Bases()?
+    // OR, instead of incrementing variables, could the variables be recycled
+    // by trimming the substitutions to only those variable assignments for
+    // variables which still occur in goal?
     //
     public HashSet<Basis> Bases(Expression goal, HashSet<Expression> triedExpressions) {
         // goal should be type t.
@@ -182,8 +213,7 @@ public class MentalState {
         }
         triedExpressions.Add(goal);
 
-        // @TODO change to an array/list of goals, and account for variables.
-        // May require having implemented unification.
+        // A |- A
         if (Contains(goal)) {
             List<Expression> premises = new List<Expression>();
             premises.Add(goal);
@@ -195,25 +225,14 @@ public class MentalState {
             // So, I'll return prematurely for now, on the assumption
             // that the belief base, as an invariant, doesn't
             // include any beliefs that could be derived elsewhere.
-            return alternativeBases;
-        }
+            // return alternativeBases;
+        } else {
+            // in case the goal is a formula,
+            // try to see if there are any satisfying instances in the belief base.
+            var satisfiers = Satisfiers(goal);
 
-        // Formula/variable checks
-        // if we find this, then we want to find
-        // satisfying instances of the formula in the belief base.
-        if (goal.Head.Type.Equals(PREDICATE)) {
-            Expression argument = goal.GetArg(0) as Expression;
-            if (goal.Head is Constant) {
-                HashSet<Expression> sats = BeliefBase[goal.Head.Type][(Constant) goal.Head];
-                if (argument.Head is Variable && argument.Head.Type.Equals(argument.Type)) {
-                    foreach (Expression sat in sats) {
-                        List<Expression> satContainer = new List<Expression>();
-                        satContainer.Add(sat);
-                        Substitution substitution = new Substitution();
-                        substitution[(Variable) argument.Head] = sat.GetArg(0) as Expression;
-                        alternativeBases.Add(new Basis(satContainer, substitution));
-                    }
-                }
+            if (satisfiers.Count != 0) {
+                alternativeBases.UnionWith(satisfiers);
             }
         }
 
@@ -240,6 +259,10 @@ public class MentalState {
             Expression leftDisjunct = goal.GetArg(0) as Expression;
             Expression rightDisjunct = goal.GetArg(1) as Expression;
 
+            // @Note there's no need to share the substitutions between
+            // the proofs of each disjunct: if one disjunct is true,
+            // it doesn't matter what gets assigned to the variables in
+            // the other. @BUT is that true??
             alternativeBases.UnionWith(Bases(leftDisjunct, triedExpressions));
             alternativeBases.UnionWith(Bases(rightDisjunct, triedExpressions));
         }
@@ -250,36 +273,51 @@ public class MentalState {
         // A, B |- A & B
         if (goal.Head.Equals(AND.Head)) {
             Expression leftConjunct = goal.GetArg(0) as Expression;
+            Expression rightConjunct = goal.GetArg(1) as Expression;
+
             HashSet<Basis> leftConjunctBases = Bases(leftConjunct, triedExpressions);
-            if (leftConjunctBases.Count != 0) {
-                Expression rightConjunct = goal.GetArg(1) as Expression;
-                HashSet<Basis> rightConjunctBases = Bases(rightConjunct, triedExpressions);
-
-                // @Note this is wrong now, because of substitutions
-                if (rightConjunctBases.Count != 0) {
-                    // if both conjuncts have proofs, then the set of all possible
-                    // proofs is the set of all combinations of the proofs of A and
-                    // the proofs of B.
-                    foreach (Basis leftConjunctBasis in leftConjunctBases) {
-                        foreach (Basis rightConjunctBasis in rightConjunctBases) {
-                            // @Note assumption is that for a plan, a plan to
-                            // enact the left conjunct should be performed before
-                            // the plan to independently enact the right conjunct.
-                            // Ultimately, both conjuncts need to be true simultaneously,
-                            // and so this is a faulty assumption to make when it comes to plans.
-
-                            // @Note should there be a special
-                            // composition function for substitutions?
-                            List<Expression> conjunctionPremises = new List<Expression>();
-                            conjunctionPremises.AddRange(leftConjunctBasis.Key);
-                            conjunctionPremises.AddRange(rightConjunctBasis.Key);
-                            Basis conjunctionBasis = new Basis(conjunctionPremises,
-                                Compose(leftConjunctBasis.Value, rightConjunctBasis.Value));
-                            alternativeBases.Add(conjunctionBasis);
-                        }
-                    }
+            foreach (var leftConjunctBasis in leftConjunctBases) {
+                Expression substitutedRightConjunct = rightConjunct.Substitute(leftConjunctBasis.Value);
+                HashSet<Basis> rightConjunctBases = Bases(substitutedRightConjunct, triedExpressions);
+                foreach (var rightConjunctBasis in rightConjunctBases) {
+                    // the set of all possible proofs  of A & B
+                    // is the set of all combinations of
+                    // the proofs of A and the proofs of B.
+                    List<Expression> conjunctionPremises = new List<Expression>();
+                    // @Note assumption is that for a plan, a plan to
+                    // enact the left conjunct should be performed before
+                    // the plan to independently enact the right conjunct.
+                    // Ultimately, both conjuncts need to be true simultaneously,
+                    // and so this is a faulty assumption to make when it comes to plans.
+                    conjunctionPremises.AddRange(leftConjunctBasis.Key);
+                    conjunctionPremises.AddRange(rightConjunctBasis.Key);
+                    Basis conjunctionBasis = new Basis(conjunctionPremises,
+                        Compose(leftConjunctBasis.Value, rightConjunctBasis.Value));
+                    alternativeBases.Add(conjunctionBasis);
                 }
             }
+        }
+
+        // gets a variable that's unused in the goal
+        Variable GetUnusedVariable(SemanticType t) {
+            Variable x = new Variable(t, "x");
+            while (goal.HasOccurenceOf(x)) {
+                x = new Variable(t, x.ID + "'");
+            }
+            return x;
+        }
+
+        // @Note trial for variable "recycling"
+        // @Note might want this to take an array instead,
+        // and trim out any unused variables.
+        Substitution DiscardUnusedAssignments(Substitution substitution) {
+            var trimmedSubstitution = new Substitution();
+            foreach (var assignment in substitution) {
+                if (goal.HasOccurenceOf(assignment.Key)) {
+                    trimmedSubstitution[assignment.Key] = assignment.Value;
+                }
+            }
+            return trimmedSubstitution;
         }
 
         // existential introduction
@@ -288,44 +326,18 @@ public class MentalState {
             Expression f = goal.GetArg(0) as Expression;
             Expression g = goal.GetArg(1) as Expression;
 
-            HashSet<Basis> fBases = Bases(new Expression(f, XE), triedExpressions);
+            Variable x = GetUnusedVariable(INDIVIDUAL);
+
+            HashSet<Basis> fBases = Bases(new Expression(f, new Expression(x)), triedExpressions);
             foreach (Basis fBasis in fBases) {
-                Expression gc = new Expression(g, fBasis.Value[(Variable) XE.Head]);
+                Expression gc = new Expression(g, fBasis.Value[x]);
 
                 HashSet<Basis> gBases = Bases(gc, triedExpressions);
                 foreach (Basis gBasis in gBases) {
-
                     List<Expression> fgPremises = new List<Expression>();
                     fgPremises.AddRange(fBasis.Key);
                     fgPremises.AddRange(gBasis.Key);
-                    alternativeBases.Add(new Basis(fgPremises, Compose(fBasis.Value, gBasis.Value)));
-                }
-            }
-        }
-
-        // this goes in tandem with universal elimination
-        // all(F, G) formula satisfaction
-        if (goal.Head.Equals(ALL.Head)) {
-            Expression f = (Expression) goal.GetArg(0);
-            Expression g = (Expression) goal.GetArg(1);
-
-            if (f.Head is Variable && f.Type.Equals(f.Head.Type)) {
-                if (BeliefBase.ContainsKey(QUANTIFIER) &&
-                    BeliefBase[QUANTIFIER].ContainsKey(ALL.Head)) {
-                    foreach (Expression allSentence in BeliefBase[QUANTIFIER][ALL.Head]) {
-                        bool gIsVariable = g.Head is Variable && g.Type.Equals(g.Head.Type);
-                        bool gEqualsSecondArg = g.Equals((Expression) allSentence.GetArg(1));
-                        if (gIsVariable || gEqualsSecondArg) {
-                            List<Expression> allSentenceContainer = new List<Expression>();
-                            allSentenceContainer.Add(allSentence);
-                            Substitution allSentenceSubstitution = new Substitution();
-                            allSentenceSubstitution[(Variable) f.Head] = (Expression) allSentence.GetArg(0);
-                            if (gIsVariable) {
-                                allSentenceSubstitution[(Variable) g.Head] = (Expression) allSentence.GetArg(1);
-                            }
-                            alternativeBases.Add(new Basis(allSentenceContainer, allSentenceSubstitution));
-                        }
-                    }
+                    alternativeBases.Add(new Basis(fgPremises, DiscardUnusedAssignments(Compose(fBasis.Value, gBasis.Value))));
                 }
             }
         }
@@ -334,15 +346,16 @@ public class MentalState {
         // all(F, G), F(x) |- G(x)
         if (goal.Head.Type.Equals(PREDICATE)) {
             Expression c = (Expression) goal.GetArg(0);
-            Expression allFsAreGs = new Expression(ALL, FET, new Expression(goal.Head));
+            Variable f = GetUnusedVariable(PREDICATE);
+            Expression allFsAreGs = new Expression(ALL, new Expression(f), new Expression(goal.Head));
             HashSet<Basis> allFsAreGsBases = Bases(allFsAreGs, triedExpressions);
             foreach (Basis allFsAreGsBasis in allFsAreGsBases) {
-                HashSet<Basis> fcBases = Bases(new Expression(FET, c).Substitute(allFsAreGsBasis.Value));
+                HashSet<Basis> fcBases = Bases(new Expression(new Expression(f), c).Substitute(allFsAreGsBasis.Value));
                 foreach (Basis fcBasis in fcBases) {
                     List<Expression> premises = new List<Expression>();
                     premises.AddRange(allFsAreGsBasis.Key);
                     premises.AddRange(fcBasis.Key);
-                    alternativeBases.Add(new Basis(premises, Compose(allFsAreGsBasis.Value, fcBasis.Value)));
+                    alternativeBases.Add(new Basis(premises, DiscardUnusedAssignments(Compose(allFsAreGsBasis.Value, fcBasis.Value))));
                 }
             }
         }
@@ -394,7 +407,7 @@ public class MentalState {
             // @Note we might in the future add a check to see if there is
             // no other proof of G. This is because you don't want to enact
             // something you already believe to be true.
-            if (ProofMode == Plan && alternativeBases.Count == 0) {
+            if (ProofMode == Plan) {
                 Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
 
                 HashSet<Basis> abilityBases = Bases(ableToEnactGoal, triedExpressions);

@@ -34,6 +34,7 @@ public abstract class SemanticType {
     public virtual SemanticType Remove(SemanticType type) {
         return this;
     }
+
     // references to the atomic types.
     public static readonly AtomicType INDIVIDUAL = new E();
     public static readonly AtomicType TRUTH_VALUE = new T();
