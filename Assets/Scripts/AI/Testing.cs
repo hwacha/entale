@@ -143,53 +143,53 @@ public class Testing : MonoBehaviour {
             iSeeCharlieAsRed, ifCharlieIsBlueIAmGreen,
             bobIsAtCharlie);
 
-        // // Log(testState.Query(aliceIsRed));
-        // Log(BasesString(testState, aliceIsRed));
-        // // Log(testState.Query(bobIsBlue));
-        // // Log(!testState.Query(bobIsRed));
-        // // Log(!testState.Query(aliceIsBlue));
+        // Log(testState.Query(aliceIsRed));
+        Log(BasesString(testState, aliceIsRed));
+        // Log(testState.Query(bobIsBlue));
+        // Log(!testState.Query(bobIsRed));
+        // Log(!testState.Query(aliceIsBlue));
 
-        // Log("Double Negation Elimination");
-        // Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
-        // Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
-        // Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
-        // Log(Verbose(notNotAliceIsRed));
-        // Log(BasesString(testState, notNotAliceIsRed));
-        // Log(Verbose(notNotNotNotAliceIsRed));
-        // Log(BasesString(testState, notNotNotNotAliceIsRed));
-        // Log(Verbose(notNotNotNotNotNotAliceIsRed));
-        // Log(BasesString(testState, notNotNotNotNotNotAliceIsRed));
-        // Log(BasesString(testState, new Expression(NOT, new Expression(NOT, bobIsRed))));
-        // Log(BasesString(testState, new Expression(NOT, bobIsBlue)));
+        Log("Double Negation Elimination");
+        Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
+        Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
+        Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
+        Log(Verbose(notNotAliceIsRed));
+        Log(BasesString(testState, notNotAliceIsRed));
+        Log(Verbose(notNotNotNotAliceIsRed));
+        Log(BasesString(testState, notNotNotNotAliceIsRed));
+        Log(Verbose(notNotNotNotNotNotAliceIsRed));
+        Log(BasesString(testState, notNotNotNotNotNotAliceIsRed));
+        Log(BasesString(testState, new Expression(NOT, new Expression(NOT, bobIsRed))));
+        Log(BasesString(testState, new Expression(NOT, bobIsBlue)));
 
-        // Log("Disjunction Introduction");
-        // Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsBlue)));
-        // Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsRed)));
-        // Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsBlue)));
-        // Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsRed)));
+        Log("Disjunction Introduction");
+        Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsBlue)));
+        Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsRed)));
+        Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsBlue)));
+        Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsRed)));
 
-        // Log("Conjunction Introduction");
-        // Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsBlue)));
-        // Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsRed)));
-        // Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsBlue)));
-        // Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsRed)));
+        Log("Conjunction Introduction");
+        Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsBlue)));
+        Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsRed)));
+        Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsBlue)));
+        Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsRed)));
 
-        // Expression conjunctionOfDisjunctions = new Expression(AND,
-        //         new Expression(OR, aliceIsRed, bobIsBlue),
-        //         new Expression(OR, aliceIsAlice, bobIsBob));
+        Expression conjunctionOfDisjunctions = new Expression(AND,
+                new Expression(OR, aliceIsRed, bobIsBlue),
+                new Expression(OR, aliceIsAlice, bobIsBob));
 
-        // Log(Verbose(conjunctionOfDisjunctions));
+        Log(Verbose(conjunctionOfDisjunctions));
 
-        // Log(BasesString(testState, conjunctionOfDisjunctions));
+        Log(BasesString(testState, conjunctionOfDisjunctions));
 
-        // Log(BasesString(testState, new Expression(RED, CHARLIE)));
+        Log(BasesString(testState, new Expression(RED, CHARLIE)));
 
-        // Log("Planning");
-        // Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
-        // testState.ProofMode = Plan;
-        // Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
-        // Log(BasesString(testState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
-        // Log(BasesString(testState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
+        Log("Planning");
+        Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
+        testState.ProofMode = Plan;
+        Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
+        Log(BasesString(testState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
+        Log(BasesString(testState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
 
         Log("Formula satisfaction");
         Expression xIsBlue = new Expression(BLUE, XE);
@@ -204,7 +204,7 @@ public class Testing : MonoBehaviour {
         Log(BasesString(testState, new Expression(RED, CHARLIE)));
         Log(BasesString(testState, new Expression(FET, CHARLIE)));
 
-        Log("variable coordination in disjunctions: TODO");
+        Log("variable coordination in disjunctions:");
         Log(BasesString(testState, new Expression(OR, ST, new Expression(NOT, ST))));
         Log(BasesString(testState, new Expression(OR, new Expression(RED, XE), new Expression(BLUE, XE))));
 
@@ -214,6 +214,10 @@ public class Testing : MonoBehaviour {
         Log("Modus ponens");
         Log(BasesString(testState, new Expression(GREEN, SELF)));
 
+        Log("Conditional proof");
+        Log(BasesString(testState, new Expression(IF, new Expression(GREEN, BOB), new Expression(GREEN, BOB))));
+        Log(BasesString(testState, new Expression(IF, new Expression(GREEN, BOB), new Expression(AND, new Expression(GREEN, BOB), new Expression(BLUE, BOB)))));
+        Log(BasesString(testState, new Expression(IF, new Expression(ALL, BLUE, GREEN), new Expression(GREEN, BOB))));
     }
 
     public static String Verbose(Expression e) {

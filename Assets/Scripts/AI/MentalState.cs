@@ -193,7 +193,9 @@ public class MentalState {
     // discarded, in case a belief is discard to resolve an inconsistency.
     // 
     // ====
-    public HashSet<Basis> Bases(Expression goal, HashSet<Expression> triedExpressions) {
+    public HashSet<Basis> Bases(Expression goal,
+        HashSet<Expression> suppositions,
+        Dictionary<Expression, List<HashSet<Expression>>> triedExpressions) {
         // goal should be type t.
         if (!goal.Type.Equals(TRUTH_VALUE)) {
             throw new ArgumentException("Bases: goal/conclusion must be a sentence (type t)");
@@ -203,15 +205,47 @@ public class MentalState {
         HashSet<Basis> alternativeBases = new HashSet<Basis>();
 
         // here, we eliminate repeated attempts to prove the same
-        // goal within the same session.
-        if (triedExpressions.Contains(goal)) {
-            return alternativeBases;    
+        // goal within the same proof.
+        if (triedExpressions.ContainsKey(goal)) {
+            var listOfSuppositionSets = triedExpressions[goal];
+            foreach (var suppositionSet in listOfSuppositionSets) {
+                if (suppositions.SetEquals(suppositionSet)) {
+                    return alternativeBases;
+                }
+            }
+        } else {
+            triedExpressions[goal] = new List<HashSet<Expression>>();
         }
-        triedExpressions.Add(goal);
+
+        triedExpressions[goal].Add(suppositions);
+
+        // if suppositions prove the goal, then
+        // nothing in our belief base will be under risk
+        // of being falsified by ~goal. So, our basis
+        // shouldn't include any premises in our basis.
+        // 
+        // @Note: the basis might include a stack of
+        // conclusions proved via supposition, and then
+        // pop them off. Maybe? Potentially not necessary.
+        if (suppositions.Contains(goal)) {
+            alternativeBases.Add(new Basis(new List<Expression>(), new Substitution()));
+            return alternativeBases;
+        } else {
+            foreach (Expression supposition in suppositions) {
+                HashSet<Substitution> unifiers = supposition.Unify(goal);
+                foreach (var unifier in unifiers) {
+                    alternativeBases.Add(new Basis(new List<Expression>(), unifier));
+                }
+
+                if (alternativeBases.Count != 0) {
+                    return alternativeBases;
+                }
+            }
+        }
 
         // A |- A
         if (Contains(goal)) {
-            List<Expression> premises = new List<Expression>();
+            var premises = new List<Expression>();
             premises.Add(goal);
             alternativeBases.Add(new Basis(premises, new Substitution()));
 
@@ -240,7 +274,7 @@ public class MentalState {
             Expression subExpression = goal.GetArg(0) as Expression;
             if (subExpression.Head.Equals(NOT.Head)) {
                 subExpression = subExpression.GetArg(0) as Expression;
-                alternativeBases.UnionWith(Bases(subExpression, triedExpressions));
+                alternativeBases.UnionWith(Bases(subExpression, suppositions, triedExpressions));
             }
         }
 
@@ -259,8 +293,8 @@ public class MentalState {
             // the proofs of each disjunct: if one disjunct is true,
             // it doesn't matter what gets assigned to the variables in
             // the other. @BUT is that true??
-            alternativeBases.UnionWith(Bases(leftDisjunct, triedExpressions));
-            alternativeBases.UnionWith(Bases(rightDisjunct, triedExpressions));
+            alternativeBases.UnionWith(Bases(leftDisjunct, suppositions, triedExpressions));
+            alternativeBases.UnionWith(Bases(rightDisjunct, suppositions, triedExpressions));
         }
 
         // @NOTE FOR SOUREN
@@ -271,10 +305,10 @@ public class MentalState {
             Expression leftConjunct = goal.GetArg(0) as Expression;
             Expression rightConjunct = goal.GetArg(1) as Expression;
 
-            HashSet<Basis> leftConjunctBases = Bases(leftConjunct, triedExpressions);
+            HashSet<Basis> leftConjunctBases = Bases(leftConjunct, suppositions, triedExpressions);
             foreach (var leftConjunctBasis in leftConjunctBases) {
                 Expression substitutedRightConjunct = rightConjunct.Substitute(leftConjunctBasis.Value);
-                HashSet<Basis> rightConjunctBases = Bases(substitutedRightConjunct, triedExpressions);
+                HashSet<Basis> rightConjunctBases = Bases(substitutedRightConjunct, suppositions, triedExpressions);
                 foreach (var rightConjunctBasis in rightConjunctBases) {
                     // the set of all possible proofs  of A & B
                     // is the set of all combinations of
@@ -324,11 +358,11 @@ public class MentalState {
 
             Variable x = GetUnusedVariable(INDIVIDUAL);
 
-            HashSet<Basis> fBases = Bases(new Expression(f, new Expression(x)), triedExpressions);
+            HashSet<Basis> fBases = Bases(new Expression(f, new Expression(x)), suppositions, triedExpressions);
             foreach (Basis fBasis in fBases) {
                 Expression gc = new Expression(g, fBasis.Value[x]);
 
-                HashSet<Basis> gBases = Bases(gc, triedExpressions);
+                HashSet<Basis> gBases = Bases(gc, suppositions, triedExpressions);
                 foreach (Basis gBasis in gBases) {
                     List<Expression> fgPremises = new List<Expression>();
                     fgPremises.AddRange(fBasis.Key);
@@ -344,9 +378,9 @@ public class MentalState {
             Expression c = (Expression) goal.GetArg(0);
             Variable f = GetUnusedVariable(PREDICATE);
             Expression allFsAreGs = new Expression(ALL, new Expression(f), new Expression(goal.Head));
-            HashSet<Basis> allFsAreGsBases = Bases(allFsAreGs, triedExpressions);
+            HashSet<Basis> allFsAreGsBases = Bases(allFsAreGs, suppositions, triedExpressions);
             foreach (Basis allFsAreGsBasis in allFsAreGsBases) {
-                HashSet<Basis> fcBases = Bases(new Expression(new Expression(f), c).Substitute(allFsAreGsBasis.Value));
+                HashSet<Basis> fcBases = Bases(new Expression(new Expression(f), c).Substitute(allFsAreGsBasis.Value), suppositions, triedExpressions);
                 foreach (Basis fcBasis in fcBases) {
                     List<Expression> premises = new List<Expression>();
                     premises.AddRange(allFsAreGsBasis.Key);
@@ -366,6 +400,26 @@ public class MentalState {
         // contraposition of disjunction elimination
         // ~A, ~B |- ~(A v B)
 
+        // conditional proof (conditional introduction)
+        // @note all of the proof annotations should be written
+        // in the sequent calculus, not natural deduction.
+        // Usually doesn't matter though.
+        // M,[A] |- B => M |- A -> B
+        if (goal.Head.Equals(IF.Head)) {
+            var newSuppositions = new HashSet<Expression>();
+            foreach (Expression supposition in suppositions) {
+                newSuppositions.Add(supposition);
+            }
+            // add the antecedent of the conditional
+            // to the list of suppositions.
+            newSuppositions.Add((Expression) goal.GetArg(0));
+            // add the proofs of the consequent
+            // under the supposition of the antecedent.
+            alternativeBases.UnionWith(Bases((Expression) goal.GetArg(1),
+                newSuppositions,
+                triedExpressions));
+        }
+
         // @Note put all contractive rules here
         // (rules whose premises are more complex than their conclusions,
         //  and for which a premise may match the rule as a conclusion)
@@ -377,16 +431,16 @@ public class MentalState {
             // Double negation introduction
             // not(not(S)) |- S
             Expression notNotGoal = new Expression(NOT, new Expression(NOT, goal));
-            alternativeBases.UnionWith(Bases(notNotGoal, triedExpressions));
+            alternativeBases.UnionWith(Bases(notNotGoal, suppositions, triedExpressions));
 
             // Modus Ponens (conditional elimination)
             // A -> B, A |- B
             Variable a = GetUnusedVariable(TRUTH_VALUE);
             Expression ifAThenGoal = new Expression(IF, new Expression(a), goal);
-            var ifAThenGoalBases = Bases(ifAThenGoal, triedExpressions);
+            var ifAThenGoalBases = Bases(ifAThenGoal, suppositions, triedExpressions);
             foreach (var ifAThenGoalBasis in ifAThenGoalBases) {
                 Expression antecedent = ifAThenGoalBasis.Value[a];
-                var antecedentBases = Bases(antecedent);
+                var antecedentBases = Bases(antecedent, suppositions, triedExpressions);
                 foreach (var antecedentBasis in antecedentBases) {
                     var premises = new List<Expression>();
                     premises.AddRange(ifAThenGoalBasis.Key);
@@ -394,6 +448,7 @@ public class MentalState {
                     alternativeBases.Add(new Basis(premises,
                         DiscardUnusedAssignments(Compose(ifAThenGoalBasis.Value, antecedentBasis.Value))));
                 }
+
             }
 
             // @Note eventually replace this with
@@ -407,8 +462,8 @@ public class MentalState {
             // perceive(self, S) | normal(perceive(self, S), S) |- S
             Expression iPerceiveGoal = new Expression(PERCEIVE, SELF, goal);
             Expression veridicalityAssumption = new Expression(NORMAL, iPerceiveGoal, goal);
-            if (Bases(new Expression(NOT, veridicalityAssumption), triedExpressions).Count == 0) {
-                HashSet<Basis> perceptionBases = Bases(iPerceiveGoal, triedExpressions);
+            if (Bases(new Expression(NOT, veridicalityAssumption), suppositions, triedExpressions).Count == 0) {
+                HashSet<Basis> perceptionBases = Bases(iPerceiveGoal, suppositions, triedExpressions);
                 foreach (Basis perceptionBasis in perceptionBases) {
                     perceptionBasis.Key.Add(veridicalityAssumption);
                     alternativeBases.Add(perceptionBasis);
@@ -423,7 +478,7 @@ public class MentalState {
             if (ProofMode == Plan) {
                 Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
 
-                HashSet<Basis> abilityBases = Bases(ableToEnactGoal, triedExpressions);
+                HashSet<Basis> abilityBases = Bases(ableToEnactGoal, suppositions, triedExpressions);
 
                 if (abilityBases.Count != 0) {
                     foreach (Basis abilityBasis in abilityBases) {
@@ -445,7 +500,7 @@ public class MentalState {
     }
 
     public HashSet<Basis> Bases(Expression goal) {
-        return Bases(goal, new HashSet<Expression>());
+        return Bases(goal, new HashSet<Expression>(), new Dictionary<Expression, List<HashSet<Expression>>>());
     }
 
     // Asks if the expression is proven by this belief base.
