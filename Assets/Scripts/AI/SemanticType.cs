@@ -70,6 +70,12 @@ public abstract class SemanticType {
 
     public static readonly FunctionalType INDIVIDUAL_TRUTH_RELATION =
         new FunctionalType(new SemanticType[]{INDIVIDUAL, TRUTH_VALUE}, TRUTH_VALUE);
+
+    public static readonly FunctionalType RELATION_2_REDUCER =
+        new FunctionalType(new SemanticType[]{RELATION_2, INDIVIDUAL}, TRUTH_VALUE);
+
+    public static readonly FunctionalType PROPOSITIONAL_QUANTIFIER =
+        new FunctionalType(new SemanticType[]{TRUTH_FUNCTION, TRUTH_FUNCTION}, TRUTH_VALUE);
 }
 
 public abstract class AtomicType : SemanticType {

@@ -237,6 +237,24 @@ public class Expression : Argument {
         return new Expression(newHead, substitutedArgs);
     }
 
+    private void GetSelfSubstitution(Dictionary<Variable, Expression> sub) {
+        if (Head is Variable) {
+            sub[(Variable) Head] = this;
+        }
+
+        foreach (var arg in Args) {
+            if (arg is Expression) {
+                ((Expression) arg).GetSelfSubstitution(sub);
+            }
+        }
+    }
+
+    public Dictionary<Variable, Expression> GetSelfSubstitution() {
+        var sub = new Dictionary<Variable, Expression>();
+        GetSelfSubstitution(sub);
+        return sub;
+    }
+
     // find the mgu (most general unifier) between this expression
     // and that expression. A unifier is a variable substitution that,
     // when applied to both expressions, leads the expressions to
@@ -540,6 +558,8 @@ public class Expression : Argument {
     public static readonly Expression BLUE = new Expression(new Constant(PREDICATE, "blue"));
     public static readonly Expression GREEN = new Expression(new Constant(PREDICATE, "green"));
     public static readonly Expression APPLE = new Expression(new Constant(PREDICATE, "apple"));
+    // a predicate that applies to any individual
+    public static readonly Expression EMPTY = new Expression(new Constant(PREDICATE, "empty"));
 
     // Predicate variables
     public static readonly Expression FET = new Expression(new Variable(PREDICATE, "F"));
@@ -555,13 +575,12 @@ public class Expression : Argument {
 
     // 1-place truth functions
     public static readonly Expression NOT = new Expression(new Constant(TRUTH_FUNCTION, "not"));
+    public static readonly Expression TRULY = new Expression(new Constant(TRUTH_FUNCTION, "truly"));
 
     // 2-place truth functions
     public static readonly Expression AND = new Expression(new Constant(TRUTH_FUNCTION_2, "and"));
     public static readonly Expression OR  = new Expression(new Constant(TRUTH_FUNCTION_2, "or"));
     public static readonly Expression IF  = new Expression(new Constant(TRUTH_FUNCTION_2, "if"));
-    public static readonly Expression NORMALLY = new Expression(new Constant(TRUTH_FUNCTION_2, "normally"));
-    public static readonly Expression NORMAL = new Expression(new Constant(TRUTH_FUNCTION_2, "normal"));
 
     // truth-conformity relations
     // "will" is interpreted as an instruction for the actuator in LOT
@@ -577,4 +596,13 @@ public class Expression : Argument {
     // quantifiers
     public static readonly Expression SOME = new Expression(new Constant(QUANTIFIER, "some"));
     public static readonly Expression ALL  = new Expression(new Constant(QUANTIFIER, "all"));
+
+    // sentential adverbs/quantifiers
+    public static readonly Expression ALWAYS = new Expression(new Constant(PROPOSITIONAL_QUANTIFIER, "always"));
+    public static readonly Expression SOMETIMES = new Expression(new Constant(PROPOSITIONAL_QUANTIFIER, "sometimes"));
+    public static readonly Expression NORMALLY = new Expression(new Constant(PROPOSITIONAL_QUANTIFIER, "normally"));
+    public static readonly Expression NORMAL = new Expression(new Constant(PROPOSITIONAL_QUANTIFIER, "normal"));
+
+    // weird function words
+    public static readonly Expression ITSELF = new Expression(new Constant(RELATION_2_REDUCER, "itself"));
 }

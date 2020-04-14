@@ -219,6 +219,8 @@ public class MentalState {
 
         triedExpressions[goal].Add(suppositions);
 
+        UnityEngine.Debug.Log(goal);
+
         // if suppositions prove the goal, then
         // nothing in our belief base will be under risk
         // of being falsified by ~goal. So, our basis
@@ -236,14 +238,24 @@ public class MentalState {
                 foreach (var unifier in unifiers) {
                     alternativeBases.Add(new Basis(new List<Expression>(), unifier));
                 }
-
-                if (alternativeBases.Count != 0) {
-                    return alternativeBases;
-                }
+                // @Note: because finding a sentence in the
+                // supposition set would amount to
+                // logical vacuity, I used to return
+                // the basis set here. But, we actually
+                // probably want to know the other bases, too.
+                // 
+                // What will happen is that, because there's
+                // no premise to discard in this basis,
+                // no other sentence from another basis
+                // will be discarded.
             }
         }
 
-        // A |- A
+        // @Note: we should initialize the substitution in a basis of a formula
+        // to include all the substitution variables assigned to themselves,
+        // etc. etc.
+
+        // belief-base(M) has A => M |- A
         if (Contains(goal)) {
             var premises = new List<Expression>();
             premises.Add(goal);
@@ -268,8 +280,41 @@ public class MentalState {
 
         // INFERENCES
         // ====
-        // Double negation elimination
-        // S |- not(not(S))
+        // => M |- Empty(x)
+        if (goal.Head.Equals(EMPTY.Head)) {
+            Expression arg = (Expression) goal.GetArg(0);
+            // this condition is meant to account for the fact that
+            // some(empty) would call on this.
+            alternativeBases.Add(new Basis(new List<Expression>(), arg.GetSelfSubstitution()));
+        }
+
+        // itself introduction
+        // M |- R(x, x) => M |- itself(R, x)
+        if (goal.Head.Equals(ITSELF.Head)) {
+            Expression r = (Expression) goal.GetArg(0);
+            Expression x = (Expression) goal.GetArg(1);
+
+            alternativeBases.UnionWith(Bases(new Expression(r, x, x), suppositions, triedExpressions));
+        }
+
+        // itself elimination
+        // M |- itself(R, x) => M |- R(x, x)
+        if (goal.Head.Type.Equals(RELATION_2)) {
+            Expression x = (Expression) goal.GetArg(0);
+            if (x.Equals((Expression) goal.GetArg(1))) {
+                alternativeBases.UnionWith(Bases(new Expression(ITSELF, new Expression(goal.Head), x), suppositions, triedExpressions));
+            }
+        }
+
+        // truly introduction
+        // M |- S => M |- truly(S)
+        if (goal.Head.Equals(TRULY.Head)) {
+            Expression subSentence = goal.GetArg(0) as Expression;
+            alternativeBases.UnionWith(Bases(subSentence, suppositions, triedExpressions));
+        }
+
+        // Double negation introduction
+        // M |- S => M |- not(not(S))
         if (goal.Head.Equals(NOT.Head)) {
             Expression subExpression = goal.GetArg(0) as Expression;
             if (subExpression.Head.Equals(NOT.Head)) {
@@ -284,7 +329,7 @@ public class MentalState {
         // @NOTE FOR SOUREN:
         // contraposition of conjunction elimination will look a lot like this
         // disjunction introduction
-        // A |- A v B; B |- A v B
+        // M |- A => M |- A v B; M |- B => M |- A v B
         if (goal.Head.Equals(OR.Head)) {
             Expression leftDisjunct = goal.GetArg(0) as Expression;
             Expression rightDisjunct = goal.GetArg(1) as Expression;
@@ -351,7 +396,7 @@ public class MentalState {
         }
 
         // existential introduction
-        // F(x), G(x) |- some(F, G)
+        // M |- F(x), M |- G(x) => M |- some(F, G)
         if (goal.Head.Equals(SOME.Head)) {
             Expression f = goal.GetArg(0) as Expression;
             Expression g = goal.GetArg(1) as Expression;
@@ -374,18 +419,28 @@ public class MentalState {
 
         // universal elimination
         // all(F, G), F(x) |- G(x)
-        if (goal.Head.Type.Equals(PREDICATE)) {
-            Expression c = (Expression) goal.GetArg(0);
+        Variable vg = GetUnusedVariable(PREDICATE);
+        Variable vx = GetUnusedVariable(INDIVIDUAL);
+        Expression predicatePattern = new Expression(new Expression(vg), new Expression(vx));
+        var gxUnifiers = predicatePattern.Unify(goal);
+        foreach (var gxUnifier in gxUnifiers) {
+            if (!gxUnifier.ContainsKey(vg) || !gxUnifier.ContainsKey(vx)) {
+                // that means unification succeeded, but not in a way that
+                // assigned variables in the right way.
+                continue;
+            }
+            var gValue = gxUnifier[vg];
+            var xValue = gxUnifier[vx];
             Variable f = GetUnusedVariable(PREDICATE);
-            Expression allFsAreGs = new Expression(ALL, new Expression(f), new Expression(goal.Head));
+            Expression allFsAreGs = new Expression(ALL, new Expression(f), gValue);
             HashSet<Basis> allFsAreGsBases = Bases(allFsAreGs, suppositions, triedExpressions);
             foreach (Basis allFsAreGsBasis in allFsAreGsBases) {
-                HashSet<Basis> fcBases = Bases(new Expression(new Expression(f), c).Substitute(allFsAreGsBasis.Value), suppositions, triedExpressions);
-                foreach (Basis fcBasis in fcBases) {
+                HashSet<Basis> fxBases = Bases(new Expression(new Expression(f), xValue).Substitute(allFsAreGsBasis.Value), suppositions, triedExpressions);
+                foreach (Basis fxBasis in fxBases) {
                     List<Expression> premises = new List<Expression>();
                     premises.AddRange(allFsAreGsBasis.Key);
-                    premises.AddRange(fcBasis.Key);
-                    alternativeBases.Add(new Basis(premises, DiscardUnusedAssignments(Compose(allFsAreGsBasis.Value, fcBasis.Value))));
+                    premises.AddRange(fxBasis.Key);
+                    alternativeBases.Add(new Basis(premises, DiscardUnusedAssignments(Compose(allFsAreGsBasis.Value, fxBasis.Value))));
                 }
             }
         }
@@ -427,18 +482,36 @@ public class MentalState {
         //  of the premise to explode. It's fine to prove conclusions
         //  that are very large (i.e. with DNE).
         if (goal.Depth <= MaxDepth) {
-            // @TEST for loop prevention
-            // Double negation introduction
-            // not(not(S)) |- S
-            Expression notNotGoal = new Expression(NOT, new Expression(NOT, goal));
-            alternativeBases.UnionWith(Bases(notNotGoal, suppositions, triedExpressions));
+            // truly elimination
+            // M |- truly(S) => M |- S
+            // @Note: have to limit the 'truly's for now...
+            // Expression trulyGoal = new Expression(TRULY, goal);
+            // alternativeBases.UnionWith(Bases(trulyGoal, suppositions, triedExpressions));
 
+            // Double negation elimination
+            // M |- not(not(S)) => M |- S
+            // Expression notNotGoal = new Expression(NOT, new Expression(NOT, goal));
+            // alternativeBases.UnionWith(Bases(notNotGoal, suppositions, triedExpressions));
+
+            // TODO fix BUG in modus ponens that's causing loops in
+            // the modus ponens/conditional proof/supposition pipeline.
+            // 
+            // UNCOMMENT when you're ready to test.
+            // 
             // Modus Ponens (conditional elimination)
             // A -> B, A |- B
             Variable a = GetUnusedVariable(TRUTH_VALUE);
             Expression ifAThenGoal = new Expression(IF, new Expression(a), goal);
             var ifAThenGoalBases = Bases(ifAThenGoal, suppositions, triedExpressions);
             foreach (var ifAThenGoalBasis in ifAThenGoalBases) {
+                // if we don't have a value for a, that means
+                // we must have proved A -> B from B alone. In which
+                // case we don't want to use modus ponens here, lest
+                // every proof involve single antecedent
+                if (!ifAThenGoalBasis.Value.ContainsKey(a)) {
+                    continue;
+                }
+
                 Expression antecedent = ifAThenGoalBasis.Value[a];
                 var antecedentBases = Bases(antecedent, suppositions, triedExpressions);
                 foreach (var antecedentBasis in antecedentBases) {
@@ -457,16 +530,101 @@ public class MentalState {
             // plus a sentence normally(perceive(self, S), S) in the belief base
             // (quantify over sentences?)
             // 
+            // forall x: [R(f(x), x)]
+            // itself: (e, e -> t), e -> t
+            // M |- R(x, x) => M |- itself(R, x)
+            // fitself: (e -> t), (e, e -> t), e -> t
+            // M |- R(x, f(x)) => M |- fitself(f, R, x)
+            // 
+            // => M |- =(x, x)
+            // see(self, S) => S
+            // 
+            // always(see(self, _), TRULY)
+            // normally(see(self, _), truly)
+            // 
+            // // all(O, itself(=))
+            // all(O, fitself(mother, ancestor))
+            // 
+            // tfitself, sentence version:
+            // M |- TF2(A, TF(A)) => M |- tfitself(TF, TF2, A)
+            // 
+            // M |- see(self, A) => M |- tfitself(see(self, _), always)
+            // 
+            // always(verum, titself(EQUIV, TRULY))
+            // always()
+            // titself()
+            // 
+            // tfitself
+            // 
             // perceptual belief
             // normally(perceive(self, any(S)), any(S))
             // perceive(self, S) | normal(perceive(self, S), S) |- S
-            Expression iPerceiveGoal = new Expression(PERCEIVE, SELF, goal);
-            Expression veridicalityAssumption = new Expression(NORMAL, iPerceiveGoal, goal);
-            if (Bases(new Expression(NOT, veridicalityAssumption), suppositions, triedExpressions).Count == 0) {
-                HashSet<Basis> perceptionBases = Bases(iPerceiveGoal, suppositions, triedExpressions);
-                foreach (Basis perceptionBasis in perceptionBases) {
-                    perceptionBasis.Key.Add(veridicalityAssumption);
-                    alternativeBases.Add(perceptionBasis);
+            // Expression iPerceiveGoal = new Expression(PERCEIVE, SELF, goal);
+            // Expression veridicalityAssumption = new Expression(NORMAL, iPerceiveGoal, goal);
+            // if (Bases(new Expression(NOT, veridicalityAssumption), suppositions, triedExpressions).Count == 0) {
+            //     HashSet<Basis> perceptionBases = Bases(iPerceiveGoal, suppositions, triedExpressions);
+            //     foreach (Basis perceptionBasis in perceptionBases) {
+            //         perceptionBasis.Key.Add(veridicalityAssumption);
+            //         alternativeBases.Add(perceptionBasis);
+            //     }
+            // }
+            
+            // sometimes introduction
+            // M |- TF(S), M |- TG(S) => M |- sometimes(TF, TG)
+            if (goal.Head.Equals(SOMETIMES.Head)) {
+                Expression tf = goal.GetArg(0) as Expression;
+                Expression tg1 = goal.GetArg(1) as Expression;
+
+                Variable s1 = GetUnusedVariable(TRUTH_VALUE);
+
+                HashSet<Basis> tfBases = Bases(new Expression(tf, new Expression(s1)), suppositions, triedExpressions);
+                foreach (Basis tfBasis in tfBases) {
+                    if (!tfBasis.Value.ContainsKey(s1)) {
+                        UnityEngine.Debug.Log(goal + Testing.BasesString(tfBases));
+                        throw new Exception("failing now");
+                    }
+                    Expression tg1c = new Expression(tg1, tfBasis.Value[s1]);
+
+                    HashSet<Basis> tgBases = Bases(tg1c, suppositions, triedExpressions);
+                    foreach (Basis tgBasis in tgBases) {
+                        List<Expression> fgPremises = new List<Expression>();
+                        fgPremises.AddRange(tfBasis.Key);
+                        fgPremises.AddRange(tgBasis.Key);
+                        alternativeBases.Add(new Basis(fgPremises, DiscardUnusedAssignments(Compose(tfBasis.Value, tgBasis.Value))));
+                    }
+                }
+            }
+
+            // @Note: we want to 'trulify' bare sentence if this check fails.
+            // TODO
+            // always elimination
+            // M |- always(TF, TG), M |- TF(S) => M |- TG(S)
+            var tg = GetUnusedVariable(TRUTH_FUNCTION);
+            var ss = GetUnusedVariable(TRUTH_VALUE);
+
+            var tgsUnifiers = (new Expression(new Expression(tg), new Expression(ss))).Unify(goal);
+
+            foreach (var tgsUnifier in tgsUnifiers) {
+                if (!tgsUnifier.ContainsKey(tg) || !tgsUnifier.ContainsKey(ss)) {
+                    // that means unification succeeded, but not in a way that
+                    // assigned variables in the right way.
+                    continue;
+                }
+                var tgValue = tgsUnifier[tg];
+                var ssValue = tgsUnifier[ss];
+                var tf = GetUnusedVariable(TRUTH_FUNCTION);
+
+                Expression alwaysTfTg = new Expression(ALWAYS, new Expression(tf), tgValue);
+                HashSet<Basis> alwaysTfTgBases = Bases(alwaysTfTg, suppositions, triedExpressions);
+                foreach (Basis alwaysTfTgBasis in alwaysTfTgBases) {
+                    HashSet<Basis> tfsBases = Bases(new Expression(new Expression(tf), ssValue)
+                        .Substitute(alwaysTfTgBasis.Value), suppositions, triedExpressions);
+                    foreach (Basis tfsBasis in tfsBases) {
+                        List<Expression> premises = new List<Expression>();
+                        premises.AddRange(alwaysTfTgBasis.Key);
+                        premises.AddRange(tfsBasis.Key);
+                        alternativeBases.Add(new Basis(premises, DiscardUnusedAssignments(Compose(alwaysTfTgBasis.Value, tfsBasis.Value))));
+                    }
                 }
             }
 
@@ -539,6 +697,9 @@ public class MentalState {
             }
             // otherwise, the belief revision policy is liberal.
             // So we accept the new information and reject the old.
+            // 
+            // @Note: we want to check for zero-premise proofs,
+            // and refuse to discard information if we do.
             foreach (Basis basis in notAssertionBases) {
                 // right now, we simply randomly select a premise
                 // to discard from each basis.
