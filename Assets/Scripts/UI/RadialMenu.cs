@@ -6,9 +6,12 @@ using UnityEngine.UI;
 
 using static SemanticType;
 using static Expression;
+using static MouseLook;
 
 public class RadialMenu : MonoBehaviour {
     public RadialMenuItem radialMenuItemPrefab;
+    public Camera playerCamera;
+    MouseLook playerMouseLook;
     const double INITIAL_ANGLE_OFFSET = Math.PI / 2f;
     const double RADIUS = 100;
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
@@ -27,6 +30,7 @@ public class RadialMenu : MonoBehaviour {
 
     // Start is called before the first frame update
     void Start() {
+        playerMouseLook = playerCamera.GetComponent<MouseLook>();
     }
 
     // Update is called once per frame
@@ -42,11 +46,18 @@ public class RadialMenu : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.M)) {
             if (!semanticMenuOpen && !constantMenuOpen) {
                 OpenSemanticMenu();
+                Cursor.lockState = CursorLockMode.None;
+                playerMouseLook.disable();
             } else {
-                CloseSemanticMenu();
-                CloseConstantMenu();
+                ExitMenu();
             }
         }
+    }
+
+    void ExitMenu() {
+        CloseSemanticMenu();
+        CloseConstantMenu();
+        playerMouseLook.enable();
     }
 
     void OpenSemanticMenu() {
@@ -122,8 +133,8 @@ public class RadialMenu : MonoBehaviour {
                 CloseSemanticMenu();
                 OpenConstantMenu(rmi.semanticType);
             } else {
-                CloseConstantMenu();
                 Debug.Log(rmi.constant);
+                ExitMenu();
             }
         }
     }
