@@ -487,6 +487,13 @@ public class Expression : Argument {
             return s.ToString();
         }
 
+        for (int i = 0; i < Args.Length; i++) {
+            if (Args[i] is Expression) {
+                break;
+            }
+            return s.ToString();
+        }
+
         s.Append("(");
 
         for (int i = 0; i < Args.Length; i++) {
@@ -548,6 +555,7 @@ public class Expression : Argument {
     // Truth Value constants
     public static readonly Expression VERUM  = new Expression(new Constant(TRUTH_VALUE, "verum"));
     public static readonly Expression FALSUM = new Expression(new Constant(TRUTH_VALUE, "falsum"));
+    public static readonly Expression NEUTRAL = new Expression(new Constant(TRUTH_VALUE, "neutral"));
 
     // Truth Value variables
     public static readonly Expression ST = new Expression(new Variable(TRUTH_VALUE, "S"));
@@ -581,6 +589,8 @@ public class Expression : Argument {
     public static readonly Expression AND = new Expression(new Constant(TRUTH_FUNCTION_2, "and"));
     public static readonly Expression OR  = new Expression(new Constant(TRUTH_FUNCTION_2, "or"));
     public static readonly Expression IF  = new Expression(new Constant(TRUTH_FUNCTION_2, "if"));
+    public static readonly Expression BETTER = new Expression(new Constant(TRUTH_FUNCTION_2, "better"));
+    public static readonly Expression AS_GOOD_AS = new Expression(new Constant(TRUTH_FUNCTION_2, "~"));
 
     // truth-conformity relations
     // "will" is interpreted as an instruction for the actuator in LOT

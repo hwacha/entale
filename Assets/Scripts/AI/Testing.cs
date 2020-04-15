@@ -82,9 +82,10 @@ public class Testing : MonoBehaviour {
         // } catch (ArgumentException e) {
         //     Log("Got expected error: " + e);
         // }
-        Log("equality");
+        // Log("equality");
         // Log(NOT.Equals(NOT));
-        Log("Unification");
+
+        // Log("Unification");
         // Log(UnificationString(ALICE, ALICE));
         // Log(UnificationString(XE, ALICE));
         // Log(UnificationString(ALICE, XE));
@@ -113,7 +114,7 @@ public class Testing : MonoBehaviour {
         
         // Testing mental state.
         Log("Testing mental state.");
-        Log("QUERY");
+        // Log("QUERY");
         Expression aliceIsRed   = new Expression(RED, ALICE);
         Expression aliceIsAnApple = new Expression(APPLE, ALICE);
         Expression bobIsBlue    = new Expression(BLUE, BOB);
@@ -148,7 +149,7 @@ public class Testing : MonoBehaviour {
             bobIsBob,
             charlieIsAMacintosh,
             allApplesAreRed,
-            // allMacintoshesAreApples,
+            allMacintoshesAreApples,
             iCanMakeCharlieBlue,
             charlieIsBlue,
             iSeeCharlieAsRed,
@@ -157,21 +158,17 @@ public class Testing : MonoBehaviour {
             everythingIsSelfIdentical,
             whatIseeIsAlwaysTrue);
 
-        // // Log(testState.Query(aliceIsRed));
         // Log(BasesString(testState, aliceIsRed));
-        // // Log(testState.Query(bobIsBlue));
-        // // Log(!testState.Query(bobIsRed));
-        // // Log(!testState.Query(aliceIsBlue));
+        // Log(BasesString(testState, bobIsBlue));
+        // Log(BasesString(testState, bobIsRed));
+        // Log(BasesString(testState, aliceIsBlue));
 
         // Log("Double Negation Elimination");
         // Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
         // Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
         // Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
-        // Log(Verbose(notNotAliceIsRed));
         // Log(BasesString(testState, notNotAliceIsRed));
-        // Log(Verbose(notNotNotNotAliceIsRed));
         // Log(BasesString(testState, notNotNotNotAliceIsRed));
-        // Log(Verbose(notNotNotNotNotNotAliceIsRed));
         // Log(BasesString(testState, notNotNotNotNotNotAliceIsRed));
         // Log(BasesString(testState, new Expression(NOT, new Expression(NOT, bobIsRed))));
         // Log(BasesString(testState, new Expression(NOT, bobIsBlue)));
@@ -192,11 +189,7 @@ public class Testing : MonoBehaviour {
         //         new Expression(OR, aliceIsRed, bobIsBlue),
         //         new Expression(OR, aliceIsAlice, bobIsBob));
 
-        // Log(Verbose(conjunctionOfDisjunctions));
-
         // Log(BasesString(testState, conjunctionOfDisjunctions));
-
-        // Log(BasesString(testState, new Expression(RED, CHARLIE)));
 
         // Log("Planning");
         // Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
@@ -204,15 +197,16 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
         // Log(BasesString(testState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
         // Log(BasesString(testState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
+        // testState.ProofMode = Proof;
 
         // Log("Formula satisfaction");
         // Expression xIsBlue = new Expression(BLUE, XE);
-        // testState.ProofMode = Proof;
         // Log(BasesString(testState, xIsBlue));
         // Log(BasesString(testState, new Expression(OR, aliceIsBlue, xIsBlue)));
 
         // Log("existential introduction");
         // Log(BasesString(testState, new Expression(SOME, APPLE, RED)));
+        // Log(BasesString(testState, new Expression(SOME, APPLE, BLUE)));
 
         // Log("universal elimination");
         // Log(BasesString(testState, new Expression(RED, CHARLIE)));
@@ -223,9 +217,11 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, new Expression(OR, new Expression(RED, XE), new Expression(BLUE, XE))));
 
         // Log("variable coordination in conjunctions: TODO");
-        // Log(BasesString(testState, new Expression(AND, new Expression(RED, XE), new Expression(BLUE, XE))));
+        // Log(BasesString(testState, new Expression(RED, XE)));
+        // Log(BasesString(testState, new Expression(APPLE, CHARLIE)));
+        // Log(BasesString(testState, new Expression(AND, new Expression(RED, XE), new Expression(APPLE, XE))));
 
-        // Log("Modus ponens");
+        // Log("Modus ponens: TODO - bug");
         // Log(BasesString(testState, new Expression(GREEN, SELF)));
 
         // Log("Conditional proof");
@@ -233,13 +229,13 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, new Expression(IF, new Expression(GREEN, BOB), new Expression(AND, new Expression(GREEN, BOB), new Expression(BLUE, BOB)))));
         // Log(BasesString(testState, new Expression(IF, new Expression(ALL, BLUE, GREEN), new Expression(GREEN, BOB))));
 
-        Log("itself");
+        // Log("itself");
         // Log(BasesString(testState, new Expression(ITSELF, IDENTITY, BOB)));
         // Log(BasesString(testState, new Expression(IDENTITY, CHARLIE, CHARLIE)));
 
-        Log("truly");
-        // Log(BasesString(testState, new Expression(TRULY, new Expression(RED, ALICE))));
-        // Log(BasesString(testState, new Expression(SOMETIMES, TRULY, TRULY)));
+        // Log("truly");
+        Log(BasesString(testState, new Expression(TRULY, new Expression(RED, ALICE))));
+        // Log(BasesString(testState, new Expression(SOMETIMES, TRULY, NOT)));
         Log(BasesString(testState, new Expression(TRULY, new Expression(RED, CHARLIE))));
     }
 
