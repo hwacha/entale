@@ -16,21 +16,21 @@ public class Testing : MonoBehaviour {
         //     "To turn these off, " +
         //     "deactivate the 'AITesting' object in the heirarchy.");
 
-        // Log("SEMANTIC TYPES: ");
-        // Log("testing constructors.");
-        // Log("individual: " + INDIVIDUAL);
-        // Log("truth value: " + TRUTH_VALUE);
-        // Log("predicate: " + PREDICATE);
-        // Log("2-place relation: " + RELATION_2);
-        // Log("Testing semantic type partial application predicate.");
-        // Log(TRUTH_VALUE.IsPartialApplicationOf(TRUTH_VALUE));
-        // Log(TRUTH_VALUE.IsPartialApplicationOf(PREDICATE));
-        // Log(TRUTH_VALUE.IsPartialApplicationOf(RELATION_2));
-        // Log(PREDICATE.IsPartialApplicationOf(PREDICATE));
-        // Log(PREDICATE.IsPartialApplicationOf(RELATION_2));
-        // Log(PREDICATE.IsPartialApplicationOf(INDIVIDUAL_TRUTH_RELATION));
-        // Log(!RELATION_2.IsPartialApplicationOf(PREDICATE));
-        // Log(!INDIVIDUAL_TRUTH_RELATION.IsPartialApplicationOf(PREDICATE));
+        Log("SEMANTIC TYPES: ");
+        Log("testing constructors.");
+        Log("individual: " + INDIVIDUAL);
+        Log("truth value: " + TRUTH_VALUE);
+        Log("predicate: " + PREDICATE);
+        Log("2-place relation: " + RELATION_2);
+        Log("Testing semantic type partial application predicate.");
+        Log(TRUTH_VALUE.IsPartialApplicationOf(TRUTH_VALUE));
+        Log(TRUTH_VALUE.IsPartialApplicationOf(PREDICATE));
+        Log(TRUTH_VALUE.IsPartialApplicationOf(RELATION_2));
+        Log(PREDICATE.IsPartialApplicationOf(PREDICATE));
+        Log(PREDICATE.IsPartialApplicationOf(RELATION_2));
+        Log(PREDICATE.IsPartialApplicationOf(INDIVIDUAL_TRUTH_RELATION));
+        Log(!RELATION_2.IsPartialApplicationOf(PREDICATE));
+        Log(!INDIVIDUAL_TRUTH_RELATION.IsPartialApplicationOf(PREDICATE));
 
         // Log("testing removal");
         // Log("@TODO");
@@ -56,7 +56,7 @@ public class Testing : MonoBehaviour {
         // Log("at: " + AT);
         // Log("R: " + REET);
 
-        // // Log("phrase constructors: ");
+        // Log("phrase constructors: ");
         // Log(Verbose(new Expression(RED, ALICE)));
         // Log(Verbose(new Expression(BLUE, BOB)));
         // Log(Verbose(new Expression(IDENTITY, ALICE, ALICE)));
@@ -115,48 +115,48 @@ public class Testing : MonoBehaviour {
         // Testing mental state.
         Log("Testing mental state.");
         // Log("QUERY");
-        Expression aliceIsRed   = new Expression(RED, ALICE);
-        Expression aliceIsAnApple = new Expression(APPLE, ALICE);
-        Expression bobIsBlue    = new Expression(BLUE, BOB);
+        // Expression aliceIsRed   = new Expression(RED, ALICE);
+        // Expression aliceIsAnApple = new Expression(APPLE, ALICE);
+        // Expression bobIsBlue    = new Expression(BLUE, BOB);
         Expression aliceIsAtBob = new Expression(AT, ALICE, BOB);
-        Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
-        Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
-        Expression allMacintoshesAreApples = new Expression(ALL, new Expression(new Constant(PREDICATE, "macintosh")), APPLE);
-        Expression allApplesAreRed = new Expression(ALL, APPLE, RED);
-        Expression charlieIsAMacintosh = new Expression(new Expression(new Constant(PREDICATE, "macintosh")), CHARLIE);
-        Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
-        Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
+        // Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
+        // Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
+        // Expression allMacintoshesAreApples = new Expression(ALL, new Expression(new Constant(PREDICATE, "macintosh")), APPLE);
+        // Expression allApplesAreRed = new Expression(ALL, APPLE, RED);
+        // Expression charlieIsAMacintosh = new Expression(new Expression(new Constant(PREDICATE, "macintosh")), CHARLIE);
+        // Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
+        // Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
 
-        Expression bobIsRed     = new Expression(RED, BOB);
-        Expression aliceIsBlue  = new Expression(BLUE, ALICE);
-        Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
+        // Expression bobIsRed     = new Expression(RED, BOB);
+        // Expression aliceIsBlue  = new Expression(BLUE, ALICE);
+        // Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
 
-        Expression ifCharlieIsBlueIAmGreen =
-            new Expression(IF, charlieIsBlue, new Expression(GREEN, SELF));
+        // Expression ifCharlieIsBlueIAmGreen =
+        //     new Expression(IF, charlieIsBlue, new Expression(GREEN, SELF));
 
-        Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
+        // Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
 
-        Expression everythingIsSelfIdentical = new Expression(ALL, EMPTY, new Expression(ITSELF, IDENTITY));
+        // Expression everythingIsSelfIdentical = new Expression(ALL, EMPTY, new Expression(ITSELF, IDENTITY));
 
-        var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
+        // var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
 
-        MentalState testState = new MentalState(
-            aliceIsRed,
-            aliceIsAnApple,
-            bobIsBlue,
-            aliceIsAtBob,
-            aliceIsAlice,
-            bobIsBob,
-            charlieIsAMacintosh,
-            allApplesAreRed,
-            allMacintoshesAreApples,
-            iCanMakeCharlieBlue,
-            charlieIsBlue,
-            iSeeCharlieAsRed,
-            ifCharlieIsBlueIAmGreen,
-            bobIsAtCharlie,
-            everythingIsSelfIdentical,
-            whatIseeIsAlwaysTrue);
+        // MentalState testState = new MentalState(
+        //     aliceIsRed,
+        //     aliceIsAnApple,
+        //     bobIsBlue,
+        //     aliceIsAtBob,
+        //     aliceIsAlice,
+        //     bobIsBob,
+        //     charlieIsAMacintosh,
+        //     allApplesAreRed,
+        //     allMacintoshesAreApples,
+        //     iCanMakeCharlieBlue,
+        //     charlieIsBlue,
+        //     iSeeCharlieAsRed,
+        //     ifCharlieIsBlueIAmGreen,
+        //     bobIsAtCharlie,
+        //     everythingIsSelfIdentical,
+        //     whatIseeIsAlwaysTrue);
 
         // Log(BasesString(testState, aliceIsRed));
         // Log(BasesString(testState, bobIsBlue));
@@ -234,9 +234,9 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, new Expression(IDENTITY, CHARLIE, CHARLIE)));
 
         // Log("truly");
-        Log(BasesString(testState, new Expression(TRULY, new Expression(RED, ALICE))));
+        // Log(BasesString(testState, new Expression(TRULY, new Expression(RED, ALICE))));
         // Log(BasesString(testState, new Expression(SOMETIMES, TRULY, NOT)));
-        Log(BasesString(testState, new Expression(TRULY, new Expression(RED, CHARLIE))));
+        // Log(BasesString(testState, new Expression(TRULY, new Expression(RED, CHARLIE))));
     }
 
     public static String Verbose(Expression e) {

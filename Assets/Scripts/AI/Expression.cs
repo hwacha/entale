@@ -136,6 +136,7 @@ public class Expression : Argument {
         // the available empty slots.
         Type = f.Type;
         int inputIndex = 0;
+        int inputTypeIndex = 0;
         for (int i = 0; i < Args.Length; i++) {
             if (inputIndex >= args.Length) {
                 break;
@@ -155,10 +156,12 @@ public class Expression : Argument {
                     // @Note this also might not to be copied
                     // to avoid weird modification bugs.
                     Args[i] = argumentToPlace;
-                    Type = Type.Remove(argumentToPlace.Type);
+                    Type = Type.RemoveAt(inputTypeIndex);
+                    inputTypeIndex--;
                 }
 
                 inputIndex++;
+                inputTypeIndex++;
             }
         }
 
