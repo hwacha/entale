@@ -31,7 +31,7 @@ public abstract class SemanticType {
     // Removes this type from the input of the semantic type,
     // or if no matching input type exists,
     // return the type itself
-    public virtual SemanticType Remove(SemanticType type) {
+    public virtual SemanticType RemoveAt(int index) {
         return this;
     }
 
@@ -110,7 +110,10 @@ public class FunctionalType : SemanticType {
         return Input[index];
     }
 
-    public override SemanticType Remove(SemanticType type) {
+    public override SemanticType RemoveAt(int index) {
+        if (index < 0 || index >= Input.Length) {
+            throw new ArgumentException(this + ".RemoveAt: index " + index + " out of bounds.");
+        }
         // if the functional type has only one argument,
         // it reduces to an atomic type.
         if (Input.Length == 1) {
@@ -122,7 +125,7 @@ public class FunctionalType : SemanticType {
         SemanticType[] newInput = new SemanticType[Input.Length - 1];
 
         for (int i = 0; i < Input.Length; i++) {
-            if (Input[i].Equals(type)) {
+            if (i == index) {
                 while (i < Input.Length - 1) {
                     newInput[i] = Input[i + 1];
                     i++;
@@ -143,20 +146,19 @@ public class FunctionalType : SemanticType {
 
         var thatFunctional = (FunctionalType) that;
 
-        bool thatContainsThisFirstInput = false;
+        int indexOfThisFirstInputInThat = -1;
         for (int i = 0; i < thatFunctional.Input.Length; i++) {
             if (thatFunctional.Input[i].Equals(this.Input[0])) {
-                thatContainsThisFirstInput = true;
+                indexOfThisFirstInputInThat = i;
                 break;
             }
         }
 
-        if (thatContainsThisFirstInput) {
-            return this.Remove(this.Input[0])
-                .IsPartialApplicationOf(thatFunctional.Remove(this.Input[0]));
+        if (indexOfThisFirstInputInThat == -1) {
+            return false;
         }
-
-        return false;
+        
+        return this.RemoveAt(0).IsPartialApplicationOf(thatFunctional.RemoveAt(indexOfThisFirstInputInThat));
     }
 
     public override bool Equals(Object o) {
