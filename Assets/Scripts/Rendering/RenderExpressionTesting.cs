@@ -47,5 +47,8 @@ public class RenderExpressionTesting : MonoBehaviour
         SpawnExpressionContainer(SOME, new Vector3(-10, 2, -1), Quaternion.identity);
         SpawnExpressionContainer(IF, new Vector3(-15, 2, -1), Quaternion.identity);
 
+        SpawnExpressionContainer(new Expression(SOME, BLUE, new Expression(AT, new Empty(SemanticType.INDIVIDUAL), ALICE)),
+            new Vector3(-20, 2, -1), Quaternion.identity);
+
     }
 }

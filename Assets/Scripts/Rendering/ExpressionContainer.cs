@@ -40,6 +40,7 @@ public class ExpressionContainer : MonoBehaviour
     public int BorderSize = 8;
     public int Scale = 80;
     public bool DrawFirstArgumentDiagonally = false;
+    public bool DrawInaccessibleArgumentSlot = false;
     public FillMode FillMode = FillMode.Head;
     public Position HeadSymbolPosition = Position.Center;
     public bool ReadVertically = false;
@@ -65,10 +66,19 @@ public class ExpressionContainer : MonoBehaviour
     private int SecondCallGetWidth(Expression e) {
         int width = 1;
 
+        int emptiesWidth = 0;
+        bool allEmptyArguments = true;
         for (int i = 0; i < e.NumArgs; i++) {
             if (e.GetArg(i) is Expression) {
                 width += SecondCallGetWidth((Expression) e.GetArg(i));
+                allEmptyArguments = false;
+            } else {
+                emptiesWidth++;
             }
+        }
+
+        if (!allEmptyArguments) {
+            width += emptiesWidth;
         }
 
         if (width == 1 || DrawFirstArgumentDiagonally) {
@@ -268,17 +278,18 @@ public class ExpressionContainer : MonoBehaviour
                 }
             }
 
-            // this is the end of the road for empty argument slots.
+            // We're at an empty argument slot. Nothing left to do here.
+            // @Note: we could draw the inaccessible argument slot, but that
+            // involves more changes than I want to make.
             if (currentDrawInfo.Argument is Empty) {
                 continue;
             }
 
             Expression currentExpression = (Expression) currentDrawInfo.Argument;
+            Texture2D headTexture = Resources.Load<Texture2D>("Textures/Symbols/" + ((Expression) currentDrawInfo.Argument).Head.ID);
 
             // if we're an expression, we want to draw the head symbol
             // @Note this has to be in a specific RGBA format to work.
-            var headTexture = Resources.Load<Texture2D>("Textures/Symbols/" + currentExpression.Head.ID);
-
             if (headTexture != null) {
                 int symbolSize = Scale - BorderSize * 2;
 
@@ -315,17 +326,38 @@ public class ExpressionContainer : MonoBehaviour
                 }
             }
 
+            if (currentDrawInfo.Argument is Empty) {
+                continue;
+            }
 
             // Now, we push the arguments on to the draw stack.
             var nextX = currentDrawInfo.X;
             if (DrawFirstArgumentDiagonally && HeadSymbolPosition != Position.Right) {
                 nextX++;
             }
+
+            if (DrawInaccessibleArgumentSlot) {
+                Debug.Log("DrawInaccessibleArgumentSlot: not implemented yet. Default to not drawing it.");
+            }
+
+
+            // We only skip empties if all arguments are empty.
+            bool canSkipEmpties = true;
+            for (int i = 0; i < currentExpression.NumArgs; i++) {
+                if (currentExpression.GetArg(i) is Expression) {
+                    canSkipEmpties = false;
+                    break;
+                }
+            }
+
             for (int i = 0; i < currentExpression.NumArgs; i++) {
                 var arg = currentExpression.GetArg(i);
 
                 // we skip moving forward, because we won't draw this empty slot.
                 if (arg is Empty && !isFirstLevel) {
+                    if (!canSkipEmpties) {
+                        nextX++;
+                    }
                     continue;
                 }
                 
