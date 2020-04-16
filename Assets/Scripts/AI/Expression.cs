@@ -82,6 +82,7 @@ public class Empty : Argument {
 public class Expression : Argument {
     public Atom Head { get; protected set; }
     protected Argument[] Args;
+    public int NumArgs { get; protected set; }
 
     // @Note we might make these constructors their own
     // classes if it's easier to think about making
@@ -92,7 +93,6 @@ public class Expression : Argument {
     public Expression(Atom head) {
         Type = head.Type;
         Head = head;
-        
 
         // we check if the head expression has an atomic type.
         // if it does, then we just initialize an empty array
@@ -100,6 +100,7 @@ public class Expression : Argument {
         if (Head.Type is AtomicType) {
             Depth = 1;
             Args = new Argument[0];
+            NumArgs = 0;
             return;
         }
 
@@ -110,6 +111,7 @@ public class Expression : Argument {
         FunctionalType fType = head.Type as FunctionalType;
         int fNumArgs = fType.GetNumArgs();
         Args = new Argument[fNumArgs];
+        NumArgs = fNumArgs;
         for (int i = 0; i < fNumArgs; i++) {
             Args[i] = new Empty(fType.GetInput(i));
         }
@@ -121,6 +123,7 @@ public class Expression : Argument {
     // partial applications.
     public Expression(Expression f, params Argument[] args) {
         Head = f.Head;
+        NumArgs = f.NumArgs;
 
         // we want a deep copy of the array so we can treat
         // expressions as immutable
