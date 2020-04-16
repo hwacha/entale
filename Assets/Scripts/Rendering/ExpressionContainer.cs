@@ -16,13 +16,37 @@ class DrawInfo {
     }
 }
 
+public enum Position {
+    Left,
+    Center,
+    Right
+}
+
+public enum FillMode {
+    Head,
+    Output,
+    Complete
+}
+
 public class ExpressionContainer : MonoBehaviour
 {
+    // THERE ARE ALL WAYS TO CUSTOMIZE THE WAY EXPRESSIONS ARE DRAWN
+    #region Attributes
+    // @Note: the opacity is 1 - transparency
+    // The larger the number, the more transparent
+    // the object will become
     public float FillTransparency = 0.6f;
     public float BorderTransparency = 0.2f;
     public int BorderSize = 8;
     public int Scale = 80;
+    public bool DrawFirstArgumentDiagonally = false;
+    public FillMode FillMode = FillMode.Head;
+    public Position HeadSymbolPosition = Position.Center;
+    public bool ReadVertically = false;
+    #endregion
+
     public Expression Expression;
+    
 
     // Start is called before the first frame update
     void Start()
@@ -31,7 +55,7 @@ public class ExpressionContainer : MonoBehaviour
     }
 
     void Update() {
-        transform.Rotate(0, 5 * Time.deltaTime, 0);    
+        transform.Rotate(0, 0, 10 * Mathf.Sin(Time.time * 10) * Time.deltaTime);
     }
     
 
@@ -47,7 +71,11 @@ public class ExpressionContainer : MonoBehaviour
             }
         }
 
-        return width;
+        if (width == 1 || DrawFirstArgumentDiagonally) {
+            return width;
+        }
+
+        return width - 1;
     }
 
     // returns the width of this expression.
@@ -67,8 +95,12 @@ public class ExpressionContainer : MonoBehaviour
                 width += SecondCallGetWidth((Expression) e.GetArg(i));    
             }
         }
- 
-        return width;
+
+        if (width == 1 || DrawFirstArgumentDiagonally) {
+            return width;
+        }
+
+        return width - 1;
     }
 
     private int SecondCallGetHeight(Expression e) {
@@ -136,7 +168,7 @@ public class ExpressionContainer : MonoBehaviour
             int currentWidth;
             int currentHeight;
 
-            if (currentDrawInfo.Argument is Expression) {
+            if (currentDrawInfo.Argument is Expression && !isFirstLevel) {
                 currentWidth = SecondCallGetWidth((Expression) currentDrawInfo.Argument);
                 currentHeight = SecondCallGetHeight((Expression) currentDrawInfo.Argument);
             } else {
@@ -158,13 +190,53 @@ public class ExpressionContainer : MonoBehaviour
             int startingX = scaledCurrentX;
             int endingX = startingX + scaledCurrentWidth;
 
+            if (ReadVertically) {
+                Debug.Log("ReadVertically: Not yet working. Defaulting to horizontal reading order.");
+                // TODO (the commented code swaps the key variables)
+                // Solution is probably to adjust the values by some
+                // negative value.
+
+                // int temp;
+
+                // temp = scaledCurrentX;
+                // scaledCurrentX = scaledCurrentY;
+                // scaledCurrentY = temp;
+
+                // temp = scaledCurrentWidth;
+                // scaledCurrentWidth = scaledCurrentHeight;
+                // scaledCurrentHeight = temp;
+
+                // temp = endingY;
+                // endingY = endingX;
+                // endingX = endingY;
+
+                // temp = startingX;
+                // startingX = startingY;
+                // startingY = temp;
+            }
+
             // fill with the color of the expression's semantic type.
             for (int y = startingY; y < endingY; y++)
             {
                 for (int x = startingX; x < endingX; x++)
                 {
-                    Color typeColor =
-                        ColorsByType[currentDrawInfo.Argument.Type] - new Color(0, 0, 0, FillTransparency);
+                    SemanticType fillType = currentDrawInfo.Argument.Type;
+                    if (FillMode == FillMode.Complete) {
+                        // already set
+                    }
+
+                    if (FillMode == FillMode.Output &&
+                        fillType is FunctionalType &&
+                        currentDrawInfo.Argument is Expression &&
+                        isFirstLevel) {
+                        fillType = ((FunctionalType) fillType).Output;   
+                    }
+
+                    if (FillMode == FillMode.Head && currentDrawInfo.Argument is Expression) {
+                        fillType = ((Expression) currentDrawInfo.Argument).Head.Type;
+                    }
+
+                    Color typeColor = ColorsByType[fillType] - new Color(0, 0, 0, FillTransparency);
                     texture.SetPixel(x, y, typeColor);
                 }
             }
@@ -216,12 +288,25 @@ public class ExpressionContainer : MonoBehaviour
                 // headTexture.Resize(Scale - BorderSize * 2, Scale - BorderSize * 2);
                 // headTexture.Apply();
 
+                int xOffset = 0;
+                if (HeadSymbolPosition == Position.Left) {
+                    xOffset = 0;
+                }
+                if (HeadSymbolPosition == Position.Center) {
+                    xOffset = (currentWidth / 2) * Scale;
+                    if (currentWidth % 2 == 0) {
+                        xOffset -= Scale / 2;    
+                    }
+                }
+                if (HeadSymbolPosition == Position.Right) {
+                    xOffset = (currentWidth - 1) * Scale;
+                }
                 for (int y = 0; y < symbolSize; y++) {
                     for (int x = 0; x < symbolSize; x++) {
                         Color headPixelColor = headTexture.GetPixel(x, y) - new Color(0, 0, 0, BorderTransparency);
                         if (headPixelColor.a > 0) {
                             texture.SetPixel(
-                                startingX + x + BorderSize,
+                                startingX + xOffset + x + BorderSize,
                                 -Scale + startingY + scaledCurrentHeight + y + BorderSize,
                                 headPixelColor);                            
                         }
@@ -232,7 +317,10 @@ public class ExpressionContainer : MonoBehaviour
 
 
             // Now, we push the arguments on to the draw stack.
-            var nextX = currentDrawInfo.X + 1;
+            var nextX = currentDrawInfo.X;
+            if (DrawFirstArgumentDiagonally && HeadSymbolPosition != Position.Right) {
+                nextX++;
+            }
             for (int i = 0; i < currentExpression.NumArgs; i++) {
                 var arg = currentExpression.GetArg(i);
 
@@ -259,7 +347,7 @@ public class ExpressionContainer : MonoBehaviour
     }
 
     private static readonly Dictionary<SemanticType, Color> ColorsByType = new Dictionary<SemanticType, Color>{
-        [TRUTH_VALUE] = new Color(0.05f, 0.2f, 0.85f, 1),
+        [TRUTH_VALUE] = new Color(0.2f, 0.3f, 0.85f, 1),
         [INDIVIDUAL]  = new Color(0.9f, 0.2f, 0.01f, 1),
         [RELATION_2]  = new Color(0.8f, 0.9f, 0.1f, 1),
         [PREDICATE]   = new Color(0.2f, 0.7f, 0.3f, 1),

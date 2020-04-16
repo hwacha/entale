@@ -22,13 +22,14 @@ public class RenderExpressionTesting : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        SpawnExpressionContainer(VERUM, new Vector3(0, 2, 0), Quaternion.identity);
-        SpawnExpressionContainer(
-            new Expression(RED, BOB),
-            new Vector3(2, 2, 0), Quaternion.identity);
-        SpawnExpressionContainer(
-            new Expression(AT, ALICE, BOB),
-            new Vector3(6, 2, 0), Quaternion.identity);
+        // SpawnExpressionContainer(VERUM, new Vector3(0, 2, 0), Quaternion.identity);
+        // SpawnExpressionContainer(
+        //     new Expression(RED, BOB),
+        //     new Vector3(2, 2, 0), Quaternion.identity);
+        // SpawnExpressionContainer(
+        //     new Expression(AT, ALICE, BOB),
+        //     new Vector3(6, 2, 0), Quaternion.identity);
+
         SpawnExpressionContainer(
             new Expression(SOME, GREEN, BLUE), new Vector3(10, 2, 0), Quaternion.identity);
 
@@ -40,6 +41,11 @@ public class RenderExpressionTesting : MonoBehaviour
             new Expression(IF,
                 new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(RED, BOB)),
              new Expression(SOME, GREEN, BLUE)), new Vector3(25, 2, 0), Quaternion.identity);
+
+        SpawnExpressionContainer(GREEN, new Vector3(-5, 2, -1), Quaternion.identity);
+        SpawnExpressionContainer(AT, new Vector3(-2, 2, -1), Quaternion.identity);
+        SpawnExpressionContainer(SOME, new Vector3(-10, 2, -1), Quaternion.identity);
+        SpawnExpressionContainer(IF, new Vector3(-15, 2, -1), Quaternion.identity);
 
     }
 }
