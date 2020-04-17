@@ -17,16 +17,17 @@ public class RadialMenu : MonoBehaviour {
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
 
     Dictionary<SemanticType, HashSet<Constant>> Lexicon = new Dictionary<SemanticType, HashSet<Constant>> {
-        [INDIVIDUAL] = new HashSet<Constant> { ALICE.Head as Constant, BOB.Head as Constant },
-        [PREDICATE] = new HashSet<Constant> { RED.Head as Constant, BLUE.Head as Constant },
-        [TRUTH_VALUE] = new HashSet<Constant> { VERUM.Head as Constant },
-        [RELATION_2] = new HashSet<Constant> { AT.Head as Constant, IDENTITY.Head as Constant },
+        [TRUTH_VALUE] = new HashSet<Constant> { VERUM.Head as Constant, FALSUM.Head as Constant},
+        [ASSERTION] = new HashSet<Constant> { OK.Head as Constant },
     };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
 
     int currentSliceIndex = -1;
     bool semanticMenuOpen = false;
     bool constantMenuOpen = false;
+
+    public delegate void WordCallback(Constant word);
+    public event WordCallback wordCallback = null;
 
     // Start is called before the first frame update
     void Start() {
@@ -133,7 +134,10 @@ public class RadialMenu : MonoBehaviour {
                 CloseSemanticMenu();
                 OpenConstantMenu(rmi.semanticType);
             } else {
-                Debug.Log(rmi.constant);
+                // Debug.Log(rmi.constant);
+                if (wordCallback != null) {
+                    wordCallback(rmi.constant);
+                }
                 ExitMenu();
             }
         }
@@ -157,5 +161,9 @@ public class RadialMenu : MonoBehaviour {
         double angle = angle_in - inital_angle_offset + (sliceAngle/2);
         angle = angle > 0 ? angle : ((2f* Math.PI) + angle);
         return (int) Math.Floor(angle / sliceAngle) % sliceCount;
+    }
+
+    public void setWordSelectCallback(WordCallback callback) {
+        wordCallback = callback;
     }
 }

@@ -552,6 +552,9 @@ public class Expression : Argument {
     public static readonly Expression ALICE   = new Expression(new Constant(INDIVIDUAL, "alice"));
     public static readonly Expression BOB     = new Expression(new Constant(INDIVIDUAL, "bob"));
     public static readonly Expression CHARLIE = new Expression(new Constant(INDIVIDUAL, "charlie"));
+    public static readonly Expression SOUP = new Expression(new Constant(INDIVIDUAL, "soup"));
+    public static readonly Expression SWEETBERRY = new Expression(new Constant(INDIVIDUAL, "sweetberry"));
+    public static readonly Expression SPICYBERRY = new Expression(new Constant(INDIVIDUAL, "spicyberry"));
 
     // Individual variables
     public static readonly Expression XE = new Expression(new Variable(INDIVIDUAL, "x"));
@@ -571,7 +574,11 @@ public class Expression : Argument {
     public static readonly Expression RED  = new Expression(new Constant(PREDICATE, "red"));
     public static readonly Expression BLUE = new Expression(new Constant(PREDICATE, "blue"));
     public static readonly Expression GREEN = new Expression(new Constant(PREDICATE, "green"));
+    public static readonly Expression YELLOW = new Expression(new Constant(PREDICATE, "yellow"));
     public static readonly Expression APPLE = new Expression(new Constant(PREDICATE, "apple"));
+    public static readonly Expression SPICY = new Expression(new Constant(PREDICATE, "spicy"));
+    public static readonly Expression SWEET = new Expression(new Constant(PREDICATE, "sweet"));
+
     // a predicate that applies to any individual
     public static readonly Expression EMPTY = new Expression(new Constant(PREDICATE, "empty"));
 
@@ -583,6 +590,7 @@ public class Expression : Argument {
     // 2-place relation constants
     public static readonly Expression IDENTITY = new Expression(new Constant(RELATION_2, "="));
     public static readonly Expression AT       = new Expression(new Constant(RELATION_2, "at"));
+    public static readonly Expression ADDED_TO = new Expression(new Constant(RELATION_2, "added_to"));
 
     // 2-place relation variables
     public static readonly Expression REET = new Expression(new Variable(RELATION_2, "R"));
@@ -621,4 +629,10 @@ public class Expression : Argument {
 
     // weird function words
     public static readonly Expression ITSELF = new Expression(new Constant(RELATION_2_REDUCER, "itself"));
+
+    // question and assert (todo figure out if this is done right)
+    public static readonly Expression ASK = new Expression(new Constant(TRUTH_FUNCTION, "ask"));
+    public static readonly Expression ASSERT = new Expression(new Constant(TRUTH_FUNCTION, "assert"));
+    public static readonly Expression OK = new Expression(new Constant(ASSERTION, "ok"));
+
 }

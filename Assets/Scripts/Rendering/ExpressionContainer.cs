@@ -286,6 +286,7 @@ public class ExpressionContainer : MonoBehaviour
             }
 
             Expression currentExpression = (Expression) currentDrawInfo.Argument;
+            Debug.Log(((Expression) currentDrawInfo.Argument).Head.ID);
             Texture2D headTexture = Resources.Load<Texture2D>("Textures/Symbols/" + ((Expression) currentDrawInfo.Argument).Head.ID);
 
             // if we're an expression, we want to draw the head symbol
@@ -385,5 +386,6 @@ public class ExpressionContainer : MonoBehaviour
         [PREDICATE]   = new Color(0.2f, 0.7f, 0.3f, 1),
         [QUANTIFIER]  = new Color(0.6f, 0.3f, 0.9f, 1),
         [TRUTH_FUNCTION_2] = new Color(0.1f, 0.9f, 0.86f, 1),
+        [TRUTH_FUNCTION] = new Color(0.7f, 0.7f, 0.86f, 1),
     };
 }
