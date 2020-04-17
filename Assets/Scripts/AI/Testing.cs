@@ -114,54 +114,59 @@ public class Testing : MonoBehaviour {
         
         // Testing mental state.
         Log("Testing mental state.");
-        // Log("QUERY");
-        // Expression aliceIsRed   = new Expression(RED, ALICE);
-        // Expression aliceIsAnApple = new Expression(APPLE, ALICE);
-        // Expression bobIsBlue    = new Expression(BLUE, BOB);
+        Log("QUERY");
+        Expression aliceIsRed   = new Expression(RED, ALICE);
+        Expression aliceIsAnApple = new Expression(APPLE, ALICE);
+        Expression bobIsBlue    = new Expression(BLUE, BOB);
         Expression aliceIsAtBob = new Expression(AT, ALICE, BOB);
-        // Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
-        // Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
-        // Expression allMacintoshesAreApples = new Expression(ALL, new Expression(new Constant(PREDICATE, "macintosh")), APPLE);
-        // Expression allApplesAreRed = new Expression(ALL, APPLE, RED);
-        // Expression charlieIsAMacintosh = new Expression(new Expression(new Constant(PREDICATE, "macintosh")), CHARLIE);
-        // Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
-        // Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
+        Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
+        Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
+        Expression allMacintoshesAreApples = new Expression(ALL, new Expression(new Constant(PREDICATE, "macintosh")), APPLE);
+        Expression allApplesAreRed = new Expression(ALL, APPLE, RED);
+        Expression charlieIsAMacintosh = new Expression(new Expression(new Constant(PREDICATE, "macintosh")), CHARLIE);
+        Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
+        Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
 
-        // Expression bobIsRed     = new Expression(RED, BOB);
-        // Expression aliceIsBlue  = new Expression(BLUE, ALICE);
-        // Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
+        Expression bobIsRed     = new Expression(RED, BOB);
+        Expression aliceIsBlue  = new Expression(BLUE, ALICE);
+        Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
 
-        // Expression ifCharlieIsBlueIAmGreen =
-        //     new Expression(IF, charlieIsBlue, new Expression(GREEN, SELF));
+        Expression ifCharlieIsBlueIAmGreen =
+            new Expression(IF, charlieIsBlue, new Expression(GREEN, SELF));
 
-        // Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
+        Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
 
-        // Expression everythingIsSelfIdentical = new Expression(ALL, EMPTY, new Expression(ITSELF, IDENTITY));
+        Expression everythingIsSelfIdentical = new Expression(ALL, EMPTY, new Expression(ITSELF, IDENTITY));
 
-        // var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
+        var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
 
-        // MentalState testState = new MentalState(
-        //     aliceIsRed,
-        //     aliceIsAnApple,
-        //     bobIsBlue,
-        //     aliceIsAtBob,
-        //     aliceIsAlice,
-        //     bobIsBob,
-        //     charlieIsAMacintosh,
-        //     allApplesAreRed,
-        //     allMacintoshesAreApples,
-        //     iCanMakeCharlieBlue,
-        //     charlieIsBlue,
-        //     iSeeCharlieAsRed,
-        //     ifCharlieIsBlueIAmGreen,
-        //     bobIsAtCharlie,
-        //     everythingIsSelfIdentical,
-        //     whatIseeIsAlwaysTrue);
+        MentalState testState = new MentalState(
+            aliceIsRed,
+            aliceIsAnApple,
+            bobIsBlue,
+            aliceIsAtBob,
+            aliceIsAlice,
+            bobIsBob,
+            charlieIsAMacintosh,
+            allApplesAreRed,
+            allMacintoshesAreApples,
+            iCanMakeCharlieBlue,
+            charlieIsBlue,
+            iSeeCharlieAsRed,
+            ifCharlieIsBlueIAmGreen,
+            bobIsAtCharlie,
+            everythingIsSelfIdentical,
+            whatIseeIsAlwaysTrue,
+            new Expression(BETTER, new Expression(BLUE, SELF), NEUTRAL),
+            new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
         // Log(BasesString(testState, aliceIsRed));
         // Log(BasesString(testState, bobIsBlue));
         // Log(BasesString(testState, bobIsRed));
         // Log(BasesString(testState, aliceIsBlue));
+        
+        Log(BasesString(testState, new Expression(BETTER, new Expression(RED, SELF), NEUTRAL)));
+        Log(BasesString(testState, new Expression(NOT, new Expression(BETTER, NEUTRAL, new Expression(RED, SELF)))));
 
         // Log("Double Negation Elimination");
         // Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));

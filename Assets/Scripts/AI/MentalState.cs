@@ -4,6 +4,7 @@ using static SemanticType;
 using static Expression;
 using static ProofType;
 using static BeliefRevisionPolicy;
+using static DecisionPolicy;
 
 using Substitution = System.Collections.Generic.Dictionary<Variable, Expression>;
 using Basis =
@@ -18,6 +19,10 @@ public enum ProofType {
     Plan
 }
 
+// @Note these policies might well
+// become sentences in the belief base
+// and can change dynamically, just like anything else.
+
 // Simple placeholder policies for how to revise beliefs.
 // Can be set with the mental state.
 // If there is a conflict between new and old information,
@@ -26,6 +31,12 @@ public enum ProofType {
 public enum BeliefRevisionPolicy {
     Liberal,
     Conservative
+}
+
+// @Note: this might be the difference
+// between risk aversion, ratinoal calculus, etc.
+public enum DecisionPolicy {
+    Default
 }
 
 // A model of the mental state of an NPC.
@@ -45,11 +56,13 @@ public enum BeliefRevisionPolicy {
 // 
 public class MentalState {
     public BeliefRevisionPolicy BeliefRevisionPolicy = Conservative;
+    public DecisionPolicy DecisionPolicy = Default;
     public ProofType ProofMode = Proof;
 
     // private HashSet<Expression> BeliefBase = new HashSet<Expression>();
     private Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>> BeliefBase =
         new Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>>();
+
     int MaxDepth = 0;
 
     // @Note this doesn't check to see if
@@ -247,6 +260,10 @@ public class MentalState {
             return alternativeBases;
         } else {
             foreach (Expression supposition in suppositions) {
+                // @Note: unification should change to a one-sided
+                // match, so that we stop unifying on formulas in
+                // the suppositions, which is screwing up other
+                // inference rules.
                 HashSet<Substitution> unifiers = supposition.Unify(goal);
                 foreach (var unifier in unifiers) {
                     alternativeBases.Add(new Basis(new List<Expression>(), unifier));
@@ -305,7 +322,11 @@ public class MentalState {
         // M |- S => M |- truly(S)
         if (goal.Head.Equals(TRULY.Head)) {
             Expression subSentence = goal.GetArg(0) as Expression;
-            alternativeBases.UnionWith(Bases(subSentence, suppositions, pendingExpressions, completeExpressions));
+            alternativeBases.UnionWith(
+                Bases(subSentence,
+                    suppositions,
+                    pendingExpressions,
+                    completeExpressions));
         }
 
         // Double negation introduction
@@ -314,7 +335,11 @@ public class MentalState {
             Expression subExpression = goal.GetArg(0) as Expression;
             if (subExpression.Head.Equals(NOT.Head)) {
                 subExpression = subExpression.GetArg(0) as Expression;
-                alternativeBases.UnionWith(Bases(subExpression, suppositions, pendingExpressions, completeExpressions));
+                alternativeBases.UnionWith(
+                    Bases(subExpression,
+                        suppositions,
+                        pendingExpressions,
+                        completeExpressions));
             }
         }
 
@@ -324,7 +349,9 @@ public class MentalState {
             Expression r = (Expression) goal.GetArg(0);
             Expression x = (Expression) goal.GetArg(1);
 
-            alternativeBases.UnionWith(Bases(new Expression(r, x, x), suppositions, pendingExpressions, completeExpressions));
+            alternativeBases.UnionWith(
+                Bases(new Expression(r, x, x),
+                    suppositions, pendingExpressions, completeExpressions));
         }
 
         // itself elimination
@@ -332,7 +359,10 @@ public class MentalState {
         if (goal.Head.Type.Equals(RELATION_2)) {
             Expression x = (Expression) goal.GetArg(0);
             if (x.Equals((Expression) goal.GetArg(1))) {
-                alternativeBases.UnionWith(Bases(new Expression(ITSELF, new Expression(goal.Head), x), suppositions, pendingExpressions, completeExpressions));
+                alternativeBases.UnionWith(Bases(
+                    new Expression(ITSELF,
+                        new Expression(goal.Head), x),
+                    suppositions, pendingExpressions, completeExpressions));
             }
         }
 
@@ -490,6 +520,52 @@ public class MentalState {
                 completeExpressions));
         }
 
+        // antisymmetry of better
+        // M |- better(A, B) => M |- ~better(B, A)
+        if (goal.Head.Equals(NOT.Head)) {
+            Expression subExpression = (Expression) goal.GetArg(0);
+            if (subExpression.Head.Equals(BETTER.Head)) {
+                Expression converse = new Expression(BETTER,
+                        (Expression) subExpression.GetArg(1),
+                        (Expression) subExpression.GetArg(0));
+                alternativeBases.UnionWith(Bases(converse,
+                    suppositions, pendingExpressions, completeExpressions));
+            }
+        }
+
+        // transitivity of better
+        // M |- better(A, B); M |- better(B, C) => M |- better(A, C)
+        if (goal.Head.Equals(BETTER.Head)) {
+            Variable b = GetUnusedVariable(TRUTH_VALUE);
+            var betterABBases =
+                Bases(new Expression(BETTER, (Expression) goal.GetArg(0), new Expression(b)), 
+                suppositions, pendingExpressions, completeExpressions);
+
+            foreach (var betterABBasis in betterABBases) {
+                if (!betterABBasis.Value.ContainsKey(b)) {
+                    continue;
+                }
+                var betterBC =
+                    (new Expression(BETTER,
+                        betterABBasis.Value[b],
+                        (Expression) goal.GetArg(1))).Substitute(betterABBasis.Value);
+
+                var betterBCBases = Bases(betterBC,
+                    suppositions,
+                    pendingExpressions,
+                    completeExpressions);
+
+                foreach (var betterBCBasis in betterBCBases) {
+                    var premises = new List<Expression>();
+                    premises.AddRange(betterABBasis.Key);
+                    premises.AddRange(betterBCBasis.Key);
+                    var substitution = DiscardUnusedAssignments(Compose(betterABBasis.Value, betterBCBasis.Value));
+                    alternativeBases.Add(new Basis(premises, substitution));
+                }
+
+            }
+        }
+
         // @Note put all contractive rules here
         // (rules whose premises are more complex than their conclusions,
         //  and for which a premise may match the rule as a conclusion)
@@ -497,16 +573,28 @@ public class MentalState {
         //  of the premise to explode. It's fine to prove conclusions
         //  that are very large (i.e. with DNE).
         if (goal.Depth <= MaxDepth) {
-            // // truly elimination
-            // // M |- truly(S) => M |- S
+            // truly elimination
+            // M |- truly(S) => M |- S
             // @Note: have to limit the 'truly's for now...
             // Expression trulyGoal = new Expression(TRULY, goal);
             // alternativeBases.UnionWith(Bases(trulyGoal, suppositions, pendingExpressions, completeExpressions));
 
-            // // Double negation elimination
-            // // M |- not(not(S)) => M |- S
+            // Double negation elimination
+            // M |- not(not(S)) => M |- S
             // Expression notNotGoal = new Expression(NOT, new Expression(NOT, goal));
             // alternativeBases.UnionWith(Bases(notNotGoal, suppositions, pendingExpressions, completeExpressions));
+            
+            // perceptual belief: back in for now
+            // M |- perceive(self, S); veridical(self, S) => M |- S
+            var perceptionBases = 
+                Bases(new Expression(PERCEIVE, SELF, goal),
+                    suppositions, pendingExpressions, completeExpressions);
+            foreach (var perceptionBasis in perceptionBases) {
+                var premises = new List<Expression>();
+                premises.AddRange(perceptionBasis.Key);
+                premises.Add(new Expression(VERIDICAL, SELF, goal));
+                alternativeBases.Add(new Basis(premises, perceptionBasis.Value));
+            }
             
             // sometimes introduction
             // M |- TF(S), M |- TG(S) => M |- sometimes(TF, TG)
@@ -516,7 +604,11 @@ public class MentalState {
 
                 Variable s1 = GetUnusedVariable(TRUTH_VALUE);
 
-                HashSet<Basis> tfBases = Bases(new Expression(tf, new Expression(s1)), suppositions, pendingExpressions, completeExpressions);
+                HashSet<Basis> tfBases =
+                    Bases(new Expression(tf, new Expression(s1)),
+                        suppositions,
+                        pendingExpressions,
+                        completeExpressions);
                 foreach (Basis tfBasis in tfBases) {
                     if (!tfBasis.Value.ContainsKey(s1)) {
                         UnityEngine.Debug.Log(goal + Testing.BasesString(tfBases));
@@ -529,7 +621,9 @@ public class MentalState {
                         List<Expression> fgPremises = new List<Expression>();
                         fgPremises.AddRange(tfBasis.Key);
                         fgPremises.AddRange(tgBasis.Key);
-                        alternativeBases.Add(new Basis(fgPremises, DiscardUnusedAssignments(Compose(tfBasis.Value, tgBasis.Value))));
+                        alternativeBases.Add(
+                            new Basis(fgPremises,
+                                DiscardUnusedAssignments(Compose(tfBasis.Value, tgBasis.Value))));
                     }
                 }
             }
@@ -607,6 +701,14 @@ public class MentalState {
             // M |- able(self, A),  M :: will(A) => M |- A
             // 
             if (ProofMode == Plan) {
+
+                // here we assume it's a logical fact
+                // that we can will the neutral state of affairs.
+                // M :: will(neutral) |- neutral
+                if (goal.Equals(NEUTRAL)) {
+                    alternativeBases.Add(new Basis(new List<Expression>{new Expression(WILL, NEUTRAL)}, new Substitution()));
+                }
+
                 Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
 
                 HashSet<Basis> abilityBases = Bases(ableToEnactGoal, suppositions, pendingExpressions, completeExpressions);
@@ -643,6 +745,7 @@ public class MentalState {
 
     // Asks if the expression is proven by this belief base.
     public bool Query(Expression query) {
+        ProofMode = Proof;
         return Bases(query).Count != 0;
     }
 
@@ -660,6 +763,7 @@ public class MentalState {
     // Assert() returns true if the assertion is
     // accepted, false if it is rejected.
     public bool Assert(Expression assertion) {
+        ProofMode = Proof;
         // We already believe assertion A.
         // We accept it, but don't change our belief state.
         if (Query(assertion)) {
@@ -694,5 +798,117 @@ public class MentalState {
         // We're agnostic about A. We accept it and add it to our belief state.
         Add(assertion);
         return true;
+    }
+
+    // ranks the goals according to this mental state,
+    // and then stores the ranking.
+    public List<Expression> DecideCurrentPlan() {
+        // if we don't have any preferences, then
+        // we return the empty list
+        // (or, equivalently, the list containing just
+        // the list to enact the neutral condtion)
+        if (!BeliefBase.ContainsKey(TRUTH_FUNCTION_2) || !BeliefBase[TRUTH_FUNCTION_2].ContainsKey(BETTER.Head)) {
+            var nothing = new List<Expression>();
+            nothing.Add(new Expression(WILL, NEUTRAL));
+            return nothing;
+        }
+
+        // first, we get our domain of elements for which preferences are defined.
+        HashSet<Expression> preferencesInBeliefBase = BeliefBase[TRUTH_FUNCTION_2][BETTER.Head];
+        var preferables = new HashSet<Expression>();
+
+        foreach (var preference in preferencesInBeliefBase) {
+            preferables.Add((Expression) preference.GetArg(0));
+            preferables.Add((Expression) preference.GetArg(1));
+        }
+
+        // @Note: we'd probably want to consider AS_GOOD_AS in the future. For now,
+        // we ignore that detail. We're also ignoring DERIVED preferences which
+        // might not be in the belief base, but are still relevant to decision making.
+        // @Q: How do we get those?
+
+        // the plan: find the sentence which is strictly better than any other sentence.
+        // NOTE: this strategy excludes any sentences not known to be better than
+        // netural, because they might be worse than neutral, for all we know.
+        // (Hence "risk averse")
+        
+        // @Note right now, the ranking is represented as a stack.
+        // This is wrong, as our preferences are only a partial
+        // ordering. Instead, we should have a tree structure
+        // where the sibling nodes are of undefined preference
+        // to one another/assumed indifferent. This way, we
+        // don't discard a goal that might be better than
+        // neutral but indifferent/unknown to something
+        // better than neutral.
+        Stack<Expression> ranking = new Stack<Expression>();
+        ranking.Push(NEUTRAL);
+        var storage = new Stack<Expression>();
+        ProofMode = Proof;
+        foreach (var preferable in preferables) {
+            while (ranking.Count != 0) {
+                var bestSoFar = ranking.Peek();
+                if (Query(new Expression(BETTER, preferable, bestSoFar))) {
+                    ranking.Push(preferable);
+                    break;
+                } else {
+                    storage.Push(ranking.Pop());
+                }
+            }
+            while (storage.Count != 0) {
+                ranking.Push(storage.Pop());
+            }
+        }
+
+        ProofMode = Plan;
+        var bestPlan = new List<Expression>();
+        while (ranking.Count != 0) {
+            Expression nextBestGoal = ranking.Pop();
+            var goalBases = Bases(nextBestGoal);
+
+            bool alreadyTrue = true;
+            // we go through each basis of the goal and
+            // find the best plan. If there is no plan,
+            // then we either can't enact it, or it's
+            // already true. In either case, we discard it.
+            foreach (var goalBasis in goalBases) {
+                // we decide the best plan for our goal
+                // and keep track of it.
+                // @Note: right now it's very simple;
+                // we simply choose the plan that takes
+                // the least actions.
+                // we'll want to incorporate the cost
+                // of actions in later.
+                var currentPlan = new List<Expression>();
+                
+                foreach (var premise in goalBasis.Key) {
+                    var boundPremise = premise.Substitute(goalBasis.Value);
+                    if (boundPremise.Head.Equals(WILL.Head)) {
+                        // @Note: we could send the argument
+                        // of the expression to reduce what we're
+                        // sending to the actuator. Not doing that
+                        // now for pedantic reasons.
+                        currentPlan.Add(boundPremise);
+                        alreadyTrue = false;
+                    }
+                }
+
+                if (alreadyTrue) {
+                    break;
+                }
+
+                if (currentPlan.Count == 0) {
+                    continue;
+                }
+
+                if (bestPlan.Count == 0 || currentPlan.Count < bestPlan.Count) {
+                    bestPlan = currentPlan;
+                }
+            }
+            if (bestPlan.Count != 0) {
+                break;
+            }
+        }
+
+        return bestPlan;
     }
 }
