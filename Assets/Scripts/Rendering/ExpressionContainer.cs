@@ -202,27 +202,7 @@ public class ExpressionContainer : MonoBehaviour
 
             if (ReadVertically) {
                 Debug.Log("ReadVertically: Not yet working. Defaulting to horizontal reading order.");
-                // TODO (the commented code swaps the key variables)
-                // Solution is probably to adjust the values by some
-                // negative value.
-
-                // int temp;
-
-                // temp = scaledCurrentX;
-                // scaledCurrentX = scaledCurrentY;
-                // scaledCurrentY = temp;
-
-                // temp = scaledCurrentWidth;
-                // scaledCurrentWidth = scaledCurrentHeight;
-                // scaledCurrentHeight = temp;
-
-                // temp = endingY;
-                // endingY = endingX;
-                // endingX = endingY;
-
-                // temp = startingX;
-                // startingX = startingY;
-                // startingY = temp;
+                // TODO (the previous code swaps the key variables)
             }
 
             // fill with the color of the expression's semantic type.
