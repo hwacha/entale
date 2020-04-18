@@ -497,6 +497,8 @@ public class MentalState {
 
         ApplyInferenceRule(BETTER_ANTISYMMETRY);
         ApplyInferenceRule(BETTER_TRANSITIVITY);
+        ApplyInferenceRule(SELF_BELIEF_INTRODUCTION);
+        ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION);
 
         // ApplyInferenceRule(SOMETIMES_INTRODUCTION);
 
@@ -599,7 +601,11 @@ public class MentalState {
 
         // We believe ~A. This is inconsistent with the assertion.
         if (notAssertionBases.Count != 0) {
+
+            // TODO: revise this to take into account
+            // a more sophisticated heuristic.
             UnityEngine.Debug.Log(Testing.BasesString(notAssertionBases));
+
             // if our belief revision policy is conservative,
             // we reject the new information in favor of the old.
             if (BeliefRevisionPolicy == Conservative) {

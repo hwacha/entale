@@ -245,12 +245,17 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, VERUM));
         // Log(BasesString(testState, new Expression(VEROUS, BOB)));
         
-        MentalState ps = new MentalState(new Expression(PERCEIVE, SELF, new Expression(GREEN, SELF)));
-        Log(BasesString(ps, new Expression(GREEN, SELF)));
-        Log(BasesString(ps, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF)))));
-        Log(BasesString(ps, new Expression(NOT,
-            new Expression(PERCEIVE, SELF,
-                new Expression(NOT, new Expression(GREEN, SELF))))));
+        // Log("contraposition of perceptual belief");
+        // MentalState ps = new MentalState(new Expression(PERCEIVE, SELF, new Expression(GREEN, SELF)));
+        // Log(BasesString(ps, new Expression(GREEN, SELF)));
+        // Log(BasesString(ps, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF)))));
+        // Log(BasesString(ps, new Expression(NOT,
+        //     new Expression(PERCEIVE, SELF,
+        //         new Expression(NOT, new Expression(GREEN, SELF))))));
+        
+        MentalState bs = new MentalState(new Expression(RED, SELF));
+        Log(BasesString(bs, new Expression(BELIEVE, SELF, new Expression(RED, SELF))));
+        Log(BasesString(bs, new Expression(NOT, new Expression(BELIEVE, SELF, new Expression(GREEN, SELF)))));
     }
 
     public static String Verbose(Expression e) {

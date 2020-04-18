@@ -164,10 +164,19 @@ public class InferenceRule
             new Expression[]{},
             new Expression[]{new Expression(SOMETIMES, FTF, GTF)});
 
-    // M |- always(TF, TG), M |- TF(S) => M |- TG(S)
     public static readonly InferenceRule ALWAYS_ELIMINATION =
         new InferenceRule(
             new Expression[]{new Expression(ALWAYS, FTF, GTF), new Expression(FTF, ST)},
             new Expression[]{},
             new Expression[]{new Expression(GTF, ST)});
+
+    public static readonly InferenceRule SELF_BELIEF_INTRODUCTION =
+        new InferenceRule(new Expression[]{ST},
+            new Expression[]{},
+            new Expression[]{new Expression(BELIEVE, SELF, ST)});
+
+    public static readonly InferenceRule NEGATIVE_SELF_BELIEF_INTRODUCTION =
+        new InferenceRule(new Expression[]{},
+            new Expression[]{new Expression(NOT, ST)},
+            new Expression[]{new Expression(NOT, new Expression(BELIEVE, SELF, ST))});
 }
