@@ -16,21 +16,21 @@ public class Testing : MonoBehaviour {
         //     "To turn these off, " +
         //     "deactivate the 'AITesting' object in the heirarchy.");
 
-        Log("SEMANTIC TYPES: ");
-        Log("testing constructors.");
-        Log("individual: " + INDIVIDUAL);
-        Log("truth value: " + TRUTH_VALUE);
-        Log("predicate: " + PREDICATE);
-        Log("2-place relation: " + RELATION_2);
-        Log("Testing semantic type partial application predicate.");
-        Log(TRUTH_VALUE.IsPartialApplicationOf(TRUTH_VALUE));
-        Log(TRUTH_VALUE.IsPartialApplicationOf(PREDICATE));
-        Log(TRUTH_VALUE.IsPartialApplicationOf(RELATION_2));
-        Log(PREDICATE.IsPartialApplicationOf(PREDICATE));
-        Log(PREDICATE.IsPartialApplicationOf(RELATION_2));
-        Log(PREDICATE.IsPartialApplicationOf(INDIVIDUAL_TRUTH_RELATION));
-        Log(!RELATION_2.IsPartialApplicationOf(PREDICATE));
-        Log(!INDIVIDUAL_TRUTH_RELATION.IsPartialApplicationOf(PREDICATE));
+        // Log("SEMANTIC TYPES: ");
+        // Log("testing constructors.");
+        // Log("individual: " + INDIVIDUAL);
+        // Log("truth value: " + TRUTH_VALUE);
+        // Log("predicate: " + PREDICATE);
+        // Log("2-place relation: " + RELATION_2);
+        // Log("Testing semantic type partial application predicate.");
+        // Log(TRUTH_VALUE.IsPartialApplicationOf(TRUTH_VALUE));
+        // Log(TRUTH_VALUE.IsPartialApplicationOf(PREDICATE));
+        // Log(TRUTH_VALUE.IsPartialApplicationOf(RELATION_2));
+        // Log(PREDICATE.IsPartialApplicationOf(PREDICATE));
+        // Log(PREDICATE.IsPartialApplicationOf(RELATION_2));
+        // Log(PREDICATE.IsPartialApplicationOf(INDIVIDUAL_TRUTH_RELATION));
+        // Log(!RELATION_2.IsPartialApplicationOf(PREDICATE));
+        // Log(!INDIVIDUAL_TRUTH_RELATION.IsPartialApplicationOf(PREDICATE));
 
         // Log("testing removal");
         // Log("@TODO");
@@ -136,7 +136,7 @@ public class Testing : MonoBehaviour {
 
         Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
 
-        Expression everythingIsSelfIdentical = new Expression(ALL, EMPTY, new Expression(ITSELF, IDENTITY));
+        Expression everythingIsSelfIdentical = new Expression(ALL, VEROUS, new Expression(ITSELF, IDENTITY));
 
         var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
 
@@ -165,9 +165,10 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, bobIsRed));
         // Log(BasesString(testState, aliceIsBlue));
         
-        Log(BasesString(testState, new Expression(BETTER, new Expression(RED, SELF), NEUTRAL)));
-        Log(BasesString(testState, new Expression(NOT, new Expression(BETTER, NEUTRAL, new Expression(RED, SELF)))));
+        // Log(BasesString(testState, new Expression(BETTER, new Expression(RED, SELF), NEUTRAL)));
+        // Log(BasesString(testState, new Expression(NOT, new Expression(BETTER, NEUTRAL, new Expression(RED, SELF)))));
 
+        // Log(BasesString(testState, new Expression(RED, CHARLIE)));
         // Log("Double Negation Elimination");
         // Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
         // Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
@@ -217,11 +218,7 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, new Expression(RED, CHARLIE)));
         // Log(BasesString(testState, new Expression(FET, CHARLIE)));
 
-        // Log("variable coordination in disjunctions:");
-        // Log(BasesString(testState, new Expression(OR, ST, new Expression(NOT, ST))));
-        // Log(BasesString(testState, new Expression(OR, new Expression(RED, XE), new Expression(BLUE, XE))));
-
-        // Log("variable coordination in conjunctions: TODO");
+        // Log("variable coordination in conjunctions");
         // Log(BasesString(testState, new Expression(RED, XE)));
         // Log(BasesString(testState, new Expression(APPLE, CHARLIE)));
         // Log(BasesString(testState, new Expression(AND, new Expression(RED, XE), new Expression(APPLE, XE))));
@@ -242,6 +239,18 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, new Expression(TRULY, new Expression(RED, ALICE))));
         // Log(BasesString(testState, new Expression(SOMETIMES, TRULY, NOT)));
         // Log(BasesString(testState, new Expression(TRULY, new Expression(RED, CHARLIE))));
+        // 
+        // Log(BasesString(testState, new Expression(SOMETIMES, new Expression(PERCEIVE, SELF), TRULY)));
+        
+        // Log(BasesString(testState, VERUM));
+        // Log(BasesString(testState, new Expression(VEROUS, BOB)));
+        
+        MentalState ps = new MentalState(new Expression(PERCEIVE, SELF, new Expression(GREEN, SELF)));
+        Log(BasesString(ps, new Expression(GREEN, SELF)));
+        Log(BasesString(ps, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF)))));
+        Log(BasesString(ps, new Expression(NOT,
+            new Expression(PERCEIVE, SELF,
+                new Expression(NOT, new Expression(GREEN, SELF))))));
     }
 
     public static String Verbose(Expression e) {
