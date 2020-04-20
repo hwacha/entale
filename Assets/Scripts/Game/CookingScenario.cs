@@ -56,10 +56,14 @@ public class CookingScenario : MonoBehaviour
             
         } else if (endcase == "spicy_soup") {
             Destroy(spicyBerry);
-            pot.GetComponent<Renderer>().materials[1].SetColor("_Color", Color.yellow);
+            pot.GetComponent<Renderer>().materials[1].SetColor("_Color", Color.red);
         } else if (endcase == "sweet_soup") {
             Destroy(sweetBerry);
-            pot.GetComponent<Renderer>().materials[1].SetColor("_Color", Color.red);
+            pot.GetComponent<Renderer>().materials[1].SetColor("_Color", Color.yellow);
+        } else if (endcase == "both_soup") {
+            Destroy(spicyBerry);
+            Destroy(sweetBerry);
+            pot.GetComponent<Renderer>().materials[1].SetColor("_Color", Color.green);
         } else {
             Debug.Log("ERROR endcase");
         }
@@ -96,7 +100,7 @@ public class CookingScenario : MonoBehaviour
                     case 3:
                         if (inputWord.Equals(YES.Head)) {
                             playerPrefersSweet = true;
-                            stage = 4;
+                            stage = 5;
                         } else if (inputWord.Equals(NO.Head)) {
                             playerPrefersSweet = false;
                             stage = 4;
@@ -177,80 +181,104 @@ public class CookingScenario : MonoBehaviour
             case 1:
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASSERT, new Expression(BETTER, new Expression(SPICY, SOUP), new Expression(SWEET, SOUP))),
-                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
-                    Quaternion.identity,
+                    new Vector3(1, EXPRESSION_HEIGHT, -1),
+                    Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
+                    [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                };
                 stage_shown = true;
                 break;
             case 2:
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASK, new Expression(BETTER, new Expression(SPICY, SOUP), new Expression(SWEET, SOUP))),
-                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
-                    Quaternion.identity,
+                    new Vector3(1, EXPRESSION_HEIGHT, -1),
+                    Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
+                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant, NO.Head as Constant}
+                };
                 stage_shown = true;
                 break;
             case 3:
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASK, new Expression(BETTER, new Expression(SWEET, SOUP), new Expression(SPICY, SOUP))),
-                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
-                    Quaternion.identity,
+                    new Vector3(1, EXPRESSION_HEIGHT, -1),
+                    Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
+                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant, NO.Head as Constant}
+                };
                 stage_shown = true;
                 break;
             case 4:
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASSERT, new Expression(AS_GOOD_AS, new Expression(SPICY, SOUP), new Expression(SWEET, SOUP))),
-                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
-                    Quaternion.identity,
+                    new Vector3(1, EXPRESSION_HEIGHT, -1),
+                    Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
+                    [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                };
                 stage_shown = true;
                 break;
             case 5:
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
-                    new Expression(IF, new Expression(ADDED_TO, SWEETBERRY, SOUP), new Expression(SWEET, SOUP)),
-                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
-                    Quaternion.identity,
+                    new Expression(ASSERT, new Expression(IF, new Expression(ADDED_TO, SWEETBERRY, SOUP), new Expression(SWEET, SOUP))),
+                    new Vector3(1, EXPRESSION_HEIGHT, -1),
+                    Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
+                    [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                };
                 stage_shown = true;
                 break;
             case 6:
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
-                    new Expression(IF, new Expression(ADDED_TO, SPICYBERRY, SOUP), new Expression(SPICY, SOUP)),
-                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
-                    Quaternion.identity,
+                    new Expression(ASSERT, new Expression(IF, new Expression(ADDED_TO, SPICYBERRY, SOUP), new Expression(SPICY, SOUP))),
+                    new Vector3(1, EXPRESSION_HEIGHT, -1),
+                    Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
+                    [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                };
                 stage_shown = true;
                 break;
             case 7:
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASK, new Expression(RED, SPICYBERRY)),
-                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
-                    Quaternion.identity,
+                    new Vector3(1, EXPRESSION_HEIGHT, -1),
+                    Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
+                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant, NO.Head as Constant}
+                };
                 stage_shown = true;
                 break;
             case 8:
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
-                    new Expression(ASK, new Expression(YELLOW, SWEETBERRY)),
-                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
-                    Quaternion.identity,
+                    new Expression(ASK, new Expression(YELLOW, SPICYBERRY)),
+                    new Vector3(1, EXPRESSION_HEIGHT, -1),
+                    Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
+                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant, NO.Head as Constant}
+                };
                 stage_shown = true;
                 break;
             case 9:
@@ -260,19 +288,25 @@ public class CookingScenario : MonoBehaviour
                 } else {
                     currentExpressionContainer = SpawnExpressionContainer(
                         new Expression(ASSERT, new Expression(ADDED_TO, SPICYBERRY, SOUP)),
-                        new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
-                        Quaternion.identity,
+                        new Vector3(1, EXPRESSION_HEIGHT, -1),
+                        Quaternion.Euler(-15, 0, 0),
                         npc.GetComponent<Transform>()
                     );
+                    radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
+                        [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                    };
                 }
                 stage_shown = true;
                 break;
             case 10:
                 Destroy(currentExpressionContainer);
-                if(spicyberryYellow) {
-                    gameEnd("sweet_soup");
+                // What if they say "yes" to both?
+                if(spicyberryYellow && spicyberryRed) {
+                    gameEnd("both_soup");
                 } else if (spicyberryRed) {
                     gameEnd("spicy_soup");
+                } else if (spicyberryYellow) {
+                    gameEnd("sweet_soup");
                 } else {
                     Debug.Log("ERROR");
                 }
