@@ -30,25 +30,25 @@ public class RenderExpressionTesting : MonoBehaviour
         //     new Expression(AT, ALICE, BOB),
         //     new Vector3(6, 2, 0), Quaternion.identity);
 
-        SpawnExpressionContainer(
-            new Expression(SOME, GREEN, BLUE), new Vector3(10, 2, 0), Quaternion.identity);
+    //     SpawnExpressionContainer(
+    //         new Expression(SOME, GREEN, BLUE), new Vector3(10, 2, 0), Quaternion.identity);
 
-        SpawnExpressionContainer(
-                new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(RED, BOB)),
-                new Vector3(15, 2, 0), Quaternion.identity);
+    //     SpawnExpressionContainer(
+    //             new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(RED, BOB)),
+    //             new Vector3(15, 2, 0), Quaternion.identity);
 
-        SpawnExpressionContainer(
-            new Expression(IF,
-                new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(RED, BOB)),
-             new Expression(SOME, GREEN, BLUE)), new Vector3(25, 2, 0), Quaternion.identity);
+    //     SpawnExpressionContainer(
+    //         new Expression(IF,
+    //             new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(RED, BOB)),
+    //          new Expression(SOME, GREEN, BLUE)), new Vector3(25, 2, 0), Quaternion.identity);
 
-        SpawnExpressionContainer(GREEN, new Vector3(-5, 2, -1), Quaternion.identity);
-        SpawnExpressionContainer(AT, new Vector3(-2, 2, -1), Quaternion.identity);
-        SpawnExpressionContainer(SOME, new Vector3(-10, 2, -1), Quaternion.identity);
-        SpawnExpressionContainer(IF, new Vector3(-15, 2, -1), Quaternion.identity);
+    //     SpawnExpressionContainer(GREEN, new Vector3(-5, 2, -1), Quaternion.identity);
+    //     SpawnExpressionContainer(AT, new Vector3(-2, 2, -1), Quaternion.identity);
+    //     SpawnExpressionContainer(SOME, new Vector3(-10, 2, -1), Quaternion.identity);
+    //     SpawnExpressionContainer(IF, new Vector3(-15, 2, -1), Quaternion.identity);
 
-        SpawnExpressionContainer(new Expression(SOME, BLUE, new Expression(AT, new Empty(SemanticType.INDIVIDUAL), ALICE)),
-            new Vector3(-20, 2, -1), Quaternion.identity);
+    //     SpawnExpressionContainer(new Expression(SOME, BLUE, new Expression(AT, new Empty(SemanticType.INDIVIDUAL), ALICE)),
+    //         new Vector3(-20, 2, -1), Quaternion.identity);
 
     }
 }
