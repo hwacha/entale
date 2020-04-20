@@ -65,6 +65,10 @@ public abstract class SemanticType {
     public static readonly FunctionalType TRUTH_FUNCTION_2 =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE, TRUTH_VALUE}, TRUTH_VALUE);
 
+    public static readonly FunctionalType TRUTH_QUESTION_FUNCTION =
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE}, QUESTION);
+    public static readonly FunctionalType TRUTH_ASSERTION_FUNCTION =
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE}, ASSERTION);
     public static readonly FunctionalType TRUTH_CONFORMITY_FUNCTION =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE}, CONFORMITY_VALUE);
 

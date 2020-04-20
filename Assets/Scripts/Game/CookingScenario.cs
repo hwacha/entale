@@ -177,7 +177,7 @@ public class CookingScenario : MonoBehaviour
             case 1:
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASSERT, new Expression(BETTER, new Expression(SPICY, SOUP), new Expression(SWEET, SOUP))),
-                    new Vector3(0, EXPRESSION_HEIGHT, 0),
+                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
                     Quaternion.identity,
                     npc.GetComponent<Transform>()
                 );
@@ -187,7 +187,7 @@ public class CookingScenario : MonoBehaviour
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASK, new Expression(BETTER, new Expression(SPICY, SOUP), new Expression(SWEET, SOUP))),
-                    new Vector3(0, EXPRESSION_HEIGHT, 0),
+                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
                     Quaternion.identity,
                     npc.GetComponent<Transform>()
                 );
@@ -197,7 +197,7 @@ public class CookingScenario : MonoBehaviour
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASK, new Expression(BETTER, new Expression(SWEET, SOUP), new Expression(SPICY, SOUP))),
-                    new Vector3(0, EXPRESSION_HEIGHT, 0),
+                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
                     Quaternion.identity,
                     npc.GetComponent<Transform>()
                 );
@@ -207,7 +207,7 @@ public class CookingScenario : MonoBehaviour
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASSERT, new Expression(AS_GOOD_AS, new Expression(SPICY, SOUP), new Expression(SWEET, SOUP))),
-                    new Vector3(0, EXPRESSION_HEIGHT, 0),
+                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
                     Quaternion.identity,
                     npc.GetComponent<Transform>()
                 );
@@ -217,7 +217,7 @@ public class CookingScenario : MonoBehaviour
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(IF, new Expression(ADDED_TO, SWEETBERRY, SOUP), new Expression(SWEET, SOUP)),
-                    new Vector3(0, EXPRESSION_HEIGHT, 0),
+                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
                     Quaternion.identity,
                     npc.GetComponent<Transform>()
                 );
@@ -227,7 +227,7 @@ public class CookingScenario : MonoBehaviour
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(IF, new Expression(ADDED_TO, SPICYBERRY, SOUP), new Expression(SPICY, SOUP)),
-                    new Vector3(0, EXPRESSION_HEIGHT, 0),
+                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
                     Quaternion.identity,
                     npc.GetComponent<Transform>()
                 );
@@ -237,7 +237,7 @@ public class CookingScenario : MonoBehaviour
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASK, new Expression(RED, SPICYBERRY)),
-                    new Vector3(0, EXPRESSION_HEIGHT, 0),
+                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
                     Quaternion.identity,
                     npc.GetComponent<Transform>()
                 );
@@ -247,7 +247,7 @@ public class CookingScenario : MonoBehaviour
                 Destroy(currentExpressionContainer);
                 currentExpressionContainer = SpawnExpressionContainer(
                     new Expression(ASK, new Expression(YELLOW, SWEETBERRY)),
-                    new Vector3(0, EXPRESSION_HEIGHT, 0),
+                    new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
                     Quaternion.identity,
                     npc.GetComponent<Transform>()
                 );
@@ -260,7 +260,7 @@ public class CookingScenario : MonoBehaviour
                 } else {
                     currentExpressionContainer = SpawnExpressionContainer(
                         new Expression(ASSERT, new Expression(ADDED_TO, SPICYBERRY, SOUP)),
-                        new Vector3(0, EXPRESSION_HEIGHT, 0),
+                        new Vector3(0, EXPRESSION_HEIGHT / 2, -1),
                         Quaternion.identity,
                         npc.GetComponent<Transform>()
                     );
