@@ -17,8 +17,7 @@ public class RadialMenu : MonoBehaviour {
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
 
     Dictionary<SemanticType, HashSet<Constant>> Lexicon = new Dictionary<SemanticType, HashSet<Constant>> {
-        [TRUTH_VALUE] = new HashSet<Constant> { VERUM.Head as Constant, FALSUM.Head as Constant},
-        [ASSERTION] = new HashSet<Constant> { OK.Head as Constant },
+        [ASSERTION] = new HashSet<Constant> { OK.Head as Constant, YES.Head as Constant, NO.Head as Constant },
     };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
 

@@ -72,7 +72,7 @@ public class CookingScenario : MonoBehaviour
             if (inputWord != null) {
                 switch (stage) {
                     case 1:
-                        if (inputWord.ToString() == "ok") {
+                        if (inputWord.Equals(OK.Head)) {
                         } else {
                             break;
                         }
@@ -81,10 +81,10 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 2:
-                        if (inputWord.ToString() == "verum") {
+                        if (inputWord.Equals(YES.Head)) {
                             playerPrefersSpicy = true;
                             stage = 5;
-                        } else if (inputWord.ToString() == "falsum") {
+                        } else if (inputWord.Equals(NO.Head)) {
                             playerPrefersSpicy = false;
                             stage = 3;
                         } else {
@@ -94,10 +94,10 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 3:
-                        if (inputWord.ToString() == "verum") {
+                        if (inputWord.Equals(YES.Head)) {
                             playerPrefersSweet = true;
                             stage = 4;
-                        } else if (inputWord.ToString() == "falsum") {
+                        } else if (inputWord.Equals(NO.Head)) {
                             playerPrefersSweet = false;
                             stage = 4;
                         } else {
@@ -107,7 +107,7 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 4:
-                        if (inputWord.ToString() == "ok") {
+                        if (inputWord.Equals(OK.Head)) {
                         } else {
                             break;
                         }
@@ -116,7 +116,7 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 5:
-                        if (inputWord.ToString() == "ok") {
+                        if (inputWord.Equals(OK.Head)) {
                         } else {
                             break;
                         }
@@ -125,7 +125,7 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 6:
-                        if (inputWord.ToString() == "ok") {
+                        if (inputWord.Equals(OK.Head)) {
                         } else {
                             break;
                         }
@@ -134,9 +134,9 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 7:
-                        if (inputWord.ToString() == "verum") {
+                        if (inputWord.Equals(YES.Head)) {
                             spicyberryRed = true;
-                        } else if (inputWord.ToString() == "falsum") {
+                        } else if (inputWord.Equals(NO.Head)) {
                             spicyberryRed = false;
                         } else {
                             break;
@@ -146,9 +146,9 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 8:
-                        if (inputWord.ToString() == "verum") {
+                        if (inputWord.Equals(YES.Head)) {
                             spicyberryYellow = true;
-                        } else if (inputWord.ToString() == "falsum") {
+                        } else if (inputWord.Equals(NO.Head)) {
                             spicyberryYellow = false;
                         } else {
                             break;
@@ -158,7 +158,7 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 9:
-                        if (inputWord.ToString() == "ok") {
+                        if (inputWord.Equals(OK.Head)) {
                         } else {
                             break;
                         }

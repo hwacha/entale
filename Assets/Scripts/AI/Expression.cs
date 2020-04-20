@@ -630,9 +630,12 @@ public class Expression : Argument {
     // weird function words
     public static readonly Expression ITSELF = new Expression(new Constant(RELATION_2_REDUCER, "itself"));
 
-    // question and assert (todo figure out if this is done right)
+    // question and assert functions
     public static readonly Expression ASK = new Expression(new Constant(TRUTH_QUESTION_FUNCTION, "ask"));
     public static readonly Expression ASSERT = new Expression(new Constant(TRUTH_ASSERTION_FUNCTION, "assert"));
-    public static readonly Expression OK = new Expression(new Constant(ASSERTION, "ok"));
 
+    // assertion constants
+    public static readonly Expression YES = new Expression(new Constant(ASSERTION, "yes"));
+    public static readonly Expression NO  = new Expression(new Constant(ASSERTION, "no"));
+    public static readonly Expression OK  = new Expression(new Constant(ASSERTION, "ok"));
 }
