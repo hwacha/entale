@@ -82,6 +82,10 @@ public class Testing : MonoBehaviour {
         // } catch (ArgumentException e) {
         //     Log("Got expected error: " + e);
         // }
+        
+        Log("Deictic Constructor");
+        Log(new Deictic(THAT, new GameObject()));
+        
         // Log("equality");
         // Log(NOT.Equals(NOT));
 

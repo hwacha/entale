@@ -79,6 +79,36 @@ public class Empty : Argument {
     }
 }
 
+// @Note this is a placeholder, to be replaced
+// by a more clever 'subjective' representation.
+// But right now, we're only concerned with
+// making 'this' words, and we have them
+// directly and objectly refer to their component
+// objects.
+public class Deictic : Expression {
+    public UnityEngine.GameObject Referent { get; protected set; }
+
+    public Deictic(Atom head, UnityEngine.GameObject referent) : base(head) {
+        Referent = referent;
+    }
+
+    public override bool Equals(Object o) {
+        if (!(o is Deictic)) {
+            return false;
+        }
+
+        if (!base.Equals(o)) {
+            return false;
+        }
+
+        return Referent.Equals(((Deictic) o).Referent);
+    }
+
+    public override String ToString() {
+       return base.ToString() + " ~> " + Referent.ToString();
+    }
+}
+
 public class Expression : Argument {
     public Atom Head { get; protected set; }
     protected Argument[] Args;
@@ -489,6 +519,9 @@ public class Expression : Argument {
             }
         }
 
+        // @Note this is commented out because we want unification
+        // to only occur from the left to the right.
+        // 
         // if (patternSubstitutions.Count == 0) {
         //     var thatMatchThisSubstitutions = patternMatch(that, this);
 
@@ -670,4 +703,7 @@ public class Expression : Argument {
     public static readonly Expression YES = new Expression(new Constant(ASSERTION, "yes"));
     public static readonly Expression NO  = new Expression(new Constant(ASSERTION, "no"));
     public static readonly Expression OK  = new Expression(new Constant(ASSERTION, "ok"));
+
+    // heads for deictic expressions
+    public static readonly Constant THAT = new Constant(INDIVIDUAL, "that");
 }
