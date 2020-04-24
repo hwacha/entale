@@ -180,7 +180,7 @@ public class Testing : MonoBehaviour {
             new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
         testState.ProofMode = Proof;
-        Log(BasesString(testState, aliceIsRed));
+        // Log(BasesString(testState, aliceIsRed));
         // Log(BasesString(testState, bobIsBlue));
         // Log(BasesString(testState, bobIsRed));
         // Log(BasesString(testState, aliceIsBlue));
@@ -225,10 +225,10 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
         // testState.ProofMode = Proof;
 
-        // Log("Formula satisfaction");
-        // Expression xIsBlue = new Expression(BLUE, XE);
-        // Log(BasesString(testState, xIsBlue));
-        // Log(BasesString(testState, new Expression(OR, aliceIsBlue, xIsBlue)));
+        Log("Formula satisfaction");
+        Expression xIsBlue = new Expression(BLUE, XE);
+        Log(BasesString(testState, xIsBlue));
+        Log(BasesString(testState, new Expression(OR, aliceIsBlue, xIsBlue)));
 
         // Log("existential introduction");
         // Log(BasesString(testState, new Expression(SOME, APPLE, RED)));
@@ -246,10 +246,10 @@ public class Testing : MonoBehaviour {
         // Log("Modus ponens: TODO - bug");
         // Log(BasesString(testState, new Expression(GREEN, SELF)));
 
-        // Log("Conditional proof");
+        Log("Conditional proof");
         // Log(BasesString(testState, new Expression(IF, new Expression(GREEN, BOB), new Expression(GREEN, BOB))));
         // Log(BasesString(testState, new Expression(IF, new Expression(GREEN, BOB), new Expression(AND, new Expression(GREEN, BOB), new Expression(BLUE, BOB)))));
-        // Log(BasesString(testState, new Expression(IF, new Expression(ALL, BLUE, GREEN), new Expression(GREEN, BOB))));
+        Log(BasesString(testState, new Expression(IF, new Expression(ALL, BLUE, GREEN), new Expression(GREEN, BOB))));
 
         // Log("itself");
         // Log(BasesString(testState, new Expression(ITSELF, IDENTITY, BOB)));
@@ -262,8 +262,8 @@ public class Testing : MonoBehaviour {
         // 
         // Log(BasesString(testState, new Expression(SOMETIMES, new Expression(PERCEIVE, SELF), TRULY)));
         
-        // Log(BasesString(testState, VERUM));
-        // Log(BasesString(testState, new Expression(VEROUS, BOB)));
+        Log(BasesString(testState, VERUM));
+        Log(BasesString(testState, new Expression(VEROUS, BOB)));
         
         // Log("contraposition of perceptual belief");
         // MentalState ps = new MentalState(new Expression(PERCEIVE, SELF, new Expression(GREEN, SELF)));
@@ -305,7 +305,7 @@ public class Testing : MonoBehaviour {
     }
 
     public static String BasesString(MentalState m, Expression e) {
-        return Verbose(e) + " is proved by: " + BasesString(m.Bases(e));
+        return "'" + e + "'" + " is proved by: " + BasesString(m.Bases(e));
     }
 
     public static String BasesString(HashSet<Basis> bases) {

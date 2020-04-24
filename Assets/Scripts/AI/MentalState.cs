@@ -270,11 +270,12 @@ public class MentalState {
             return alternativeBases;
         } else {
             foreach (Expression supposition in suppositions) {
-                // @Note: unification should change to a one-sided
-                // match, so that we stop unifying on formulas in
-                // the suppositions, which is screwing up other
-                // inference rules.
-                HashSet<Substitution> unifiers = supposition.GetMatches(goal);
+                // @Note: now that get matches is unidirectional
+                // as opposed to unification, we may now want
+                // to make a second call, here, in case we want to make 
+                // some sort of supposition -> goal match, interpreted
+                // universally instead of existentially.
+                HashSet<Substitution> unifiers = goal.GetMatches(supposition);
                 foreach (var unifier in unifiers) {
                     alternativeBases.Add(new Basis(new List<Expression>(), unifier));
                 }
@@ -445,65 +446,65 @@ public class MentalState {
         // INFERENCES
         // ==========
 
-        // ApplyInferenceRule(VERUM_INTRODUCTION);
-        // ApplyInferenceRule(VEROUS_INTRODUCTION);
+        ApplyInferenceRule(VERUM_INTRODUCTION);
+        ApplyInferenceRule(VEROUS_INTRODUCTION);
 
-        // ApplyInferenceRule(TRULY_INTRODUCTION);
-        // ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION);
+        ApplyInferenceRule(TRULY_INTRODUCTION);
+        ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION);
 
         // @Note: not working. Something is up with Unify()
-        // ApplyInferenceRule(ITSELF_INTRODUCTION);
+        ApplyInferenceRule(ITSELF_INTRODUCTION);
         ApplyInferenceRule(ITSELF_ELIMINATION);
         
-        // ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT);
-        // ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT);
+        ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT);
+        ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT);
         
-        // ApplyInferenceRule(CONJUNCTION_INTRODUCTION);
+        ApplyInferenceRule(CONJUNCTION_INTRODUCTION);
 
-        // ApplyInferenceRule(EXISTENTIAL_INTRODUCTION);
-        // ApplyInferenceRule(UNIVERSAL_ELIMINATION);
+        ApplyInferenceRule(EXISTENTIAL_INTRODUCTION);
+        ApplyInferenceRule(UNIVERSAL_ELIMINATION);
 
         // conjunction elimination
         // A & B |- A; A & B |- B
 
-        // // conditional proof (conditional introduction)
-        // // @note all of the proof annotations should be written
-        // // in the sequent calculus, not natural deduction.
-        // // Usually doesn't matter though.
-        // // M, A |- B => M |- A -> B
-        // if (goal.Head.Equals(IF.Head)) {
-        //     var antecedent = goal.GetArgAsExpression(0);
+        // conditional proof (conditional introduction)
+        // @note all of the proof annotations should be written
+        // in the sequent calculus, not natural deduction.
+        // Usually doesn't matter though.
+        // M, A |- B => M |- A -> B
+        if (goal.Head.Equals(IF.Head)) {
+            var antecedent = goal.GetArgAsExpression(0);
 
-        //     // @Note as a workaround, we skip if the antecedent
-        //     // is a lone variable, as it won't be helpful to know
-        //     // that's matching, and it causes loops with
-        //     // modus ponens.
-        //     if (!(antecedent.Head is Variable) && !antecedent.Type.Equals(antecedent.Head.Type)) {
-        //         var newSuppositions = new HashSet<Expression>();
-        //         foreach (Expression supposition in suppositions) {
-        //             newSuppositions.Add(supposition);
-        //         }
-        //         // add the antecedent of the conditional
-        //         // to the list of suppositions.
-        //         newSuppositions.Add(antecedent);
-        //         // add the proofs of the consequent
-        //         // under the supposition of the antecedent.
-        //         alternativeBases.UnionWith(Bases((Expression) goal.GetArg(1),
-        //             newSuppositions,
-        //             pendingExpressions,
-        //             completeExpressions));
-        //     }
-        // }
+            // @Note as a workaround, we skip if the antecedent
+            // is a lone variable, as it won't be helpful to know
+            // that's matching, and it causes loops with
+            // modus ponens.
+            if (!(antecedent.Head is Variable) && !antecedent.Type.Equals(antecedent.Head.Type)) {
+                var newSuppositions = new HashSet<Expression>();
+                foreach (Expression supposition in suppositions) {
+                    newSuppositions.Add(supposition);
+                }
+                // add the antecedent of the conditional
+                // to the list of suppositions.
+                newSuppositions.Add(antecedent);
+                // add the proofs of the consequent
+                // under the supposition of the antecedent.
+                alternativeBases.UnionWith(Bases((Expression) goal.GetArg(1),
+                    newSuppositions,
+                    pendingExpressions,
+                    completeExpressions));
+            }
+        }
 
-        // ApplyInferenceRule(BETTER_ANTISYMMETRY);
-        // ApplyInferenceRule(BETTER_TRANSITIVITY);
-        // ApplyInferenceRule(SELF_BELIEF_INTRODUCTION);
-        // ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION);
+        ApplyInferenceRule(BETTER_ANTISYMMETRY);
+        ApplyInferenceRule(BETTER_TRANSITIVITY);
+        ApplyInferenceRule(SELF_BELIEF_INTRODUCTION);
+        ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION);
 
         // ApplyInferenceRule(SYMMETRY_OF_LOCATION);
         // ApplyInferenceRule(TRANSITIVITY_OF_LOCATION);
 
-        // ApplyInferenceRule(SOMETIMES_INTRODUCTION);
+        ApplyInferenceRule(SOMETIMES_INTRODUCTION);
 
         // ApplyInferenceRule(Contrapose(PERCEPTUAL_BELIEF));
 
@@ -516,11 +517,11 @@ public class MentalState {
         if (goal.Depth <= MaxDepth) {            
             ApplyInferenceRule(PERCEPTUAL_BELIEF);
             // ApplyInferenceRule(ALWAYS_ELIMINATION);
-            // ApplyInferenceRule(MODUS_PONENS);
+            ApplyInferenceRule(MODUS_PONENS);
             // ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_LEFT));
             // ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT));
             // ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION));
-            // ApplyInferenceRule(Contrapose(MODUS_PONENS));
+            ApplyInferenceRule(Contrapose(MODUS_PONENS));
 
             // PLANNING
             // ====
