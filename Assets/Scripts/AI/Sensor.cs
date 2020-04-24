@@ -24,14 +24,12 @@ public class Sensor : MonoBehaviour {
     // Right now, assume it's a vision module.
     public IEnumerator ReceiveStimulus() {
         while (true) {
-            // right now, simply receive the attributes of
-            // the agent. This is just a test!
-            if (Agent.IsBlue) {
-                UnityEngine.Debug.Log("My proprioceptive senses are tingling... I truly am blue!");
-                Agent.MentalState.Assert(new Expression(PERCEIVE, SELF, new Expression(BLUE, SELF)));
-            } else {
-                // @Note: this should be uncommented once Assert() is working better.
-                Agent.MentalState.Assert(new Expression(PERCEIVE, SELF, new Expression(NOT, new Expression(BLUE, SELF))));
+            var tree = GameObject.Find("tree");
+            if (Vector3.Distance(tree.transform.position,
+                Agent.gameObject.transform.position) < 2) {
+                Agent.MentalState.Assert(
+                    new Expression(PERCEIVE, SELF,
+                        new Expression(AT, SELF, new Deictic(THAT, tree))));
             }
             yield return new WaitForSeconds(0.5f);
         }

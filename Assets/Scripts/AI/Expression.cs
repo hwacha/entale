@@ -92,6 +92,12 @@ public class Deictic : Expression {
         Referent = referent;
     }
 
+    public override Expression Substitute(Dictionary<Variable, Expression> substitution) {
+        Expression substitutedExpression = base.Substitute(substitution);
+
+        return new Deictic(substitutedExpression.Head, Referent);
+    }
+
     public override bool Equals(Object o) {
         if (!(o is Deictic)) {
             return false;
@@ -101,11 +107,15 @@ public class Deictic : Expression {
             return false;
         }
 
-        return Referent.Equals(((Deictic) o).Referent);
+        return Referent == (((Deictic) o).Referent);
     }
 
     public override String ToString() {
        return base.ToString() + " ~> " + Referent.ToString();
+    }
+
+    public override int GetHashCode() {
+        return base.GetHashCode() * Referent.GetHashCode();
     }
 }
 
@@ -276,7 +286,7 @@ public class Expression : Argument {
 
     // replaces all occurances of the variables within s with the
     // associated expression in s.
-    public Expression Substitute(Dictionary<Variable, Expression> s) {
+    public virtual Expression Substitute(Dictionary<Variable, Expression> s) {
         Argument[] substitutedArgs = new Argument[Args.Length];
         for (int i = 0; i < Args.Length; i++) {
             if (Args[i] is Expression) {
@@ -614,6 +624,7 @@ public class Expression : Argument {
     public static readonly Expression SOUP = new Expression(new Constant(INDIVIDUAL, "soup"));
     public static readonly Expression SWEETBERRY = new Expression(new Constant(INDIVIDUAL, "sweetberry"));
     public static readonly Expression SPICYBERRY = new Expression(new Constant(INDIVIDUAL, "spicyberry"));
+    public static readonly Expression FOREST_KING = new Expression(new Constant(INDIVIDUAL, "forest_king"));
 
     // Individual variables
     public static readonly Expression XE = new Expression(new Variable(INDIVIDUAL, "x"));

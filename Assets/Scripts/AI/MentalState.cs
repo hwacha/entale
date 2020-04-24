@@ -461,7 +461,7 @@ public class MentalState {
         ApplyInferenceRule(CONJUNCTION_INTRODUCTION);
 
         ApplyInferenceRule(EXISTENTIAL_INTRODUCTION);
-        ApplyInferenceRule(UNIVERSAL_ELIMINATION);
+        // ApplyInferenceRule(UNIVERSAL_ELIMINATION);
 
         // conjunction elimination
         // A & B |- A; A & B |- B
@@ -478,7 +478,7 @@ public class MentalState {
             // is a lone variable, as it won't be helpful to know
             // that's matching, and it causes loops with
             // modus ponens.
-            if (!(antecedent.Head is Variable) || !antecedent.Type.Equals(antecedent.Head.Type)) {
+            if (!(antecedent.Head is Variable) && !antecedent.Type.Equals(antecedent.Head.Type)) {
                 var newSuppositions = new HashSet<Expression>();
                 foreach (Expression supposition in suppositions) {
                     newSuppositions.Add(supposition);
@@ -497,8 +497,11 @@ public class MentalState {
 
         ApplyInferenceRule(BETTER_ANTISYMMETRY);
         ApplyInferenceRule(BETTER_TRANSITIVITY);
-        ApplyInferenceRule(SELF_BELIEF_INTRODUCTION);
-        ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION);
+        // ApplyInferenceRule(SELF_BELIEF_INTRODUCTION);
+        // ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION);
+
+        // ApplyInferenceRule(SYMMETRY_OF_LOCATION);
+        // ApplyInferenceRule(TRANSITIVITY_OF_LOCATION);
 
         // ApplyInferenceRule(SOMETIMES_INTRODUCTION);
 
@@ -607,6 +610,7 @@ public class MentalState {
             UnityEngine.Debug.Log(Testing.BasesString(notAssertionBases));
 
             // if our belief revision policy is conservative,
+
             // we reject the new information in favor of the old.
             if (BeliefRevisionPolicy == Conservative) {
                 return false;

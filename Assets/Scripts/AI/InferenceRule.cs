@@ -179,4 +179,20 @@ public class InferenceRule
         new InferenceRule(new Expression[]{},
             new Expression[]{new Expression(NOT, ST)},
             new Expression[]{new Expression(NOT, new Expression(BELIEVE, SELF, ST))});
+
+    public static readonly InferenceRule SYMMETRY_OF_LOCATION =
+        new InferenceRule(new Expression[]{
+            new Expression(AT, XE, YE)},
+            new Expression[]{},
+            new Expression[]{new Expression(AT, YE, XE)});
+
+    // able(self, at(self, x)), at(x, y) => able(self, at(self, y))
+    public static readonly InferenceRule TRANSITIVITY_OF_LOCATION =
+        new InferenceRule(
+            new Expression[]{
+                new Expression(AT, XE, YE),
+                new Expression(AT, YE, ZE)
+            },
+            new Expression[]{},
+            new Expression[]{new Expression(AT, XE, ZE)});
 }

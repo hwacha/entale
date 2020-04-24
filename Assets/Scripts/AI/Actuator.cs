@@ -20,7 +20,6 @@ public class Actuator : MonoBehaviour {
         while (true) {
             List<Expression> plan = Agent.MentalState.DecideCurrentPlan();
             foreach (Expression action in plan) {
-
                 if (!action.Head.Equals(WILL.Head)) {
                     throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
                 }
@@ -28,12 +27,7 @@ public class Actuator : MonoBehaviour {
                 var content = action.GetArgAsExpression(0);
 
                 if (content.Equals(NEUTRAL)) {
-                    Debug.Log("Busy doin' nothin'");
-                }
-
-                else if (content.Equals(new Expression(BLUE, SELF))) {
-                    Agent.IsBlue = true;
-                    Debug.Log("I blue myself.");
+                    // Debug.Log("Busy doin' nothin'");
                 }
 
                 // at(self, that ~> #forest1)
@@ -51,13 +45,14 @@ public class Actuator : MonoBehaviour {
                                 while (NavMeshAgent.remainingDistance > 1) {
                                     yield return new WaitForSeconds(0.5f);
                                 }
+                                NavMeshAgent.ResetPath();
                             }
                         }
                     }
                 }
 
                 var iTried = new Expression(TRIED, SELF, content);
-                Debug.Log(iTried);
+                // Debug.Log(iTried);
 
                 // we assert to the mental state that
                 // we've tried to perform this action.
