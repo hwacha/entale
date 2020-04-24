@@ -99,3 +99,8 @@ Considering you might want to refer to a couple of things at once, there are dif
 #### Images
 
 ![highlight demo](https://user-images.githubusercontent.com/3184499/77706284-516c8500-6f98-11ea-913b-aa67de165cd1.gif)
+
+### Resources
+
+- Graphics
+  - [roystan: Toon Shader](https://roystan.net/articles/toon-shader.html)
