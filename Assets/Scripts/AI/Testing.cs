@@ -16,21 +16,21 @@ public class Testing : MonoBehaviour {
         //     "To turn these off, " +
         //     "deactivate the 'AITesting' object in the heirarchy.");
 
-        Log("SEMANTIC TYPES: ");
-        Log("testing constructors.");
-        Log("individual: " + INDIVIDUAL);
-        Log("truth value: " + TRUTH_VALUE);
-        Log("predicate: " + PREDICATE);
-        Log("2-place relation: " + RELATION_2);
-        Log("Testing semantic type partial application predicate.");
-        Log(TRUTH_VALUE.IsPartialApplicationOf(TRUTH_VALUE));
-        Log(TRUTH_VALUE.IsPartialApplicationOf(PREDICATE));
-        Log(TRUTH_VALUE.IsPartialApplicationOf(RELATION_2));
-        Log(PREDICATE.IsPartialApplicationOf(PREDICATE));
-        Log(PREDICATE.IsPartialApplicationOf(RELATION_2));
-        Log(PREDICATE.IsPartialApplicationOf(INDIVIDUAL_TRUTH_RELATION));
-        Log(!RELATION_2.IsPartialApplicationOf(PREDICATE));
-        Log(!INDIVIDUAL_TRUTH_RELATION.IsPartialApplicationOf(PREDICATE));
+        // Log("SEMANTIC TYPES: ");
+        // Log("testing constructors.");
+        // Log("individual: " + INDIVIDUAL);
+        // Log("truth value: " + TRUTH_VALUE);
+        // Log("predicate: " + PREDICATE);
+        // Log("2-place relation: " + RELATION_2);
+        // Log("Testing semantic type partial application predicate.");
+        // Log(TRUTH_VALUE.IsPartialApplicationOf(TRUTH_VALUE));
+        // Log(TRUTH_VALUE.IsPartialApplicationOf(PREDICATE));
+        // Log(TRUTH_VALUE.IsPartialApplicationOf(RELATION_2));
+        // Log(PREDICATE.IsPartialApplicationOf(PREDICATE));
+        // Log(PREDICATE.IsPartialApplicationOf(RELATION_2));
+        // Log(PREDICATE.IsPartialApplicationOf(INDIVIDUAL_TRUTH_RELATION));
+        // Log(!RELATION_2.IsPartialApplicationOf(PREDICATE));
+        // Log(!INDIVIDUAL_TRUTH_RELATION.IsPartialApplicationOf(PREDICATE));
 
         // Log("testing removal");
         // Log("@TODO");
@@ -82,6 +82,10 @@ public class Testing : MonoBehaviour {
         // } catch (ArgumentException e) {
         //     Log("Got expected error: " + e);
         // }
+        
+        Log("Deictic Constructor");
+        Log(new Deictic(THAT, new GameObject()));
+        
         // Log("equality");
         // Log(NOT.Equals(NOT));
 
@@ -114,55 +118,61 @@ public class Testing : MonoBehaviour {
         
         // Testing mental state.
         Log("Testing mental state.");
-        // Log("QUERY");
-        // Expression aliceIsRed   = new Expression(RED, ALICE);
-        // Expression aliceIsAnApple = new Expression(APPLE, ALICE);
-        // Expression bobIsBlue    = new Expression(BLUE, BOB);
+        Log("QUERY");
+        Expression aliceIsRed   = new Expression(RED, ALICE);
+        Expression aliceIsAnApple = new Expression(APPLE, ALICE);
+        Expression bobIsBlue    = new Expression(BLUE, BOB);
         Expression aliceIsAtBob = new Expression(AT, ALICE, BOB);
-        // Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
-        // Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
-        // Expression allMacintoshesAreApples = new Expression(ALL, new Expression(new Constant(PREDICATE, "macintosh")), APPLE);
-        // Expression allApplesAreRed = new Expression(ALL, APPLE, RED);
-        // Expression charlieIsAMacintosh = new Expression(new Expression(new Constant(PREDICATE, "macintosh")), CHARLIE);
-        // Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
-        // Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
+        Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
+        Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
+        Expression allMacintoshesAreApples = new Expression(ALL, new Expression(new Constant(PREDICATE, "macintosh")), APPLE);
+        Expression allApplesAreRed = new Expression(ALL, APPLE, RED);
+        Expression charlieIsAMacintosh = new Expression(new Expression(new Constant(PREDICATE, "macintosh")), CHARLIE);
+        Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
+        Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
 
-        // Expression bobIsRed     = new Expression(RED, BOB);
-        // Expression aliceIsBlue  = new Expression(BLUE, ALICE);
-        // Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
+        Expression bobIsRed     = new Expression(RED, BOB);
+        Expression aliceIsBlue  = new Expression(BLUE, ALICE);
+        Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
 
-        // Expression ifCharlieIsBlueIAmGreen =
-        //     new Expression(IF, charlieIsBlue, new Expression(GREEN, SELF));
+        Expression ifCharlieIsBlueIAmGreen =
+            new Expression(IF, charlieIsBlue, new Expression(GREEN, SELF));
 
-        // Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
+        Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
 
-        // Expression everythingIsSelfIdentical = new Expression(ALL, EMPTY, new Expression(ITSELF, IDENTITY));
+        Expression everythingIsSelfIdentical = new Expression(ALL, VEROUS, new Expression(ITSELF, IDENTITY));
 
-        // var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
+        var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
 
-        // MentalState testState = new MentalState(
-        //     aliceIsRed,
-        //     aliceIsAnApple,
-        //     bobIsBlue,
-        //     aliceIsAtBob,
-        //     aliceIsAlice,
-        //     bobIsBob,
-        //     charlieIsAMacintosh,
-        //     allApplesAreRed,
-        //     allMacintoshesAreApples,
-        //     iCanMakeCharlieBlue,
-        //     charlieIsBlue,
-        //     iSeeCharlieAsRed,
-        //     ifCharlieIsBlueIAmGreen,
-        //     bobIsAtCharlie,
-        //     everythingIsSelfIdentical,
-        //     whatIseeIsAlwaysTrue);
+        MentalState testState = new MentalState(
+            aliceIsRed,
+            aliceIsAnApple,
+            bobIsBlue,
+            aliceIsAtBob,
+            aliceIsAlice,
+            bobIsBob,
+            charlieIsAMacintosh,
+            allApplesAreRed,
+            allMacintoshesAreApples,
+            iCanMakeCharlieBlue,
+            charlieIsBlue,
+            iSeeCharlieAsRed,
+            ifCharlieIsBlueIAmGreen,
+            bobIsAtCharlie,
+            everythingIsSelfIdentical,
+            whatIseeIsAlwaysTrue,
+            new Expression(BETTER, new Expression(BLUE, SELF), NEUTRAL),
+            new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
         // Log(BasesString(testState, aliceIsRed));
         // Log(BasesString(testState, bobIsBlue));
         // Log(BasesString(testState, bobIsRed));
         // Log(BasesString(testState, aliceIsBlue));
+        
+        // Log(BasesString(testState, new Expression(BETTER, new Expression(RED, SELF), NEUTRAL)));
+        // Log(BasesString(testState, new Expression(NOT, new Expression(BETTER, NEUTRAL, new Expression(RED, SELF)))));
 
+        // Log(BasesString(testState, new Expression(RED, CHARLIE)));
         // Log("Double Negation Elimination");
         // Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
         // Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
@@ -212,11 +222,7 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, new Expression(RED, CHARLIE)));
         // Log(BasesString(testState, new Expression(FET, CHARLIE)));
 
-        // Log("variable coordination in disjunctions:");
-        // Log(BasesString(testState, new Expression(OR, ST, new Expression(NOT, ST))));
-        // Log(BasesString(testState, new Expression(OR, new Expression(RED, XE), new Expression(BLUE, XE))));
-
-        // Log("variable coordination in conjunctions: TODO");
+        // Log("variable coordination in conjunctions");
         // Log(BasesString(testState, new Expression(RED, XE)));
         // Log(BasesString(testState, new Expression(APPLE, CHARLIE)));
         // Log(BasesString(testState, new Expression(AND, new Expression(RED, XE), new Expression(APPLE, XE))));
@@ -237,6 +243,23 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(testState, new Expression(TRULY, new Expression(RED, ALICE))));
         // Log(BasesString(testState, new Expression(SOMETIMES, TRULY, NOT)));
         // Log(BasesString(testState, new Expression(TRULY, new Expression(RED, CHARLIE))));
+        // 
+        // Log(BasesString(testState, new Expression(SOMETIMES, new Expression(PERCEIVE, SELF), TRULY)));
+        
+        // Log(BasesString(testState, VERUM));
+        // Log(BasesString(testState, new Expression(VEROUS, BOB)));
+        
+        // Log("contraposition of perceptual belief");
+        // MentalState ps = new MentalState(new Expression(PERCEIVE, SELF, new Expression(GREEN, SELF)));
+        // Log(BasesString(ps, new Expression(GREEN, SELF)));
+        // Log(BasesString(ps, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF)))));
+        // Log(BasesString(ps, new Expression(NOT,
+        //     new Expression(PERCEIVE, SELF,
+        //         new Expression(NOT, new Expression(GREEN, SELF))))));
+        
+        MentalState bs = new MentalState(new Expression(RED, SELF));
+        Log(BasesString(bs, new Expression(BELIEVE, SELF, new Expression(RED, SELF))));
+        Log(BasesString(bs, new Expression(NOT, new Expression(BELIEVE, SELF, new Expression(GREEN, SELF)))));
     }
 
     public static String Verbose(Expression e) {
