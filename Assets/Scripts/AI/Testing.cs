@@ -83,36 +83,51 @@ public class Testing : MonoBehaviour {
         //     Log("Got expected error: " + e);
         // }
         
-        Log("Deictic Constructor");
-        Log(new Deictic(THAT, new GameObject()));
+        // Log("Deictic Constructor");
+        // Deictic thatEmpty = new Deictic(THAT, new GameObject());
+        // Log(Verbose(thatEmpty));
         
         // Log("equality");
+        // Log(thatEmpty.Equals(thatEmpty));
+        // Deictic thatTree = new Deictic(THAT, GameObject.Find("tree"));
+        // Deictic thatTree2 = new Deictic(THAT, GameObject.Find("tree"));
+
+        // Log(thatTree.Equals(thatTree));
+        // Log(thatTree2.Equals(thatTree2));
+        // Log(thatTree.Equals(thatTree2));
+        // Log(thatTree2.Equals(thatTree));
+        // Log(!thatEmpty.Equals(thatTree));
+        // Log(!thatEmpty.Equals(thatTree2));
+
         // Log(NOT.Equals(NOT));
 
         // Log("Unification");
-        // Log(UnificationString(ALICE, ALICE));
-        // Log(UnificationString(XE, ALICE));
-        // Log(UnificationString(ALICE, XE));
-        // Log(UnificationString(XE, XE));
-        // Log(UnificationString(ST, new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(ALICE, ALICE));
+        // Log(MatchesString(XE, ALICE));
+        // Log(MatchesString(ALICE, XE));
+        // Log(MatchesString(XE, XE));
+        // Log(MatchesString(ST, new Expression(AT, ALICE, BOB)));
 
-        // Log(UnificationString(new Expression(RED, XE), new Expression(RED, ALICE)));
-        // Log(UnificationString(new Expression(RED, ALICE), new Expression(RED, XE)));
+        // Log(MatchesString(new Expression(RED, XE), new Expression(RED, ALICE)));
+        // Log(MatchesString(new Expression(RED, ALICE), new Expression(RED, XE)));
 
-        // Log(UnificationString(new Expression(AT, XE, YE), new Expression(AT, ALICE, BOB)));
-        // Log(UnificationString(new Expression(AT, XE, XE), new Expression(AT, ALICE, ALICE)));
-        // Log(UnificationString(new Expression(AT, XE, XE), new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(new Expression(AT, XE, YE), new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(new Expression(AT, XE, XE), new Expression(AT, ALICE, ALICE)));
+        // Log(MatchesString(new Expression(AT, XE, XE), new Expression(AT, ALICE, BOB)));
 
-        // Log(UnificationString(new Expression(FET, ALICE), new Expression(AT, ALICE, BOB)));
-        // Log(UnificationString(new Expression(FET, BOB), new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(new Expression(FET, ALICE), new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(new Expression(FET, BOB), new Expression(AT, ALICE, BOB)));
 
-        // Log(UnificationString(new Expression(AT, ALICE, BOB), new Expression(FET, ALICE)));
-        // Log(UnificationString(new Expression(AT, ALICE, BOB), new Expression(FET, BOB)));
+        // Log(MatchesString(new Expression(AT, ALICE, BOB), new Expression(FET, ALICE)));
+        // Log(MatchesString(new Expression(AT, ALICE, BOB), new Expression(FET, BOB)));
 
-        // Log(UnificationString(new Expression(AT, XE, BOB), new Expression(AT, ALICE, YE)));
+        // Log(MatchesString(new Expression(AT, XE, BOB), new Expression(AT, ALICE, YE)));
 
-        // Log(UnificationString(new Expression(FET, XE), new Expression(REET, ALICE, BOB)));
-        // Log(UnificationString(new Expression(FET, XE), new Expression(GET, YE)));
+        // Log(MatchesString(new Expression(FET, XE), new Expression(REET, ALICE, BOB)));
+        // Log(MatchesString(new Expression(FET, XE), new Expression(GET, YE)));
+
+        // Log(MatchesString(new Expression(FET, XE), new Expression(ITSELF, REET, XE)));
+        // Log(MatchesString(new Expression(ITSELF, REET, XE), new Expression(FET, BOB)));
 
         // @TODO Test potential bug in mutating expressions
         
@@ -164,7 +179,8 @@ public class Testing : MonoBehaviour {
             new Expression(BETTER, new Expression(BLUE, SELF), NEUTRAL),
             new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
-        // Log(BasesString(testState, aliceIsRed));
+        testState.ProofMode = Proof;
+        Log(BasesString(testState, aliceIsRed));
         // Log(BasesString(testState, bobIsBlue));
         // Log(BasesString(testState, bobIsRed));
         // Log(BasesString(testState, aliceIsBlue));
@@ -257,9 +273,9 @@ public class Testing : MonoBehaviour {
         //     new Expression(PERCEIVE, SELF,
         //         new Expression(NOT, new Expression(GREEN, SELF))))));
         
-        MentalState bs = new MentalState(new Expression(RED, SELF));
-        Log(BasesString(bs, new Expression(BELIEVE, SELF, new Expression(RED, SELF))));
-        Log(BasesString(bs, new Expression(NOT, new Expression(BELIEVE, SELF, new Expression(GREEN, SELF)))));
+        // MentalState bs = new MentalState(new Expression(RED, SELF));
+        // Log(BasesString(bs, new Expression(BELIEVE, SELF, new Expression(RED, SELF))));
+        // Log(BasesString(bs, new Expression(NOT, new Expression(BELIEVE, SELF, new Expression(GREEN, SELF)))));
     }
 
     public static String Verbose(Expression e) {
@@ -284,8 +300,8 @@ public class Testing : MonoBehaviour {
         return s.ToString();
     }
 
-    public static String UnificationString(Expression a, Expression b) {
-        return a + ", " + b + ": " + SubstitutionString(a.Unify(b));
+    public static String MatchesString(Expression a, Expression b) {
+        return a + ", " + b + ": " + SubstitutionString(a.GetMatches(b));
     }
 
     public static String BasesString(MentalState m, Expression e) {

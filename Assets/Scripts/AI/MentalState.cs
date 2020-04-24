@@ -139,7 +139,7 @@ public class MentalState {
         // unifying substitution, to the basis set.
         HashSet<Basis> satisfiers = new HashSet<Basis>();
         foreach (Expression belief in domain) {
-            HashSet<Substitution> unifiers = formula.Unify(belief);
+            HashSet<Substitution> unifiers = formula.GetMatches(belief);
             foreach (Substitution unifier in unifiers) {
                 List<Expression> premiseContainer = new List<Expression>();
                 premiseContainer.Add(belief);
@@ -274,7 +274,7 @@ public class MentalState {
                 // match, so that we stop unifying on formulas in
                 // the suppositions, which is screwing up other
                 // inference rules.
-                HashSet<Substitution> unifiers = supposition.Unify(goal);
+                HashSet<Substitution> unifiers = supposition.GetMatches(goal);
                 foreach (var unifier in unifiers) {
                     alternativeBases.Add(new Basis(new List<Expression>(), unifier));
                 }
@@ -364,7 +364,7 @@ public class MentalState {
             // Now, we go through the conclusions of the rules,
             // trying to match a conclusion.
             for (int i = 0; i < conclusions.Length; i++) {
-                var unifiers = conclusions[i].Unify(goal);
+                var unifiers = conclusions[i].GetMatches(goal);
 
                 // for each unifier, we get a different set of bases.
                 foreach (var unifier in unifiers) {
@@ -445,58 +445,58 @@ public class MentalState {
         // INFERENCES
         // ==========
 
-        ApplyInferenceRule(VERUM_INTRODUCTION);
-        ApplyInferenceRule(VEROUS_INTRODUCTION);
+        // ApplyInferenceRule(VERUM_INTRODUCTION);
+        // ApplyInferenceRule(VEROUS_INTRODUCTION);
 
-        ApplyInferenceRule(TRULY_INTRODUCTION);
-        ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION);
+        // ApplyInferenceRule(TRULY_INTRODUCTION);
+        // ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION);
 
         // @Note: not working. Something is up with Unify()
         // ApplyInferenceRule(ITSELF_INTRODUCTION);
-        // ApplyInferenceRule(ITSELF_ELIMINATION);
+        ApplyInferenceRule(ITSELF_ELIMINATION);
         
-        ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT);
-        ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT);
+        // ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT);
+        // ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT);
         
-        ApplyInferenceRule(CONJUNCTION_INTRODUCTION);
+        // ApplyInferenceRule(CONJUNCTION_INTRODUCTION);
 
-        ApplyInferenceRule(EXISTENTIAL_INTRODUCTION);
+        // ApplyInferenceRule(EXISTENTIAL_INTRODUCTION);
         // ApplyInferenceRule(UNIVERSAL_ELIMINATION);
 
         // conjunction elimination
         // A & B |- A; A & B |- B
 
-        // conditional proof (conditional introduction)
-        // @note all of the proof annotations should be written
-        // in the sequent calculus, not natural deduction.
-        // Usually doesn't matter though.
-        // M,[A] |- B => M |- A -> B
-        if (goal.Head.Equals(IF.Head)) {
-            var antecedent = goal.GetArgAsExpression(0);
+        // // conditional proof (conditional introduction)
+        // // @note all of the proof annotations should be written
+        // // in the sequent calculus, not natural deduction.
+        // // Usually doesn't matter though.
+        // // M, A |- B => M |- A -> B
+        // if (goal.Head.Equals(IF.Head)) {
+        //     var antecedent = goal.GetArgAsExpression(0);
 
-            // @Note as a workaround, we skip if the antecedent
-            // is a lone variable, as it won't be helpful to know
-            // that's matching, and it causes loops with
-            // modus ponens.
-            if (!(antecedent.Head is Variable) && !antecedent.Type.Equals(antecedent.Head.Type)) {
-                var newSuppositions = new HashSet<Expression>();
-                foreach (Expression supposition in suppositions) {
-                    newSuppositions.Add(supposition);
-                }
-                // add the antecedent of the conditional
-                // to the list of suppositions.
-                newSuppositions.Add(antecedent);
-                // add the proofs of the consequent
-                // under the supposition of the antecedent.
-                alternativeBases.UnionWith(Bases((Expression) goal.GetArg(1),
-                    newSuppositions,
-                    pendingExpressions,
-                    completeExpressions));
-            }
-        }
+        //     // @Note as a workaround, we skip if the antecedent
+        //     // is a lone variable, as it won't be helpful to know
+        //     // that's matching, and it causes loops with
+        //     // modus ponens.
+        //     if (!(antecedent.Head is Variable) && !antecedent.Type.Equals(antecedent.Head.Type)) {
+        //         var newSuppositions = new HashSet<Expression>();
+        //         foreach (Expression supposition in suppositions) {
+        //             newSuppositions.Add(supposition);
+        //         }
+        //         // add the antecedent of the conditional
+        //         // to the list of suppositions.
+        //         newSuppositions.Add(antecedent);
+        //         // add the proofs of the consequent
+        //         // under the supposition of the antecedent.
+        //         alternativeBases.UnionWith(Bases((Expression) goal.GetArg(1),
+        //             newSuppositions,
+        //             pendingExpressions,
+        //             completeExpressions));
+        //     }
+        // }
 
-        ApplyInferenceRule(BETTER_ANTISYMMETRY);
-        ApplyInferenceRule(BETTER_TRANSITIVITY);
+        // ApplyInferenceRule(BETTER_ANTISYMMETRY);
+        // ApplyInferenceRule(BETTER_TRANSITIVITY);
         // ApplyInferenceRule(SELF_BELIEF_INTRODUCTION);
         // ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION);
 
@@ -505,7 +505,7 @@ public class MentalState {
 
         // ApplyInferenceRule(SOMETIMES_INTRODUCTION);
 
-        ApplyInferenceRule(Contrapose(PERCEPTUAL_BELIEF));
+        // ApplyInferenceRule(Contrapose(PERCEPTUAL_BELIEF));
 
         // @Note put all contractive rules here
         // (rules whose premises are more complex than their conclusions,
@@ -529,7 +529,6 @@ public class MentalState {
             // something you already believe to be true.
             // 
             // M |- able(self, A),  M :: will(A) => M |- A
-            // 
             if (ProofMode == Plan) {
 
                 // here we assume it's a logical fact
@@ -558,7 +557,6 @@ public class MentalState {
         // If that turns out to be a faulty assumption,
         // we can check if the proof mode is Proof, and
         // if it is go through the list and remove duplicates.
-            
         var completeBases = new HashSet<Basis>();
         completeBases.UnionWith(alternativeBases);
 

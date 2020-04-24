@@ -52,7 +52,6 @@ public class Actuator : MonoBehaviour {
                 }
 
                 var iTried = new Expression(TRIED, SELF, content);
-                // Debug.Log(iTried);
 
                 // we assert to the mental state that
                 // we've tried to perform this action.
