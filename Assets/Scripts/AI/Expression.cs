@@ -79,6 +79,46 @@ public class Empty : Argument {
     }
 }
 
+// @Note this is a placeholder, to be replaced
+// by a more clever 'subjective' representation.
+// But right now, we're only concerned with
+// making 'this' words, and we have them
+// directly and objectly refer to their component
+// objects.
+public class Deictic : Expression {
+    public UnityEngine.GameObject Referent { get; protected set; }
+
+    public Deictic(Atom head, UnityEngine.GameObject referent) : base(head) {
+        Referent = referent;
+    }
+
+    public override Expression Substitute(Dictionary<Variable, Expression> substitution) {
+        Expression substitutedExpression = base.Substitute(substitution);
+
+        return new Deictic(substitutedExpression.Head, Referent);
+    }
+
+    public override bool Equals(Object o) {
+        if (!(o is Deictic)) {
+            return false;
+        }
+
+        if (!base.Equals(o)) {
+            return false;
+        }
+
+        return Referent == (((Deictic) o).Referent);
+    }
+
+    public override String ToString() {
+       return base.ToString() + " ~> " + Referent.ToString();
+    }
+
+    public override int GetHashCode() {
+        return base.GetHashCode() * Referent.GetHashCode();
+    }
+}
+
 public class Expression : Argument {
     public Atom Head { get; protected set; }
     protected Argument[] Args;
@@ -93,12 +133,12 @@ public class Expression : Argument {
     public Expression(Atom head) {
         Type = head.Type;
         Head = head;
+        Depth = 1;
 
         // we check if the head expression has an atomic type.
         // if it does, then we just initialize an empty array
         // since this expression doesn't take any arguments.
         if (Head.Type is AtomicType) {
-            Depth = 1;
             Args = new Argument[0];
             NumArgs = 0;
             return;
@@ -107,7 +147,6 @@ public class Expression : Argument {
         // we're going to populate the argument array with
         // empty slots that are typed according to the
         // semantic type of the functional head expression.
-        Depth = 2;
         FunctionalType fType = head.Type as FunctionalType;
         int fNumArgs = fType.GetNumArgs();
         Args = new Argument[fNumArgs];
@@ -208,6 +247,10 @@ public class Expression : Argument {
         return Args[i];
     }
 
+    public Expression GetArgAsExpression(int i) {
+        return (Expression) Args[i];
+    }
+
     // returns true if x occurs in this expression
     public bool HasOccurenceOf(Variable x) {
         if (Head.Equals(x)) {
@@ -223,9 +266,27 @@ public class Expression : Argument {
         return false;
     }
 
+    public HashSet<Variable> GetVariables() {
+        HashSet<Variable> variables = new HashSet<Variable>();
+        if (Head is Variable) {
+            variables.Add((Variable) Head);
+        }
+
+        for (int i = 0; i < Args.Length; i++) {
+            Argument arg = Args[i];
+            if (arg is Empty) {
+                continue;
+            }
+            Expression argExpression = (Expression) arg;
+            variables.UnionWith(argExpression.GetVariables());
+        }
+
+        return variables;
+    }
+
     // replaces all occurances of the variables within s with the
     // associated expression in s.
-    public Expression Substitute(Dictionary<Variable, Expression> s) {
+    public virtual Expression Substitute(Dictionary<Variable, Expression> s) {
         Argument[] substitutedArgs = new Argument[Args.Length];
         for (int i = 0; i < Args.Length; i++) {
             if (Args[i] is Expression) {
@@ -265,7 +326,10 @@ public class Expression : Argument {
     // and that expression. A unifier is a variable substitution that,
     // when applied to both expressions, leads the expressions to
     // be syntactically equal
-    private HashSet<Dictionary<Variable, Expression>> Unify(Expression that,
+    // 
+    // @Note we want to change this to be pattern matching instead
+    // of unification (or closer to pattern matching, in any case.)
+    private HashSet<Dictionary<Variable, Expression>> GetMatches(Expression that,
         HashSet<Dictionary<Variable, Expression>> substitutions) {
         // if the types don't match or the substitutions are empty, we fail.
         if (substitutions.Count == 0 || !this.Type.Equals(that.Type)) {
@@ -276,7 +340,6 @@ public class Expression : Argument {
         HashSet<Dictionary<Variable, Expression>> AddAssignment(Variable x, Expression e,
             HashSet<Dictionary<Variable, Expression>> sub) {
             // first, we check if x occurs in e.
-            // if it does, then unification fails.
             if (e.HasOccurenceOf(x) && !e.Equals(new Expression(x))) {
                 return new HashSet<Dictionary<Variable, Expression>>();
             }
@@ -314,10 +377,12 @@ public class Expression : Argument {
             return AddAssignment((Variable) this.Head, that, substitutions);
         }
 
+        // @Note: this is commented out to make it so unification
+        // only happens left to right (essentially pattern matching)
         // same case as above, but reversed.
-        if (that.Head is Variable && that.Head.Type.Equals(that.Type)) {
-            return AddAssignment((Variable) that.Head, this, substitutions);
-        }
+        // if (that.Head is Variable && that.Head.Type.Equals(that.Type)) {
+        //     return AddAssignment((Variable) that.Head, this, substitutions);
+        // }
 
         // both head symbols are constants. We need to recur on arguments and
         // collect results of unifying them.
@@ -354,7 +419,9 @@ public class Expression : Argument {
                 // It shouldn't be, because we're checking to see
                 // if x is bound to anything 
                 // Let see if it's necessary in testing.
-                currentSubstitutions = ((Expression) this.Args[i]).Unify((Expression) that.Args[i], currentSubstitutions);
+                currentSubstitutions =
+                    ((Expression) this.Args[i]).GetMatches((Expression) that.Args[i],
+                        currentSubstitutions);
             }
 
             return currentSubstitutions;
@@ -397,6 +464,10 @@ public class Expression : Argument {
 
                     nextArgs[patternIndex] = f.Args[i];
 
+                    for (int j = patternIndex + 1; j < nextArgs.Length; j++) {
+                        nextArgs[j] = args[j];
+                    }
+
                     var partialDecompositions = DecomposeExpression(patternIndex + 1, i + 1,
                         patternHeadType, f.RemoveAt(i), nextArgs);
 
@@ -418,12 +489,13 @@ public class Expression : Argument {
             Dictionary<Expression, Argument[]> decompositionsOfMatch =
                 DecomposeExpression(0, 0, pattern.Head.Type, match, initialArguments);
 
+
             var alternativeSubstitutions = new List<HashSet<Dictionary<Variable, Expression>>>();
 
             // similar logic to that found in the code with two constants, except with
             // the decomposed expressions instead of the expressions themselves.
             foreach (var decompositionOfMatch in decompositionsOfMatch) {
-                var currentSubstitutions = (new Expression(pattern.Head)).Unify(decompositionOfMatch.Key, substitutions);
+                var currentSubstitutions = (new Expression(pattern.Head)).GetMatches(decompositionOfMatch.Key, substitutions);
                 for (int i = 0; i < pattern.Args.Length; i++) {
                     if (currentSubstitutions.Count == 0) {
                         break;
@@ -439,7 +511,7 @@ public class Expression : Argument {
                         break;
                     }
 
-                    currentSubstitutions = ((Expression) pattern.Args[i]).Unify((Expression) matchArg, currentSubstitutions);
+                    currentSubstitutions = ((Expression) pattern.Args[i]).GetMatches((Expression) matchArg, currentSubstitutions);
                 }
 
                 if (currentSubstitutions.Count != 0) {
@@ -464,22 +536,26 @@ public class Expression : Argument {
             }
         }
 
-        if (patternSubstitutions.Count == 0) {
-            var thatMatchThisSubstitutions = patternMatch(that, this);
+        // // @Note this is commented out because we want unification
+        // // to only occur from the left to the right.
+        
+        // if (patternSubstitutions.Count == 0) {
+        //     var thatMatchThisSubstitutions = patternMatch(that, this);
 
-            foreach (var thatMatchThisSubstitution in thatMatchThisSubstitutions) {
-                patternSubstitutions.UnionWith(thatMatchThisSubstitution);
-            }            
-        }
+        //     foreach (var thatMatchThisSubstitution in thatMatchThisSubstitutions) {
+        //         patternSubstitutions.UnionWith(thatMatchThisSubstitution);
+        //     }            
+        // }
 
         return patternSubstitutions;
     }
 
-    public HashSet<Dictionary<Variable, Expression>> Unify(Expression that) {
+    public HashSet<Dictionary<Variable, Expression>>
+        GetMatches(Expression that) {
         var initialSubstitution = new Dictionary<Variable, Expression>();
         var initialSubstitutions = new HashSet<Dictionary<Variable, Expression>>();
         initialSubstitutions.Add(initialSubstitution);
-        return Unify(that, initialSubstitutions);
+        return GetMatches(that, initialSubstitutions);
     }
 
     public override String ToString() {
@@ -493,10 +569,15 @@ public class Expression : Argument {
             return s.ToString();
         }
 
+        bool hasOneExpression = false;
         for (int i = 0; i < Args.Length; i++) {
             if (Args[i] is Expression) {
+                hasOneExpression = true;
                 break;
             }
+        }
+
+        if (!hasOneExpression) {
             return s.ToString();
         }
 
@@ -552,6 +633,10 @@ public class Expression : Argument {
     public static readonly Expression ALICE   = new Expression(new Constant(INDIVIDUAL, "alice"));
     public static readonly Expression BOB     = new Expression(new Constant(INDIVIDUAL, "bob"));
     public static readonly Expression CHARLIE = new Expression(new Constant(INDIVIDUAL, "charlie"));
+    public static readonly Expression SOUP = new Expression(new Constant(INDIVIDUAL, "soup"));
+    public static readonly Expression SWEETBERRY = new Expression(new Constant(INDIVIDUAL, "sweetberry"));
+    public static readonly Expression SPICYBERRY = new Expression(new Constant(INDIVIDUAL, "spicyberry"));
+    public static readonly Expression FOREST_KING = new Expression(new Constant(INDIVIDUAL, "forest_king"));
 
     // Individual variables
     public static readonly Expression XE = new Expression(new Variable(INDIVIDUAL, "x"));
@@ -566,14 +651,19 @@ public class Expression : Argument {
     // Truth Value variables
     public static readonly Expression ST = new Expression(new Variable(TRUTH_VALUE, "S"));
     public static readonly Expression TT = new Expression(new Variable(TRUTH_VALUE, "T"));
+    public static readonly Expression PT = new Expression(new Variable(TRUTH_VALUE, "P"));
 
     // Predicate constants
     public static readonly Expression RED  = new Expression(new Constant(PREDICATE, "red"));
     public static readonly Expression BLUE = new Expression(new Constant(PREDICATE, "blue"));
     public static readonly Expression GREEN = new Expression(new Constant(PREDICATE, "green"));
+    public static readonly Expression YELLOW = new Expression(new Constant(PREDICATE, "yellow"));
     public static readonly Expression APPLE = new Expression(new Constant(PREDICATE, "apple"));
+    public static readonly Expression SPICY = new Expression(new Constant(PREDICATE, "spicy"));
+    public static readonly Expression SWEET = new Expression(new Constant(PREDICATE, "sweet"));
+
     // a predicate that applies to any individual
-    public static readonly Expression EMPTY = new Expression(new Constant(PREDICATE, "empty"));
+    public static readonly Expression VEROUS = new Expression(new Constant(PREDICATE, "verous"));
 
     // Predicate variables
     public static readonly Expression FET = new Expression(new Variable(PREDICATE, "F"));
@@ -583,6 +673,7 @@ public class Expression : Argument {
     // 2-place relation constants
     public static readonly Expression IDENTITY = new Expression(new Constant(RELATION_2, "="));
     public static readonly Expression AT       = new Expression(new Constant(RELATION_2, "at"));
+    public static readonly Expression ADDED_TO = new Expression(new Constant(RELATION_2, "added_to"));
 
     // 2-place relation variables
     public static readonly Expression REET = new Expression(new Variable(RELATION_2, "R"));
@@ -590,6 +681,9 @@ public class Expression : Argument {
     // 1-place truth functions
     public static readonly Expression NOT = new Expression(new Constant(TRUTH_FUNCTION, "not"));
     public static readonly Expression TRULY = new Expression(new Constant(TRUTH_FUNCTION, "truly"));
+
+    public static readonly Expression FTF = new Expression(new Variable(TRUTH_FUNCTION, "FTF"));
+    public static readonly Expression GTF = new Expression(new Variable(TRUTH_FUNCTION, "GTF"));
 
     // 2-place truth functions
     public static readonly Expression AND = new Expression(new Constant(TRUTH_FUNCTION_2, "and"));
@@ -608,6 +702,8 @@ public class Expression : Argument {
     public static readonly Expression BELIEVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "believe"));
     public static readonly Expression ABLE    = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "able"));
     public static readonly Expression PERCEIVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceive"));
+    public static readonly Expression VERIDICAL = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "veridical"));
+    public static readonly Expression TRIED = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "tried"));
 
     // quantifiers
     public static readonly Expression SOME = new Expression(new Constant(QUANTIFIER, "some"));
@@ -621,4 +717,16 @@ public class Expression : Argument {
 
     // weird function words
     public static readonly Expression ITSELF = new Expression(new Constant(RELATION_2_REDUCER, "itself"));
+
+    // question and assert functions
+    public static readonly Expression ASK = new Expression(new Constant(TRUTH_QUESTION_FUNCTION, "ask"));
+    public static readonly Expression ASSERT = new Expression(new Constant(TRUTH_ASSERTION_FUNCTION, "assert"));
+
+    // assertion constants
+    public static readonly Expression YES = new Expression(new Constant(ASSERTION, "yes"));
+    public static readonly Expression NO  = new Expression(new Constant(ASSERTION, "no"));
+    public static readonly Expression OK  = new Expression(new Constant(ASSERTION, "ok"));
+
+    // heads for deictic expressions
+    public static readonly Constant THAT = new Constant(INDIVIDUAL, "that");
 }
