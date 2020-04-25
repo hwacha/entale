@@ -29,7 +29,7 @@ public class Testing : MonoBehaviour {
     private IEnumerator CalleeRoutine(Container<bool> done) {
         float timeBudget = 0.032f;
         int counter = 0;
-        while (counter < 1000000) {
+        while (counter < 100000000) {
             while (FrameTimer.FrameDuration < timeBudget) {
                 counter++;    
             }
@@ -41,9 +41,9 @@ public class Testing : MonoBehaviour {
     }
 
     void Start() {
-        FrameTimer = gameObject.GetComponent<FrameTimer>();
-        Log(FrameTimer);
-        Log("Testing coroutines.");
+        // FrameTimer = gameObject.GetComponent<FrameTimer>();
+        // Log(FrameTimer);
+        // Log("Testing coroutines.");
         // StartCoroutine(TestRoutine());
 
         // Log("Running tests from AI/Testing.cs. " +
@@ -216,90 +216,90 @@ public class Testing : MonoBehaviour {
             new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
         MentalState.ProofMode = Proof;
-        StartCoroutine(LogBases(MentalState, aliceIsRed));
-        StartCoroutine(LogBases(MentalState, bobIsBlue));
-        StartCoroutine(LogBases(MentalState, bobIsRed));
-        StartCoroutine(LogBases(MentalState, aliceIsBlue));
+        // StartCoroutine(LogBases(MentalState, aliceIsRed));
+        // StartCoroutine(LogBases(MentalState, bobIsBlue));
+        // StartCoroutine(LogBases(MentalState, bobIsRed));
+        // StartCoroutine(LogBases(MentalState, aliceIsBlue));
         
-        StartCoroutine(LogBases(MentalState, new Expression(BETTER, new Expression(RED, SELF), NEUTRAL)));
-        StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(BETTER, NEUTRAL, new Expression(RED, SELF)))));
+        // StartCoroutine(LogBases(MentalState, new Expression(BETTER, new Expression(RED, SELF), NEUTRAL)));
+        // StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(BETTER, NEUTRAL, new Expression(RED, SELF)))));
 
-        StartCoroutine(LogBases(MentalState, new Expression(RED, CHARLIE)));
-        Log("Double Negation Elimination");
-        Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
-        Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
-        Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
-        StartCoroutine(LogBases(MentalState, notNotAliceIsRed));
-        StartCoroutine(LogBases(MentalState, notNotNotNotAliceIsRed));
-        StartCoroutine(LogBases(MentalState, notNotNotNotNotNotAliceIsRed));
-        StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(NOT, bobIsRed))));
-        StartCoroutine(LogBases(MentalState, new Expression(NOT, bobIsBlue)));
+        // StartCoroutine(LogBases(MentalState, new Expression(RED, CHARLIE)));
+        // Log("Double Negation Elimination");
+        // Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
+        // Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
+        // Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
+        // StartCoroutine(LogBases(MentalState, notNotAliceIsRed));
+        // StartCoroutine(LogBases(MentalState, notNotNotNotAliceIsRed));
+        // StartCoroutine(LogBases(MentalState, notNotNotNotNotNotAliceIsRed));
+        // StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(NOT, bobIsRed))));
+        // StartCoroutine(LogBases(MentalState, new Expression(NOT, bobIsBlue)));
 
-        Log("Disjunction Introduction");
-        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsRed, bobIsBlue)));
-        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsRed, bobIsRed)));
-        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsBlue, bobIsBlue)));
-        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsBlue, bobIsRed)));
+        // Log("Disjunction Introduction");
+        // StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsRed, bobIsBlue)));
+        // StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsRed, bobIsRed)));
+        // StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsBlue, bobIsBlue)));
+        // StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsBlue, bobIsRed)));
 
-        Log("Conjunction Introduction");
-        StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsRed,  bobIsBlue)));
-        StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsRed,  bobIsRed)));
-        StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsBlue, bobIsBlue)));
-        StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsBlue, bobIsRed)));
+        // Log("Conjunction Introduction");
+        // StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsRed,  bobIsBlue)));
+        // StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsRed,  bobIsRed)));
+        // StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsBlue, bobIsBlue)));
+        // StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsBlue, bobIsRed)));
 
-        Expression conjunctionOfDisjunctions = new Expression(AND,
-                new Expression(OR, aliceIsRed, bobIsBlue),
-                new Expression(OR, aliceIsAlice, bobIsBob));
+        // Expression conjunctionOfDisjunctions = new Expression(AND,
+        //         new Expression(OR, aliceIsRed, bobIsBlue),
+        //         new Expression(OR, aliceIsAlice, bobIsBob));
 
-        StartCoroutine(LogBases(MentalState, conjunctionOfDisjunctions));
+        // StartCoroutine(LogBases(MentalState, conjunctionOfDisjunctions));
 
-        Log("Planning");
-        StartCoroutine(LogBases(MentalState, new Expression(BLUE, CHARLIE)));
-        MentalState.ProofMode = Plan;
-        StartCoroutine(LogBases(MentalState, new Expression(BLUE, CHARLIE)));
-        StartCoroutine(LogBases(MentalState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
-        StartCoroutine(LogBases(MentalState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
-        MentalState.ProofMode = Proof;
+        // Log("Planning");
+        // StartCoroutine(LogBases(MentalState, new Expression(BLUE, CHARLIE)));
+        // MentalState.ProofMode = Plan;
+        // StartCoroutine(LogBases(MentalState, new Expression(BLUE, CHARLIE)));
+        // StartCoroutine(LogBases(MentalState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
+        // StartCoroutine(LogBases(MentalState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
+        // MentalState.ProofMode = Proof;
 
-        Log("Formula satisfaction");
-        Expression xIsBlue = new Expression(BLUE, XE);
-        StartCoroutine(LogBases(MentalState, xIsBlue));
-        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsBlue, xIsBlue)));
+        // Log("Formula satisfaction");
+        // Expression xIsBlue = new Expression(BLUE, XE);
+        // StartCoroutine(LogBases(MentalState, xIsBlue));
+        // StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsBlue, xIsBlue)));
 
-        Log("existential introduction");
-        StartCoroutine(LogBases(MentalState, new Expression(SOME, APPLE, RED)));
-        StartCoroutine(LogBases(MentalState, new Expression(SOME, APPLE, BLUE)));
+        // Log("existential introduction");
+        // StartCoroutine(LogBases(MentalState, new Expression(SOME, APPLE, RED)));
+        // StartCoroutine(LogBases(MentalState, new Expression(SOME, APPLE, BLUE)));
 
-        Log("universal elimination");
-        StartCoroutine(LogBases(MentalState, new Expression(RED, CHARLIE)));
-        StartCoroutine(LogBases(MentalState, new Expression(FET, CHARLIE)));
+        // Log("universal elimination");
+        // StartCoroutine(LogBases(MentalState, new Expression(RED, CHARLIE)));
+        // StartCoroutine(LogBases(MentalState, new Expression(FET, CHARLIE)));
 
-        Log("variable coordination in conjunctions");
-        StartCoroutine(LogBases(MentalState, new Expression(RED, XE)));
-        StartCoroutine(LogBases(MentalState, new Expression(APPLE, CHARLIE)));
-        StartCoroutine(LogBases(MentalState, new Expression(AND, new Expression(RED, XE), new Expression(APPLE, XE))));
+        // Log("variable coordination in conjunctions");
+        // StartCoroutine(LogBases(MentalState, new Expression(RED, XE)));
+        // StartCoroutine(LogBases(MentalState, new Expression(APPLE, CHARLIE)));
+        // StartCoroutine(LogBases(MentalState, new Expression(AND, new Expression(RED, XE), new Expression(APPLE, XE))));
 
-        Log("Modus ponens: TODO - bug");
-        StartCoroutine(LogBases(MentalState, new Expression(GREEN, SELF)));
+        // Log("Modus ponens: TODO - bug");
+        // StartCoroutine(LogBases(MentalState, new Expression(GREEN, SELF)));
 
-        Log("Conditional proof");
-        StartCoroutine(LogBases(MentalState, new Expression(IF, new Expression(GREEN, BOB), new Expression(GREEN, BOB))));
-        StartCoroutine(LogBases(MentalState, new Expression(IF, new Expression(GREEN, BOB), new Expression(AND, new Expression(GREEN, BOB), new Expression(BLUE, BOB)))));
-        StartCoroutine(LogBases(MentalState, new Expression(IF, new Expression(ALL, BLUE, GREEN), new Expression(GREEN, BOB))));
+        // Log("Conditional proof");
+        // StartCoroutine(LogBases(MentalState, new Expression(IF, new Expression(GREEN, BOB), new Expression(GREEN, BOB))));
+        // StartCoroutine(LogBases(MentalState, new Expression(IF, new Expression(GREEN, BOB), new Expression(AND, new Expression(GREEN, BOB), new Expression(BLUE, BOB)))));
+        // StartCoroutine(LogBases(MentalState, new Expression(IF, new Expression(ALL, BLUE, GREEN), new Expression(GREEN, BOB))));
 
-        Log("itself");
-        StartCoroutine(LogBases(MentalState, new Expression(ITSELF, IDENTITY, BOB)));
-        StartCoroutine(LogBases(MentalState, new Expression(IDENTITY, CHARLIE, CHARLIE)));
+        // Log("itself");
+        // StartCoroutine(LogBases(MentalState, new Expression(ITSELF, IDENTITY, BOB)));
+        // StartCoroutine(LogBases(MentalState, new Expression(IDENTITY, CHARLIE, CHARLIE)));
 
-        Log("truly");
-        StartCoroutine(LogBases(MentalState, new Expression(TRULY, new Expression(RED, ALICE))));
-        StartCoroutine(LogBases(MentalState, new Expression(SOMETIMES, TRULY, NOT)));
-        StartCoroutine(LogBases(MentalState, new Expression(TRULY, new Expression(RED, CHARLIE))));
+        // Log("truly");
+        // StartCoroutine(LogBases(MentalState, new Expression(TRULY, new Expression(RED, ALICE))));
+        // StartCoroutine(LogBases(MentalState, new Expression(SOMETIMES, TRULY, NOT)));
+        // StartCoroutine(LogBases(MentalState, new Expression(TRULY, new Expression(RED, CHARLIE))));
         
-        StartCoroutine(LogBases(MentalState, new Expression(SOMETIMES, new Expression(PERCEIVE, SELF), TRULY)));
+        // StartCoroutine(LogBases(MentalState, new Expression(SOMETIMES, new Expression(PERCEIVE, SELF), TRULY)));
         
-        StartCoroutine(LogBases(MentalState, VERUM));
-        StartCoroutine(LogBases(MentalState, new Expression(VEROUS, BOB)));
+        // StartCoroutine(LogBases(MentalState, VERUM));
+        // StartCoroutine(LogBases(MentalState, new Expression(VEROUS, BOB)));
         
         // Log("contraposition of perceptual belief");
         // MentalState ps = new MentalState(new Expression(PERCEIVE, SELF, new Expression(GREEN, SELF)));

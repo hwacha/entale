@@ -61,7 +61,7 @@ public enum DecisionPolicy {
 public class MentalState : MonoBehaviour {
     // the time, in seconds, that the mental
     // state is allowed to run search in one frame
-    protected static float TIME_BUDGET = 0.06f;
+    protected static float TIME_BUDGET = 0.16f;
 
     public BeliefRevisionPolicy BeliefRevisionPolicy = Conservative;
     public DecisionPolicy DecisionPolicy = Default;
@@ -249,7 +249,7 @@ public class MentalState : MonoBehaviour {
         Dictionary<Expression, KeyValuePair<HashSet<Expression>, HashSet<Basis>>> completeExpressions,
         HashSet<Basis> alternativeBases,
         Container<bool> done) {
-        if (FrameTimer.FrameDuration < TIME_BUDGET) {
+        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
             yield return null;
         }
 
@@ -496,6 +496,10 @@ public class MentalState : MonoBehaviour {
             numRoutines--;
         }
 
+        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+            yield return null;
+        }
+
         // INFERENCES
         // ==========
 
@@ -515,10 +519,14 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(CONJUNCTION_INTRODUCTION));
 
         StartCoroutine(ApplyInferenceRule(EXISTENTIAL_INTRODUCTION));
-        // StartCoroutine(ApplyInferenceRule(UNIVERSAL_ELIMINATION));
+        StartCoroutine(ApplyInferenceRule(UNIVERSAL_ELIMINATION));
 
         // conjunction elimination
         // A & B |- A; A & B |- B
+        
+        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+            yield return null;
+        }
 
         // conditional proof (conditional introduction)
         // @note all of the proof annotations should be written
@@ -569,6 +577,10 @@ public class MentalState : MonoBehaviour {
 
         StartCoroutine(ApplyInferenceRule(Contrapose(PERCEPTUAL_BELIEF)));
 
+        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+            yield return null;
+        }
+
         // @Note put all contractive rules here
         // (rules whose premises are more complex than their conclusions,
         //  and for which a premise may match the rule as a conclusion)
@@ -612,6 +624,10 @@ public class MentalState : MonoBehaviour {
                     completeExpressions,
                     abilityBases,
                     doneFlag));
+
+                while (!doneFlag.Item) {
+                    yield return null;
+                }
 
                 if (abilityBases.Count != 0) {
                     foreach (Basis abilityBasis in abilityBases) {
@@ -768,6 +784,7 @@ public class MentalState : MonoBehaviour {
         ProofMode = Proof;
 
         foreach (var preferable in preferables) {
+            Debug.Log("ranking " + preferable + "...");
             while (ranking.Count != 0) {
                 var bestSoFar = ranking.Peek();
                 
@@ -777,6 +794,8 @@ public class MentalState : MonoBehaviour {
                 while (!doneFlag.Item) {
                     yield return null;
                 }
+
+                Debug.Log("... done.");
 
                 if (answer.Item) {
                     ranking.Push(preferable);
@@ -794,6 +813,7 @@ public class MentalState : MonoBehaviour {
         var bestPlan = new List<Expression>();
         while (ranking.Count != 0) {
             Expression nextBestGoal = ranking.Pop();
+            Debug.Log(nextBestGoal + " is the best.");
             var goalBases = new HashSet<Basis>();
             var doneFlag = new Container<bool>(false);
             StartCoroutine(GetBases(nextBestGoal, goalBases, doneFlag));
@@ -801,6 +821,8 @@ public class MentalState : MonoBehaviour {
             while (!doneFlag.Item) {
                 yield return null;
             }
+
+            Debug.Log(Testing.BasesString(goalBases));
 
             bool alreadyTrue = true;
             // we go through each basis of the goal and
