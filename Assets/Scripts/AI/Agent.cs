@@ -7,7 +7,7 @@ using static Expression;
 public abstract class Agent : MonoBehaviour
 {
     protected Sensor Sensor;
-    public MentalState MentalState { protected set; get; }
+    public MentalState MentalState;
     protected Actuator Actuator;
 
     protected virtual void Start()

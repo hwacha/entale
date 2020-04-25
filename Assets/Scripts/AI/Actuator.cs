@@ -18,7 +18,14 @@ public class Actuator : MonoBehaviour {
     // @Note we want this to be interruptible
     public IEnumerator ExecutePlan() {
         while (true) {
-            List<Expression> plan = Agent.MentalState.DecideCurrentPlan();
+            List<Expression> plan = new List<Expression>();
+            var done = new Container<bool>(false);
+            Agent.MentalState.StartCoroutine(Agent.MentalState.DecideCurrentPlan(plan, done));
+
+            while (!done.Item) {
+                yield return new WaitForSeconds(0.5f);
+            }
+
             foreach (Expression action in plan) {
                 if (!action.Head.Equals(WILL.Head)) {
                     throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
@@ -27,7 +34,7 @@ public class Actuator : MonoBehaviour {
                 var content = action.GetArgAsExpression(0);
 
                 if (content.Equals(NEUTRAL)) {
-                    // Debug.Log("Busy doin' nothin'");
+                    Debug.Log("Busy doin' nothin'");
                 }
 
                 // at(self, that ~> #forest1)
@@ -52,7 +59,6 @@ public class Actuator : MonoBehaviour {
                 }
 
                 var iTried = new Expression(TRIED, SELF, content);
-                // Debug.Log(iTried);
 
                 // we assert to the mental state that
                 // we've tried to perform this action.

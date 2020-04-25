@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Text;
+using System.Collections;
 using System.Collections.Generic;
 using static UnityEngine.Debug;
 using static SemanticType;
@@ -11,7 +12,40 @@ using Substitution = System.Collections.Generic.Dictionary<Variable, Expression>
 using Basis = System.Collections.Generic.KeyValuePair<System.Collections.Generic.List<Expression>, System.Collections.Generic.Dictionary<Variable, Expression>>;
 
 public class Testing : MonoBehaviour {
+    private FrameTimer FrameTimer;
+
+    public MentalState MentalState;
+
+    private IEnumerator TestRoutine() {
+        Container<bool> done = new Container<bool>(false);
+        StartCoroutine(CalleeRoutine(done));
+        while (!done.Item) {
+            yield return new WaitForSeconds(1);
+        }
+        Debug.Log("done.");
+        yield break;
+    }
+
+    private IEnumerator CalleeRoutine(Container<bool> done) {
+        float timeBudget = 0.032f;
+        int counter = 0;
+        while (counter < 1000000) {
+            while (FrameTimer.FrameDuration < timeBudget) {
+                counter++;    
+            }
+            Log(counter);
+            yield return null;
+        }
+        done.Item = true;
+        yield break;
+    }
+
     void Start() {
+        FrameTimer = gameObject.GetComponent<FrameTimer>();
+        Log(FrameTimer);
+        Log("Testing coroutines.");
+        // StartCoroutine(TestRoutine());
+
         // Log("Running tests from AI/Testing.cs. " +
         //     "To turn these off, " +
         //     "deactivate the 'AITesting' object in the heirarchy.");
@@ -83,42 +117,57 @@ public class Testing : MonoBehaviour {
         //     Log("Got expected error: " + e);
         // }
         
-        Log("Deictic Constructor");
-        Log(new Deictic(THAT, new GameObject()));
+        // Log("Deictic Constructor");
+        // Deictic thatEmpty = new Deictic(THAT, new GameObject());
+        // Log(Verbose(thatEmpty));
         
         // Log("equality");
+        // Log(thatEmpty.Equals(thatEmpty));
+        // Deictic thatTree = new Deictic(THAT, GameObject.Find("tree"));
+        // Deictic thatTree2 = new Deictic(THAT, GameObject.Find("tree"));
+
+        // Log(thatTree.Equals(thatTree));
+        // Log(thatTree2.Equals(thatTree2));
+        // Log(thatTree.Equals(thatTree2));
+        // Log(thatTree2.Equals(thatTree));
+        // Log(!thatEmpty.Equals(thatTree));
+        // Log(!thatEmpty.Equals(thatTree2));
+
         // Log(NOT.Equals(NOT));
 
         // Log("Unification");
-        // Log(UnificationString(ALICE, ALICE));
-        // Log(UnificationString(XE, ALICE));
-        // Log(UnificationString(ALICE, XE));
-        // Log(UnificationString(XE, XE));
-        // Log(UnificationString(ST, new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(ALICE, ALICE));
+        // Log(MatchesString(XE, ALICE));
+        // Log(MatchesString(ALICE, XE));
+        // Log(MatchesString(XE, XE));
+        // Log(MatchesString(ST, new Expression(AT, ALICE, BOB)));
 
-        // Log(UnificationString(new Expression(RED, XE), new Expression(RED, ALICE)));
-        // Log(UnificationString(new Expression(RED, ALICE), new Expression(RED, XE)));
+        // Log(MatchesString(new Expression(RED, XE), new Expression(RED, ALICE)));
+        // Log(MatchesString(new Expression(RED, ALICE), new Expression(RED, XE)));
 
-        // Log(UnificationString(new Expression(AT, XE, YE), new Expression(AT, ALICE, BOB)));
-        // Log(UnificationString(new Expression(AT, XE, XE), new Expression(AT, ALICE, ALICE)));
-        // Log(UnificationString(new Expression(AT, XE, XE), new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(new Expression(AT, XE, YE), new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(new Expression(AT, XE, XE), new Expression(AT, ALICE, ALICE)));
+        // Log(MatchesString(new Expression(AT, XE, XE), new Expression(AT, ALICE, BOB)));
 
-        // Log(UnificationString(new Expression(FET, ALICE), new Expression(AT, ALICE, BOB)));
-        // Log(UnificationString(new Expression(FET, BOB), new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(new Expression(FET, ALICE), new Expression(AT, ALICE, BOB)));
+        // Log(MatchesString(new Expression(FET, BOB), new Expression(AT, ALICE, BOB)));
 
-        // Log(UnificationString(new Expression(AT, ALICE, BOB), new Expression(FET, ALICE)));
-        // Log(UnificationString(new Expression(AT, ALICE, BOB), new Expression(FET, BOB)));
+        // Log(MatchesString(new Expression(AT, ALICE, BOB), new Expression(FET, ALICE)));
+        // Log(MatchesString(new Expression(AT, ALICE, BOB), new Expression(FET, BOB)));
 
-        // Log(UnificationString(new Expression(AT, XE, BOB), new Expression(AT, ALICE, YE)));
+        // Log(MatchesString(new Expression(AT, XE, BOB), new Expression(AT, ALICE, YE)));
 
-        // Log(UnificationString(new Expression(FET, XE), new Expression(REET, ALICE, BOB)));
-        // Log(UnificationString(new Expression(FET, XE), new Expression(GET, YE)));
+        // Log(MatchesString(new Expression(FET, XE), new Expression(REET, ALICE, BOB)));
+        // Log(MatchesString(new Expression(FET, XE), new Expression(GET, YE)));
+
+        // Log(MatchesString(new Expression(FET, XE), new Expression(ITSELF, REET, XE)));
+        // Log(MatchesString(new Expression(ITSELF, REET, XE), new Expression(FET, BOB)));
 
         // @TODO Test potential bug in mutating expressions
         
         // Testing mental state.
-        Log("Testing mental state.");
-        Log("QUERY");
+        // Log("Testing mental state.");
+        // Log("QUERY");
         Expression aliceIsRed   = new Expression(RED, ALICE);
         Expression aliceIsAnApple = new Expression(APPLE, ALICE);
         Expression bobIsBlue    = new Expression(BLUE, BOB);
@@ -144,7 +193,9 @@ public class Testing : MonoBehaviour {
 
         var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
 
-        MentalState testState = new MentalState(
+        MentalState.FrameTimer = FrameTimer;
+
+        MentalState.Initialize(
             aliceIsRed,
             aliceIsAnApple,
             bobIsBlue,
@@ -164,90 +215,91 @@ public class Testing : MonoBehaviour {
             new Expression(BETTER, new Expression(BLUE, SELF), NEUTRAL),
             new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
-        // Log(BasesString(testState, aliceIsRed));
-        // Log(BasesString(testState, bobIsBlue));
-        // Log(BasesString(testState, bobIsRed));
-        // Log(BasesString(testState, aliceIsBlue));
+        MentalState.ProofMode = Proof;
+        StartCoroutine(LogBases(MentalState, aliceIsRed));
+        StartCoroutine(LogBases(MentalState, bobIsBlue));
+        StartCoroutine(LogBases(MentalState, bobIsRed));
+        StartCoroutine(LogBases(MentalState, aliceIsBlue));
         
-        // Log(BasesString(testState, new Expression(BETTER, new Expression(RED, SELF), NEUTRAL)));
-        // Log(BasesString(testState, new Expression(NOT, new Expression(BETTER, NEUTRAL, new Expression(RED, SELF)))));
+        StartCoroutine(LogBases(MentalState, new Expression(BETTER, new Expression(RED, SELF), NEUTRAL)));
+        StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(BETTER, NEUTRAL, new Expression(RED, SELF)))));
 
-        // Log(BasesString(testState, new Expression(RED, CHARLIE)));
-        // Log("Double Negation Elimination");
-        // Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
-        // Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
-        // Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
-        // Log(BasesString(testState, notNotAliceIsRed));
-        // Log(BasesString(testState, notNotNotNotAliceIsRed));
-        // Log(BasesString(testState, notNotNotNotNotNotAliceIsRed));
-        // Log(BasesString(testState, new Expression(NOT, new Expression(NOT, bobIsRed))));
-        // Log(BasesString(testState, new Expression(NOT, bobIsBlue)));
+        StartCoroutine(LogBases(MentalState, new Expression(RED, CHARLIE)));
+        Log("Double Negation Elimination");
+        Expression notNotAliceIsRed = new Expression(NOT, new Expression(NOT, aliceIsRed));
+        Expression notNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotAliceIsRed));
+        Expression notNotNotNotNotNotAliceIsRed = new Expression(NOT, new Expression(NOT, notNotNotNotAliceIsRed));
+        StartCoroutine(LogBases(MentalState, notNotAliceIsRed));
+        StartCoroutine(LogBases(MentalState, notNotNotNotAliceIsRed));
+        StartCoroutine(LogBases(MentalState, notNotNotNotNotNotAliceIsRed));
+        StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(NOT, bobIsRed))));
+        StartCoroutine(LogBases(MentalState, new Expression(NOT, bobIsBlue)));
 
-        // Log("Disjunction Introduction");
-        // Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsBlue)));
-        // Log(BasesString(testState, new Expression(OR, aliceIsRed, bobIsRed)));
-        // Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsBlue)));
-        // Log(BasesString(testState, new Expression(OR, aliceIsBlue, bobIsRed)));
+        Log("Disjunction Introduction");
+        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsRed, bobIsBlue)));
+        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsRed, bobIsRed)));
+        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsBlue, bobIsBlue)));
+        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsBlue, bobIsRed)));
 
-        // Log("Conjunction Introduction");
-        // Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsBlue)));
-        // Log(BasesString(testState, new Expression(AND, aliceIsRed,  bobIsRed)));
-        // Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsBlue)));
-        // Log(BasesString(testState, new Expression(AND, aliceIsBlue, bobIsRed)));
+        Log("Conjunction Introduction");
+        StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsRed,  bobIsBlue)));
+        StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsRed,  bobIsRed)));
+        StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsBlue, bobIsBlue)));
+        StartCoroutine(LogBases(MentalState, new Expression(AND, aliceIsBlue, bobIsRed)));
 
-        // Expression conjunctionOfDisjunctions = new Expression(AND,
-        //         new Expression(OR, aliceIsRed, bobIsBlue),
-        //         new Expression(OR, aliceIsAlice, bobIsBob));
+        Expression conjunctionOfDisjunctions = new Expression(AND,
+                new Expression(OR, aliceIsRed, bobIsBlue),
+                new Expression(OR, aliceIsAlice, bobIsBob));
 
-        // Log(BasesString(testState, conjunctionOfDisjunctions));
+        StartCoroutine(LogBases(MentalState, conjunctionOfDisjunctions));
 
-        // Log("Planning");
-        // Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
-        // testState.ProofMode = Plan;
-        // Log(BasesString(testState, new Expression(BLUE, CHARLIE)));
-        // Log(BasesString(testState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
-        // Log(BasesString(testState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
-        // testState.ProofMode = Proof;
+        Log("Planning");
+        StartCoroutine(LogBases(MentalState, new Expression(BLUE, CHARLIE)));
+        MentalState.ProofMode = Plan;
+        StartCoroutine(LogBases(MentalState, new Expression(BLUE, CHARLIE)));
+        StartCoroutine(LogBases(MentalState, new Expression(AND, new Expression(BLUE, CHARLIE), bobIsBlue)));
+        StartCoroutine(LogBases(MentalState, new Expression(AND, bobIsBlue, new Expression(BLUE, CHARLIE))));
+        MentalState.ProofMode = Proof;
 
-        // Log("Formula satisfaction");
-        // Expression xIsBlue = new Expression(BLUE, XE);
-        // Log(BasesString(testState, xIsBlue));
-        // Log(BasesString(testState, new Expression(OR, aliceIsBlue, xIsBlue)));
+        Log("Formula satisfaction");
+        Expression xIsBlue = new Expression(BLUE, XE);
+        StartCoroutine(LogBases(MentalState, xIsBlue));
+        StartCoroutine(LogBases(MentalState, new Expression(OR, aliceIsBlue, xIsBlue)));
 
-        // Log("existential introduction");
-        // Log(BasesString(testState, new Expression(SOME, APPLE, RED)));
-        // Log(BasesString(testState, new Expression(SOME, APPLE, BLUE)));
+        Log("existential introduction");
+        StartCoroutine(LogBases(MentalState, new Expression(SOME, APPLE, RED)));
+        StartCoroutine(LogBases(MentalState, new Expression(SOME, APPLE, BLUE)));
 
-        // Log("universal elimination");
-        // Log(BasesString(testState, new Expression(RED, CHARLIE)));
-        // Log(BasesString(testState, new Expression(FET, CHARLIE)));
+        Log("universal elimination");
+        StartCoroutine(LogBases(MentalState, new Expression(RED, CHARLIE)));
+        StartCoroutine(LogBases(MentalState, new Expression(FET, CHARLIE)));
 
-        // Log("variable coordination in conjunctions");
-        // Log(BasesString(testState, new Expression(RED, XE)));
-        // Log(BasesString(testState, new Expression(APPLE, CHARLIE)));
-        // Log(BasesString(testState, new Expression(AND, new Expression(RED, XE), new Expression(APPLE, XE))));
+        Log("variable coordination in conjunctions");
+        StartCoroutine(LogBases(MentalState, new Expression(RED, XE)));
+        StartCoroutine(LogBases(MentalState, new Expression(APPLE, CHARLIE)));
+        StartCoroutine(LogBases(MentalState, new Expression(AND, new Expression(RED, XE), new Expression(APPLE, XE))));
 
-        // Log("Modus ponens: TODO - bug");
-        // Log(BasesString(testState, new Expression(GREEN, SELF)));
+        Log("Modus ponens: TODO - bug");
+        StartCoroutine(LogBases(MentalState, new Expression(GREEN, SELF)));
 
-        // Log("Conditional proof");
-        // Log(BasesString(testState, new Expression(IF, new Expression(GREEN, BOB), new Expression(GREEN, BOB))));
-        // Log(BasesString(testState, new Expression(IF, new Expression(GREEN, BOB), new Expression(AND, new Expression(GREEN, BOB), new Expression(BLUE, BOB)))));
-        // Log(BasesString(testState, new Expression(IF, new Expression(ALL, BLUE, GREEN), new Expression(GREEN, BOB))));
+        Log("Conditional proof");
+        StartCoroutine(LogBases(MentalState, new Expression(IF, new Expression(GREEN, BOB), new Expression(GREEN, BOB))));
+        StartCoroutine(LogBases(MentalState, new Expression(IF, new Expression(GREEN, BOB), new Expression(AND, new Expression(GREEN, BOB), new Expression(BLUE, BOB)))));
+        StartCoroutine(LogBases(MentalState, new Expression(IF, new Expression(ALL, BLUE, GREEN), new Expression(GREEN, BOB))));
 
-        // Log("itself");
-        // Log(BasesString(testState, new Expression(ITSELF, IDENTITY, BOB)));
-        // Log(BasesString(testState, new Expression(IDENTITY, CHARLIE, CHARLIE)));
+        Log("itself");
+        StartCoroutine(LogBases(MentalState, new Expression(ITSELF, IDENTITY, BOB)));
+        StartCoroutine(LogBases(MentalState, new Expression(IDENTITY, CHARLIE, CHARLIE)));
 
-        // Log("truly");
-        // Log(BasesString(testState, new Expression(TRULY, new Expression(RED, ALICE))));
-        // Log(BasesString(testState, new Expression(SOMETIMES, TRULY, NOT)));
-        // Log(BasesString(testState, new Expression(TRULY, new Expression(RED, CHARLIE))));
-        // 
-        // Log(BasesString(testState, new Expression(SOMETIMES, new Expression(PERCEIVE, SELF), TRULY)));
+        Log("truly");
+        StartCoroutine(LogBases(MentalState, new Expression(TRULY, new Expression(RED, ALICE))));
+        StartCoroutine(LogBases(MentalState, new Expression(SOMETIMES, TRULY, NOT)));
+        StartCoroutine(LogBases(MentalState, new Expression(TRULY, new Expression(RED, CHARLIE))));
         
-        // Log(BasesString(testState, VERUM));
-        // Log(BasesString(testState, new Expression(VEROUS, BOB)));
+        StartCoroutine(LogBases(MentalState, new Expression(SOMETIMES, new Expression(PERCEIVE, SELF), TRULY)));
+        
+        StartCoroutine(LogBases(MentalState, VERUM));
+        StartCoroutine(LogBases(MentalState, new Expression(VEROUS, BOB)));
         
         // Log("contraposition of perceptual belief");
         // MentalState ps = new MentalState(new Expression(PERCEIVE, SELF, new Expression(GREEN, SELF)));
@@ -257,9 +309,9 @@ public class Testing : MonoBehaviour {
         //     new Expression(PERCEIVE, SELF,
         //         new Expression(NOT, new Expression(GREEN, SELF))))));
         
-        MentalState bs = new MentalState(new Expression(RED, SELF));
-        Log(BasesString(bs, new Expression(BELIEVE, SELF, new Expression(RED, SELF))));
-        Log(BasesString(bs, new Expression(NOT, new Expression(BELIEVE, SELF, new Expression(GREEN, SELF)))));
+        // MentalState bs = new MentalState(new Expression(RED, SELF));
+        // Log(BasesString(bs, new Expression(BELIEVE, SELF, new Expression(RED, SELF))));
+        // Log(BasesString(bs, new Expression(NOT, new Expression(BELIEVE, SELF, new Expression(GREEN, SELF)))));
     }
 
     public static String Verbose(Expression e) {
@@ -284,12 +336,21 @@ public class Testing : MonoBehaviour {
         return s.ToString();
     }
 
-    public static String UnificationString(Expression a, Expression b) {
-        return a + ", " + b + ": " + SubstitutionString(a.Unify(b));
+    public static String MatchesString(Expression a, Expression b) {
+        return a + ", " + b + ": " + SubstitutionString(a.GetMatches(b));
     }
 
-    public static String BasesString(MentalState m, Expression e) {
-        return Verbose(e) + " is proved by: " + BasesString(m.Bases(e));
+    public static IEnumerator LogBases(MentalState m, Expression e) {
+        var result = new HashSet<Basis>();
+        var done = new Container<bool>(false);
+
+        m.StartCoroutine(m.GetBases(e, result, done));
+
+        while (!done.Item) {
+            yield return null;
+        }
+        Log("'" + e + "'" + " is proved by: " + BasesString(result));
+        yield break;
     }
 
     public static String BasesString(HashSet<Basis> bases) {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using static SemanticType;
 using static Expression;
@@ -6,6 +7,8 @@ using static ProofType;
 using static BeliefRevisionPolicy;
 using static DecisionPolicy;
 using static InferenceRule;
+
+using UnityEngine;
 
 using Substitution = System.Collections.Generic.Dictionary<Variable, Expression>;
 using Basis =
@@ -55,21 +58,29 @@ public enum DecisionPolicy {
 // returning the free premises of the proof so that
 // inconsistencies can be resolved.
 // 
-public class MentalState {
+public class MentalState : MonoBehaviour {
+    // the time, in seconds, that the mental
+    // state is allowed to run search in one frame
+    protected static float TIME_BUDGET = 0.06f;
+
     public BeliefRevisionPolicy BeliefRevisionPolicy = Conservative;
     public DecisionPolicy DecisionPolicy = Default;
     public ProofType ProofMode = Proof;
 
-    // private HashSet<Expression> BeliefBase = new HashSet<Expression>();
-    private Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>> BeliefBase =
-        new Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>>();
+    public FrameTimer FrameTimer;
 
+    // private HashSet<Expression> BeliefBase = new HashSet<Expression>();
+    private Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>> BeliefBase;
     int MaxDepth = 0;
 
     // @Note this doesn't check to see if
     // the initial belief set is inconsistent.
     // Assume, for now, as an invariant, that it is.
-    public MentalState(params Expression[] initialBeliefs) {
+    public void Initialize(params Expression[] initialBeliefs) {
+        if (BeliefBase != null) {
+            throw new Exception("Initialize: mental state already initialized.");
+        }
+        BeliefBase = new Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>>();
         for (int i = 0; i < initialBeliefs.Length; i++) {
             if (!Add(initialBeliefs[i])) {
                 throw new ArgumentException("MentalState(): expected sentences for belief base.");
@@ -139,7 +150,7 @@ public class MentalState {
         // unifying substitution, to the basis set.
         HashSet<Basis> satisfiers = new HashSet<Basis>();
         foreach (Expression belief in domain) {
-            HashSet<Substitution> unifiers = formula.Unify(belief);
+            HashSet<Substitution> unifiers = formula.GetMatches(belief);
             foreach (Substitution unifier in unifiers) {
                 List<Expression> premiseContainer = new List<Expression>();
                 premiseContainer.Add(belief);
@@ -214,23 +225,38 @@ public class MentalState {
     // As for normal proofs, the order doesn't have a concrete interpretation,
     // and can be ignored. Furthermore, duplicate premises should ultimately be
     // discarded, in case a belief is discard to resolve an inconsistency.
+    // ====
     // 
-    // TODO: fix bug of accidentally rejecting a proof of A in loops
-    // where we may have to get the proof of A twice. Need to save
-    // previous expressions
+    // @BUG pending expressions shouldn't be mutated in branches
+    // that don't have the expression as its ancestor.
+    // This'll cause false negatives.
     // 
     // ====
-    public HashSet<Basis> Bases(Expression goal,
+    // 
+    // goal: the sentence to be proved
+    // suppositions: the set of sentences supposed at this point in search
+    //               due to  a conditional
+    // pendingExpressions: expressions that have commenced search but
+    //                     haven't completed. Used to prevent mutually
+    //                     recursive loops.
+    // completeExpressions: expressions that have been tried and found.
+    // alternativeBases: the resulting set of bases that each prove the goal.
+    // done: a flag that indicates when search has been completed.
+    // 
+    public IEnumerator GetBases(Expression goal,
         HashSet<Expression> suppositions,
         Dictionary<Expression, List<HashSet<Expression>>> pendingExpressions,
-        Dictionary<Expression, KeyValuePair<HashSet<Expression>, HashSet<Basis>>> completeExpressions) {
+        Dictionary<Expression, KeyValuePair<HashSet<Expression>, HashSet<Basis>>> completeExpressions,
+        HashSet<Basis> alternativeBases,
+        Container<bool> done) {
+        if (FrameTimer.FrameDuration < TIME_BUDGET) {
+            yield return null;
+        }
+
         // goal should be type t.
         if (!goal.Type.Equals(TRUTH_VALUE)) {
             throw new ArgumentException("Bases: goal/conclusion must be a sentence (type t)");
         }
-
-        // the set of alternative bases for the goal
-        HashSet<Basis> alternativeBases = new HashSet<Basis>();
 
         // if we have completed bases for this goal, go ahead
         // and return with the previous value.
@@ -238,7 +264,8 @@ public class MentalState {
             var suppositionsAndBases = completeExpressions[goal];
             if (suppositions.SetEquals(suppositionsAndBases.Key)) {
                 alternativeBases.UnionWith(suppositionsAndBases.Value);
-                return alternativeBases;
+                done.Item = true;
+                yield break;
             }
         }
 
@@ -248,7 +275,8 @@ public class MentalState {
             var listOfSuppositionSets = pendingExpressions[goal];
             foreach (var suppositionSet in listOfSuppositionSets) {
                 if (suppositions.SetEquals(suppositionSet)) {
-                    return alternativeBases;
+                    done.Item = true;
+                    yield break;
                 }
             }
         } else {
@@ -267,14 +295,16 @@ public class MentalState {
         // pop them off. Maybe? Potentially not necessary.
         if (suppositions.Contains(goal)) {
             alternativeBases.Add(new Basis(new List<Expression>(), new Substitution()));
-            return alternativeBases;
+            done.Item = true;
+            yield break;
         } else {
             foreach (Expression supposition in suppositions) {
-                // @Note: unification should change to a one-sided
-                // match, so that we stop unifying on formulas in
-                // the suppositions, which is screwing up other
-                // inference rules.
-                HashSet<Substitution> unifiers = supposition.Unify(goal);
+                // @Note: now that get matches is unidirectional
+                // as opposed to unification, we may now want
+                // to make a second call, here, in case we want to make 
+                // some sort of supposition -> goal match, interpreted
+                // universally instead of existentially.
+                HashSet<Substitution> unifiers = goal.GetMatches(supposition);
                 foreach (var unifier in unifiers) {
                     alternativeBases.Add(new Basis(new List<Expression>(), unifier));
                 }
@@ -291,23 +321,16 @@ public class MentalState {
             }
         }
 
-        // @Note: we should initialize the substitution in a basis of a formula
-        // to include all the substitution variables assigned to themselves,
-        // etc. etc.
-
-        // M has A => M |- A
+        // M's belief base has A => M |- A
         if (Contains(goal)) {
             var premises = new List<Expression>();
             premises.Add(goal);
             alternativeBases.Add(new Basis(premises, new Substitution()));
 
-            // @Note if a belief is found in the belief base,
-            // then should we also try to find other supporting
-            // premises? This may lead to an infinite loop.
-            // So, I'll return prematurely for now, on the assumption
-            // that the belief base, as an invariant, doesn't
-            // include any beliefs that could be derived elsewhere.
-            // return alternativeBases;
+            // @Note we want all proofs, not just these basic ones,
+            // because they may need to be falsified to accept the
+            // negation of A.
+            // yield return;
         } else {
             // in case the goal is a formula,
             // try to see if there are any satisfying instances in the belief base.
@@ -318,7 +341,6 @@ public class MentalState {
             }
         }
 
-        // @Note trial for variable "recycling"
         // @Note might want this to take an array instead,
         // and trim out any unused variables.
         Substitution DiscardUnusedAssignments(Substitution substitution) {
@@ -331,8 +353,13 @@ public class MentalState {
             return trimmedSubstitution;
         }
 
+        int numRoutines = 0;
+
         // a function for handling inference rules
-        void ApplyInferenceRule(InferenceRule rule) {
+        IEnumerator ApplyInferenceRule(InferenceRule rule)
+        {
+            numRoutines++;
+
             Expression[] premises = new Expression[rule.Premises.Length];
             Expression[] assumptions = new Expression[rule.Assumptions.Length];
             Expression[] conclusions = new Expression[rule.Conclusions.Length];
@@ -360,11 +387,11 @@ public class MentalState {
                 conclusions[i] = rule.Conclusions[i].Substitute(newVariableSubstitution);
             }
 
-
             // Now, we go through the conclusions of the rules,
             // trying to match a conclusion.
-            for (int i = 0; i < conclusions.Length; i++) {
-                var unifiers = conclusions[i].Unify(goal);
+            for (int i = 0; i < conclusions.Length; i++)
+            {
+                var unifiers = conclusions[i].GetMatches(goal);
 
                 // for each unifier, we get a different set of bases.
                 foreach (var unifier in unifiers) {
@@ -374,11 +401,19 @@ public class MentalState {
                     for (int j = 0; j < premises.Length; j++) {
                         var meetBases = new HashSet<Basis>();
                         foreach (var currentBasis in currentBases) {
-                            var premiseBases =
-                                Bases(premises[j].Substitute(currentBasis.Value),
+                            var premiseBases = new HashSet<Basis>();
+                            var doneFlag = new Container<bool>(false);
+                            StartCoroutine(GetBases(premises[j].Substitute(currentBasis.Value),
                                     suppositions,
                                     pendingExpressions,
-                                    completeExpressions);
+                                    completeExpressions,
+                                    premiseBases,
+                                    doneFlag));
+
+                            while (!doneFlag.Item) {
+                                yield return null;
+                            }
+                            
                             foreach (var premiseBasis in premiseBases) {
                                 List<Expression> meetPremises = new List<Expression>();
                                 meetPremises.AddRange(currentBasis.Key);
@@ -394,11 +429,20 @@ public class MentalState {
                         var meetBases = new HashSet<Basis>();
                         foreach (var currentBasis in currentBases) {
                             var notConclusion = new Expression(NOT, conclusions[j].Substitute(currentBasis.Value));
-                            var conclusionBases =
-                                Bases(notConclusion,
-                                    suppositions,
-                                    pendingExpressions,
-                                    completeExpressions);
+                            var conclusionBases = new HashSet<Basis>();
+                            var doneFlag = new Container<bool>(false);
+
+                            StartCoroutine(GetBases(notConclusion,
+                                suppositions,
+                                pendingExpressions,
+                                completeExpressions,
+                                conclusionBases,
+                                doneFlag));
+
+                            while (!doneFlag.Item) {
+                                yield return null;
+                            }
+
                             foreach (var conclusionBasis in conclusionBases) {
                                 List<Expression> meetPremises = new List<Expression>();
                                 meetPremises.AddRange(currentBasis.Key);
@@ -417,11 +461,20 @@ public class MentalState {
                             // here we want to try to disprove
                             // the assumption. If we can't, then
                             // the inference goes through by default.
-                            var assumptionDisbases =
-                                Bases(new Expression(NOT, assumption),
+                            var assumptionDisbases = new HashSet<Basis>();
+                            var doneFlag = new Container<bool>(false);
+
+                            StartCoroutine(GetBases(new Expression(NOT, assumption),
                                     suppositions,
                                     pendingExpressions,
-                                    completeExpressions);
+                                    completeExpressions,
+                                    assumptionDisbases,
+                                    doneFlag));
+
+                            while (!doneFlag.Item) {
+                                yield return null;
+                            }
+
                             if (assumptionDisbases.Count == 0) {
                                 List<Expression> meetPremises = new List<Expression>();
                                 meetPremises.AddRange(currentBasis.Key);
@@ -440,28 +493,29 @@ public class MentalState {
                     alternativeBases.UnionWith(collectedBases);
                 }
             }
+            numRoutines--;
         }
 
         // INFERENCES
         // ==========
 
-        ApplyInferenceRule(VERUM_INTRODUCTION);
-        ApplyInferenceRule(VEROUS_INTRODUCTION);
+        StartCoroutine(ApplyInferenceRule(VERUM_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(VEROUS_INTRODUCTION));
 
-        ApplyInferenceRule(TRULY_INTRODUCTION);
-        ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION);
+        StartCoroutine(ApplyInferenceRule(TRULY_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION));
 
         // @Note: not working. Something is up with Unify()
-        // ApplyInferenceRule(ITSELF_INTRODUCTION);
-        // ApplyInferenceRule(ITSELF_ELIMINATION);
+        StartCoroutine(ApplyInferenceRule(ITSELF_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(ITSELF_ELIMINATION));
         
-        ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT);
-        ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT);
+        StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT));
+        StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT));
         
-        ApplyInferenceRule(CONJUNCTION_INTRODUCTION);
+        StartCoroutine(ApplyInferenceRule(CONJUNCTION_INTRODUCTION));
 
-        ApplyInferenceRule(EXISTENTIAL_INTRODUCTION);
-        // ApplyInferenceRule(UNIVERSAL_ELIMINATION);
+        StartCoroutine(ApplyInferenceRule(EXISTENTIAL_INTRODUCTION));
+        // StartCoroutine(ApplyInferenceRule(UNIVERSAL_ELIMINATION));
 
         // conjunction elimination
         // A & B |- A; A & B |- B
@@ -470,7 +524,7 @@ public class MentalState {
         // @note all of the proof annotations should be written
         // in the sequent calculus, not natural deduction.
         // Usually doesn't matter though.
-        // M,[A] |- B => M |- A -> B
+        // M, A |- B => M |- A -> B
         if (goal.Head.Equals(IF.Head)) {
             var antecedent = goal.GetArgAsExpression(0);
 
@@ -486,26 +540,34 @@ public class MentalState {
                 // add the antecedent of the conditional
                 // to the list of suppositions.
                 newSuppositions.Add(antecedent);
+
                 // add the proofs of the consequent
                 // under the supposition of the antecedent.
-                alternativeBases.UnionWith(Bases((Expression) goal.GetArg(1),
+                var doneFlag = new Container<bool>(false);
+                StartCoroutine(GetBases((Expression) goal.GetArg(1),
                     newSuppositions,
                     pendingExpressions,
-                    completeExpressions));
+                    completeExpressions,
+                    alternativeBases,
+                    doneFlag));
+
+                while (!doneFlag.Item) {
+                    yield return null;
+                }
             }
         }
 
-        ApplyInferenceRule(BETTER_ANTISYMMETRY);
-        ApplyInferenceRule(BETTER_TRANSITIVITY);
-        // ApplyInferenceRule(SELF_BELIEF_INTRODUCTION);
-        // ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION);
+        StartCoroutine(ApplyInferenceRule(BETTER_ANTISYMMETRY));
+        StartCoroutine(ApplyInferenceRule(BETTER_TRANSITIVITY));
+        StartCoroutine(ApplyInferenceRule(SELF_BELIEF_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION));
 
-        // ApplyInferenceRule(SYMMETRY_OF_LOCATION);
-        // ApplyInferenceRule(TRANSITIVITY_OF_LOCATION);
+        // StartCoroutine(ApplyInferenceRule(SYMMETRY_OF_LOCATION));
+        // StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
 
-        // ApplyInferenceRule(SOMETIMES_INTRODUCTION);
+        StartCoroutine(ApplyInferenceRule(SOMETIMES_INTRODUCTION));
 
-        ApplyInferenceRule(Contrapose(PERCEPTUAL_BELIEF));
+        StartCoroutine(ApplyInferenceRule(Contrapose(PERCEPTUAL_BELIEF)));
 
         // @Note put all contractive rules here
         // (rules whose premises are more complex than their conclusions,
@@ -514,13 +576,13 @@ public class MentalState {
         //  of the premise to explode. It's fine to prove conclusions
         //  that are very large (i.e. with DNE).
         if (goal.Depth <= MaxDepth) {            
-            ApplyInferenceRule(PERCEPTUAL_BELIEF);
-            // ApplyInferenceRule(ALWAYS_ELIMINATION);
-            // ApplyInferenceRule(MODUS_PONENS);
-            // ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_LEFT));
-            // ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT));
-            // ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION));
-            // ApplyInferenceRule(Contrapose(MODUS_PONENS));
+            StartCoroutine(ApplyInferenceRule(PERCEPTUAL_BELIEF));
+            // StartCoroutine(ApplyInferenceRule(ALWAYS_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(MODUS_PONENS));
+            // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_LEFT)));
+            // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
+            // StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
+            StartCoroutine(ApplyInferenceRule(Contrapose(MODUS_PONENS)));
 
             // PLANNING
             // ====
@@ -529,7 +591,6 @@ public class MentalState {
             // something you already believe to be true.
             // 
             // M |- able(self, A),  M :: will(A) => M |- A
-            // 
             if (ProofMode == Plan) {
 
                 // here we assume it's a logical fact
@@ -541,7 +602,16 @@ public class MentalState {
 
                 Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
 
-                HashSet<Basis> abilityBases = Bases(ableToEnactGoal, suppositions, pendingExpressions, completeExpressions);
+                HashSet<Basis> abilityBases = new HashSet<Basis>();
+                var doneFlag = new Container<bool>(false);
+
+                StartCoroutine(GetBases(
+                    ableToEnactGoal,
+                    suppositions,
+                    pendingExpressions,
+                    completeExpressions,
+                    abilityBases,
+                    doneFlag));
 
                 if (abilityBases.Count != 0) {
                     foreach (Basis abilityBasis in abilityBases) {
@@ -552,31 +622,55 @@ public class MentalState {
             }
         }
 
+        while (numRoutines > 0) {
+            yield return null;
+        }
+
+        var completeBases = new HashSet<Basis>();
+        completeBases.UnionWith(alternativeBases);
+
+        completeExpressions[goal] =
+            new KeyValuePair<HashSet<Expression>, HashSet<Basis>>(suppositions, completeBases);
+
+        done.Item = true;
+        yield break;
+
         // @Note my assumption is: because removing premises
         // occurs within the belief base, it's okay to have
         // duplicate premises, even in a standard proof.
         // If that turns out to be a faulty assumption,
         // we can check if the proof mode is Proof, and
         // if it is go through the list and remove duplicates.
-            
-        var completeBases = new HashSet<Basis>();
-        completeBases.UnionWith(alternativeBases);
-
-        completeExpressions[goal] = new KeyValuePair<HashSet<Expression>, HashSet<Basis>>(suppositions, completeBases);
-
-        return alternativeBases;
     }
 
-    public HashSet<Basis> Bases(Expression goal) {
-        return Bases(goal, new HashSet<Expression>(),
+    public IEnumerator GetBases(Expression goal, HashSet<Basis> result, Container<bool> done) {
+        yield return StartCoroutine(GetBases(goal, new HashSet<Expression>(),
             new Dictionary<Expression, List<HashSet<Expression>>>(),
-            new Dictionary<Expression, KeyValuePair<HashSet<Expression>, HashSet<Basis>>>());
+            new Dictionary<Expression, KeyValuePair<HashSet<Expression>, HashSet<Basis>>>(),
+            result, done));
     }
 
     // Asks if the expression is proven by this belief base.
-    public bool Query(Expression query) {
+    public IEnumerator Query(Expression query, Container<bool> answer, Container<bool> queryDone) {
+        HashSet<Basis> bases = new HashSet<Basis>();
+        var doneFlag = new Container<bool>(false);
         ProofMode = Proof;
-        return Bases(query).Count != 0;
+        IEnumerator basesRoutine = GetBases(query, bases, doneFlag);
+        StartCoroutine(basesRoutine);
+
+        while (!doneFlag.Item) {
+            if (bases.Count > 0) {
+                answer.Item = true;
+                queryDone.Item = true;
+                StopCoroutine(basesRoutine);
+                yield break;
+            }
+            yield return null;
+        }
+
+        answer.Item = bases.Count > 0;
+        queryDone.Item = true;
+        yield break;
     }
 
     // Asserts a sentence to this mental state.
@@ -592,61 +686,53 @@ public class MentalState {
     // 
     // Assert() returns true if the assertion is
     // accepted, false if it is rejected.
-    public bool Assert(Expression assertion) {
+    public IEnumerator Assert(Expression assertion) {
         // We already believe assertion A.
         // We accept it, but don't change our belief state.
-        if (Query(assertion)) {
-            return true;
+        var answer = new Container<bool>(false);
+        var queryDone = new Container<bool>(false);
+        StartCoroutine(Query(assertion, answer, queryDone));
+
+        while (!queryDone.Item) {
+            yield return null;
         }
 
+        if (answer.Item) {
+            yield break;
+        }
+
+        var notAssertionBases = new HashSet<Basis>();
+        var done = new Container<bool>(false);
         ProofMode = Proof;
-        HashSet<Basis> notAssertionBases = Bases(new Expression(NOT, assertion));
+        StartCoroutine(GetBases(new Expression(NOT, assertion), notAssertionBases, done));
+
+        while (!done.Item) {
+            yield return null;
+        }
+
+        // We're agnostic about A. We add this belief to our base.
+        if (notAssertionBases.Count == 0) {
+            Add(assertion);
+            yield break;
+        }
 
         // We believe ~A. This is inconsistent with the assertion.
-        if (notAssertionBases.Count != 0) {
-
-            // TODO: revise this to take into account
-            // a more sophisticated heuristic.
-            UnityEngine.Debug.Log(Testing.BasesString(notAssertionBases));
-
-            // if our belief revision policy is conservative,
-
-            // we reject the new information in favor of the old.
-            if (BeliefRevisionPolicy == Conservative) {
-                return false;
-            }
-            // otherwise, the belief revision policy is liberal.
-            // So we accept the new information and reject the old.
-            // 
-            // @Note: we want to check for zero-premise proofs,
-            // and refuse to discard information if we do.
-            foreach (Basis basis in notAssertionBases) {
-                // right now, we simply randomly select a premise
-                // to discard from each basis.
-                var random = new Random();
-                int index = random.Next(basis.Key.Count);
-                Remove(basis.Key[index]);
-            }
-            Add(assertion);
-            return true;
-        }
-
-        // We're agnostic about A. We accept it and add it to our belief state.
-        Add(assertion);
-        return true;
+        // TODO: implement revision policy whereby we accept or
+        // reject information based on its epistemic strength
     }
 
     // ranks the goals according to this mental state,
     // and then stores the ranking.
-    public List<Expression> DecideCurrentPlan() {
+    public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
         // if we don't have any preferences, then
         // we return the empty list
         // (or, equivalently, the list containing just
         // the list to enact the neutral condtion)
-        if (!BeliefBase.ContainsKey(TRUTH_FUNCTION_2) || !BeliefBase[TRUTH_FUNCTION_2].ContainsKey(BETTER.Head)) {
-            var nothing = new List<Expression>();
-            nothing.Add(new Expression(WILL, NEUTRAL));
-            return nothing;
+        if (!BeliefBase.ContainsKey(TRUTH_FUNCTION_2) ||
+            !BeliefBase[TRUTH_FUNCTION_2].ContainsKey(BETTER.Head)) {
+            plan.Add(new Expression(WILL, NEUTRAL));
+            done.Item = true;
+            yield break;
         }
 
         // first, we get our domain of elements for which preferences are defined.
@@ -680,10 +766,19 @@ public class MentalState {
         ranking.Push(NEUTRAL);
         var storage = new Stack<Expression>();
         ProofMode = Proof;
+
         foreach (var preferable in preferables) {
             while (ranking.Count != 0) {
                 var bestSoFar = ranking.Peek();
-                if (Query(new Expression(BETTER, preferable, bestSoFar))) {
+                
+                var answer = new Container<bool>(false);
+                var doneFlag = new Container<bool>(false);
+                StartCoroutine(Query(new Expression(BETTER, preferable, bestSoFar), answer, doneFlag));
+                while (!doneFlag.Item) {
+                    yield return null;
+                }
+
+                if (answer.Item) {
                     ranking.Push(preferable);
                     break;
                 } else {
@@ -699,7 +794,13 @@ public class MentalState {
         var bestPlan = new List<Expression>();
         while (ranking.Count != 0) {
             Expression nextBestGoal = ranking.Pop();
-            var goalBases = Bases(nextBestGoal);
+            var goalBases = new HashSet<Basis>();
+            var doneFlag = new Container<bool>(false);
+            StartCoroutine(GetBases(nextBestGoal, goalBases, doneFlag));
+
+            while (!doneFlag.Item) {
+                yield return null;
+            }
 
             bool alreadyTrue = true;
             // we go through each basis of the goal and
@@ -745,6 +846,8 @@ public class MentalState {
             }
         }
 
-        return bestPlan;
+        plan.AddRange(bestPlan);
+        done.Item = true;
+        yield break;
     }
 }

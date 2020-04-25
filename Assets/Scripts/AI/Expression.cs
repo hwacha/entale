@@ -329,7 +329,7 @@ public class Expression : Argument {
     // 
     // @Note we want to change this to be pattern matching instead
     // of unification (or closer to pattern matching, in any case.)
-    private HashSet<Dictionary<Variable, Expression>> Unify(Expression that,
+    private HashSet<Dictionary<Variable, Expression>> GetMatches(Expression that,
         HashSet<Dictionary<Variable, Expression>> substitutions) {
         // if the types don't match or the substitutions are empty, we fail.
         if (substitutions.Count == 0 || !this.Type.Equals(that.Type)) {
@@ -377,10 +377,12 @@ public class Expression : Argument {
             return AddAssignment((Variable) this.Head, that, substitutions);
         }
 
+        // @Note: this is commented out to make it so unification
+        // only happens left to right (essentially pattern matching)
         // same case as above, but reversed.
-        if (that.Head is Variable && that.Head.Type.Equals(that.Type)) {
-            return AddAssignment((Variable) that.Head, this, substitutions);
-        }
+        // if (that.Head is Variable && that.Head.Type.Equals(that.Type)) {
+        //     return AddAssignment((Variable) that.Head, this, substitutions);
+        // }
 
         // both head symbols are constants. We need to recur on arguments and
         // collect results of unifying them.
@@ -418,7 +420,7 @@ public class Expression : Argument {
                 // if x is bound to anything 
                 // Let see if it's necessary in testing.
                 currentSubstitutions =
-                    ((Expression) this.Args[i]).Unify((Expression) that.Args[i],
+                    ((Expression) this.Args[i]).GetMatches((Expression) that.Args[i],
                         currentSubstitutions);
             }
 
@@ -462,6 +464,10 @@ public class Expression : Argument {
 
                     nextArgs[patternIndex] = f.Args[i];
 
+                    for (int j = patternIndex + 1; j < nextArgs.Length; j++) {
+                        nextArgs[j] = args[j];
+                    }
+
                     var partialDecompositions = DecomposeExpression(patternIndex + 1, i + 1,
                         patternHeadType, f.RemoveAt(i), nextArgs);
 
@@ -483,12 +489,13 @@ public class Expression : Argument {
             Dictionary<Expression, Argument[]> decompositionsOfMatch =
                 DecomposeExpression(0, 0, pattern.Head.Type, match, initialArguments);
 
+
             var alternativeSubstitutions = new List<HashSet<Dictionary<Variable, Expression>>>();
 
             // similar logic to that found in the code with two constants, except with
             // the decomposed expressions instead of the expressions themselves.
             foreach (var decompositionOfMatch in decompositionsOfMatch) {
-                var currentSubstitutions = (new Expression(pattern.Head)).Unify(decompositionOfMatch.Key, substitutions);
+                var currentSubstitutions = (new Expression(pattern.Head)).GetMatches(decompositionOfMatch.Key, substitutions);
                 for (int i = 0; i < pattern.Args.Length; i++) {
                     if (currentSubstitutions.Count == 0) {
                         break;
@@ -504,7 +511,7 @@ public class Expression : Argument {
                         break;
                     }
 
-                    currentSubstitutions = ((Expression) pattern.Args[i]).Unify((Expression) matchArg, currentSubstitutions);
+                    currentSubstitutions = ((Expression) pattern.Args[i]).GetMatches((Expression) matchArg, currentSubstitutions);
                 }
 
                 if (currentSubstitutions.Count != 0) {
@@ -529,9 +536,9 @@ public class Expression : Argument {
             }
         }
 
-        // @Note this is commented out because we want unification
-        // to only occur from the left to the right.
-        // 
+        // // @Note this is commented out because we want unification
+        // // to only occur from the left to the right.
+        
         // if (patternSubstitutions.Count == 0) {
         //     var thatMatchThisSubstitutions = patternMatch(that, this);
 
@@ -544,11 +551,11 @@ public class Expression : Argument {
     }
 
     public HashSet<Dictionary<Variable, Expression>>
-        Unify(Expression that) {
+        GetMatches(Expression that) {
         var initialSubstitution = new Dictionary<Variable, Expression>();
         var initialSubstitutions = new HashSet<Dictionary<Variable, Expression>>();
         initialSubstitutions.Add(initialSubstitution);
-        return Unify(that, initialSubstitutions);
+        return GetMatches(that, initialSubstitutions);
     }
 
     public override String ToString() {
@@ -562,10 +569,15 @@ public class Expression : Argument {
             return s.ToString();
         }
 
+        bool hasOneExpression = false;
         for (int i = 0; i < Args.Length; i++) {
             if (Args[i] is Expression) {
+                hasOneExpression = true;
                 break;
             }
+        }
+
+        if (!hasOneExpression) {
             return s.ToString();
         }
 
