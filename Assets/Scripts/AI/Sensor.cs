@@ -27,9 +27,9 @@ public class Sensor : MonoBehaviour {
             var tree = GameObject.Find("tree");
             if (Vector3.Distance(tree.transform.position,
                 Agent.gameObject.transform.position) < 2) {
-                Agent.MentalState.Assert(
+                Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
                     new Expression(PERCEIVE, SELF,
-                        new Expression(AT, SELF, new Deictic(THAT, tree))));
+                        new Expression(AT, SELF, new Deictic(THAT, tree)))));
             }
             yield return new WaitForSeconds(0.5f);
         }
