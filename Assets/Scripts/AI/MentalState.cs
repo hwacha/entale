@@ -784,7 +784,6 @@ public class MentalState : MonoBehaviour {
         ProofMode = Proof;
 
         foreach (var preferable in preferables) {
-            Debug.Log("ranking " + preferable + "...");
             while (ranking.Count != 0) {
                 var bestSoFar = ranking.Peek();
                 
@@ -794,8 +793,6 @@ public class MentalState : MonoBehaviour {
                 while (!doneFlag.Item) {
                     yield return null;
                 }
-
-                Debug.Log("... done.");
 
                 if (answer.Item) {
                     ranking.Push(preferable);
@@ -813,7 +810,6 @@ public class MentalState : MonoBehaviour {
         var bestPlan = new List<Expression>();
         while (ranking.Count != 0) {
             Expression nextBestGoal = ranking.Pop();
-            Debug.Log(nextBestGoal + " is the best.");
             var goalBases = new HashSet<Basis>();
             var doneFlag = new Container<bool>(false);
             StartCoroutine(GetBases(nextBestGoal, goalBases, doneFlag));
@@ -821,8 +817,6 @@ public class MentalState : MonoBehaviour {
             while (!doneFlag.Item) {
                 yield return null;
             }
-
-            Debug.Log(Testing.BasesString(goalBases));
 
             bool alreadyTrue = true;
             // we go through each basis of the goal and

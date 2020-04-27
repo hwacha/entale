@@ -1,20 +1,18 @@
-﻿Shader "ExpressionContainer"
+﻿Shader "PrePassOpaque"
 {
     Properties
     {
-        _MainTex ("Color (RGB) Alpha (A)", 2D) = "white"
+        _Color ("Color", Color) = (1, 1, 1, 1)
+        _MainTex ("Color (RGB) Alpha (A)", 2D) = "white" {}
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
+        Tags { "RenderType"="Opaque" }
         LOD 100
 
         Pass
         {
-            Cull Off
-            ZWrite Off
-            Blend SrcAlpha OneMinusSrcAlpha
-
+            ZWrite On 
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -33,6 +31,7 @@
                 float4 vertex : SV_POSITION;
             };
 
+            float4 _Color;
             sampler2D _MainTex;
             float4 _MainTex_ST;
 
@@ -47,7 +46,7 @@
             fixed4 frag (v2f i) : SV_Target
             {
                 // sample the texture
-                fixed4 col = tex2D(_MainTex, i.uv);
+                fixed4 col = tex2D(_MainTex, i.uv) * _Color;
                 return col;
             }
             ENDCG

@@ -1,20 +1,17 @@
-﻿Shader "ExpressionContainer"
+﻿Shader "ApplyTransparency"
 {
     Properties
     {
-        _MainTex ("Color (RGB) Alpha (A)", 2D) = "white"
+        _MainTex ("Texture", 2D) = "white" {}
+        _Opacity ("Opacity", Float) = 1
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
-        LOD 100
+        // No culling or depth
+        Cull Off ZWrite Off ZTest Always
 
         Pass
         {
-            Cull Off
-            ZWrite Off
-            Blend SrcAlpha OneMinusSrcAlpha
-
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -33,21 +30,22 @@
                 float4 vertex : SV_POSITION;
             };
 
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
-
             v2f vert (appdata v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv = v.uv;
                 return o;
             }
 
+            sampler2D _MainTex;
+            float _Opacity;
+
             fixed4 frag (v2f i) : SV_Target
             {
-                // sample the texture
                 fixed4 col = tex2D(_MainTex, i.uv);
+                // just invert the colors
+                col.a *= _Opacity;
                 return col;
             }
             ENDCG
