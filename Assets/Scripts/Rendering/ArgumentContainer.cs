@@ -24,6 +24,11 @@ public class ArgumentContainer : MonoBehaviour {
         GameObject argumentContainerInstance =
             Instantiate(argumentContainerPrefab, new Vector3(0, 0, 0), Quaternion.identity);
 
+        argumentContainerInstance.name =
+            (argument is Expression)
+            ? ((Expression) argument).Head.ToString()
+            : argument.ToString();
+
         var argumentContainerScript = argumentContainerInstance.GetComponent<ArgumentContainer>();
 
         argumentContainerScript.Argument = argument;
@@ -60,7 +65,6 @@ public class ArgumentContainer : MonoBehaviour {
             }
             for (int i = 0; i < expression.NumArgs; i++) {
                 var subArgument = From(expression.GetArg(i), depth + 1);
-                
 
                 var subArgumentScript = subArgument.GetComponent<ArgumentContainer>();
                 var subArgumentWidth = subArgumentScript.Width;
@@ -213,7 +217,6 @@ public class ArgumentContainer : MonoBehaviour {
                 if (r != null) r.enabled = false;
             }
         }
-
     }
 
     public void GenerateVisual() {
@@ -226,6 +229,7 @@ public class ArgumentContainer : MonoBehaviour {
             Vector3.Scale(prePassCamera.transform.position, new Vector3(1, 1, Argument.Depth * 2));
 
         Camera prePassCameraComponent = prePassCamera.GetComponent<Camera>();
+        prePassCameraComponent.enabled = true;
         prePassCameraComponent.orthographicSize = 0.5f * (Height > Width ? Height : Width);
 
         int textureWidth = Scale * Width;
@@ -239,7 +243,6 @@ public class ArgumentContainer : MonoBehaviour {
         // phase down its transparency
         // according to fill transparency
         prePassCameraComponent.targetTexture = fillTexture;
-        prePassCamera.SetActive(true);
         prePassCamera.GetComponent<ApplyTransparency>().Opacity = 1 - FillTransparency;
         prePassCameraComponent.Render();
         
@@ -297,6 +300,7 @@ public class ArgumentContainer : MonoBehaviour {
         // @Note I can't set it inactive again, or else I can't reference it.
         // Maybe I should have a reference to the camera?
         prePassCamera.transform.parent = null;
-        prePassCameraComponent.targetTexture = new RenderTexture(1, 1, 16);
+        prePassCameraComponent.enabled = false;
+        prePassCameraComponent.targetTexture = null;
     }
 }

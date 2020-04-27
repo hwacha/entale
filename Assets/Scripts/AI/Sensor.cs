@@ -5,11 +5,7 @@ using UnityEngine;
 using static Expression;
 
 public class Sensor : MonoBehaviour {
-    protected Agent Agent;
-
-    public Sensor(Agent agent) {
-        Agent = agent;
-    }
+    public Agent Agent;
 
     // @Note for separate sense modalities,
     // we'd want this to become an abstract class,

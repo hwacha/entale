@@ -48,15 +48,15 @@ public class RenderExpressionTesting : MonoBehaviour
 
         // ArgumentContainer.From(new Expression(ITSELF, AT, BOB)).GetComponent<ArgumentContainer>().GenerateVisual();
 
-        SpawnArgumentContainer(
-            new Expression(IF,
-                new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(RED, BOB)),
-             new Expression(SOME, GREEN, BLUE)), new Vector3(25, 2, 0), Quaternion.identity);
+        // SpawnArgumentContainer(
+        //     new Expression(IF,
+        //         new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(RED, BOB)),
+        //      new Expression(SOME, GREEN, BLUE)), new Vector3(25, 2, 0), Quaternion.identity);
         
         // SpawnArgumentContainer(new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(GREEN, BOB)));
         // SpawnArgumentContainer(new Expression(ITSELF, AT, ALICE));
-        SpawnArgumentContainer(new Expression(SOME, BLUE, new Expression(AT, new Empty(SemanticType.INDIVIDUAL), BOB)),
-            new Vector3(0, 2, 1), Quaternion.identity);
+        // SpawnArgumentContainer(new Expression(SOME, BLUE, new Expression(AT, new Empty(SemanticType.INDIVIDUAL), BOB)),
+            // new Vector3(0, 2, 1), Quaternion.identity);
         // SpawnArgumentContainer(new Expression(GREEN, BOB));
 
     //     SpawnExpressionContainer(GREEN, new Vector3(-5, 2, -1), Quaternion.identity);
