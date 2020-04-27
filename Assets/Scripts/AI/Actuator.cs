@@ -7,13 +7,31 @@ using UnityEngine.AI;
 using static Expression;
 
 public class Actuator : MonoBehaviour {
-    protected Agent Agent;
+    public Agent Agent;
     public NavMeshAgent NavMeshAgent { protected set; get; }
 
-    public Actuator(Agent agent) {
-        Agent = agent;
+    void Start() {
         NavMeshAgent = Agent.GetComponent<NavMeshAgent>();
     }
+
+    protected IEnumerator Say(Expression e, float time) {
+        GameObject eContainer = ArgumentContainer.From(e);
+        ArgumentContainer eContainerScript = eContainer.GetComponent<ArgumentContainer>();
+
+        eContainerScript.GenerateVisual();
+        eContainer.transform.rotation = Agent.gameObject.transform.rotation;
+        eContainer.transform.Rotate(0, 180, 0);
+        eContainer.transform.position =
+            Agent.gameObject.transform.position +
+            2f * Vector3.up +
+            0.75f * Vector3.forward;
+        eContainer.transform.SetParent(Agent.gameObject.transform);
+
+        yield return new WaitForSeconds(time);
+        Destroy(eContainer);
+        yield break;
+    }
+
 
     // @Note we want this to be interruptible
     public IEnumerator ExecutePlan() {
@@ -31,10 +49,12 @@ public class Actuator : MonoBehaviour {
                     throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
                 }
 
+                StartCoroutine(Say(action, 1));
+
                 var content = action.GetArgAsExpression(0);
 
                 if (content.Equals(NEUTRAL)) {
-                    Debug.Log("Busy doin' nothin'");
+                    // Debug.Log("Busy doin' nothin'");
                 }
 
                 // at(self, that ~> #forest1)
@@ -70,4 +90,5 @@ public class Actuator : MonoBehaviour {
             yield return null;
         }
     }
+
 }

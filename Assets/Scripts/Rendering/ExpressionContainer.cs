@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 using static SemanticType;
+using static RenderingOptions;
 
 class DrawInfo {
     public Argument Argument { get; }
@@ -16,38 +17,9 @@ class DrawInfo {
     }
 }
 
-public enum Position {
-    Left,
-    Center,
-    Right
-}
-
-public enum FillMode {
-    Head,
-    Output,
-    Complete
-}
-
 public class ExpressionContainer : MonoBehaviour
 {
-    // THERE ARE ALL WAYS TO CUSTOMIZE THE WAY EXPRESSIONS ARE DRAWN
-    #region Attributes
-    // @Note: the opacity is 1 - transparency
-    // The larger the number, the more transparent
-    // the object will become
-    public float FillTransparency = 0.6f;
-    public float BorderTransparency = 0.2f;
-    public int BorderSize = 8;
-    public int Scale = 80;
-    public bool DrawFirstArgumentDiagonally = false;
-    public bool DrawInaccessibleArgumentSlot = false;
-    public FillMode FillMode = FillMode.Head;
-    public Position HeadSymbolPosition = Position.Center;
-    public bool ReadVertically = false;
-    #endregion
-
     public Expression Expression;
-    
 
     // Start is called before the first frame update
     void Start()
@@ -57,99 +29,6 @@ public class ExpressionContainer : MonoBehaviour
 
     void Update() {
         transform.Rotate(0, 0, 10 * Mathf.Sin(Time.time * 10) * Time.deltaTime);
-    }
-    
-
-    // because we want empty argument slots
-    // that are inaccessible not to be rendered,
-    // we have a separate call for recurring.
-    private int SecondCallGetWidth(Expression e) {
-        int width = 1;
-
-        int emptiesWidth = 0;
-        bool allEmptyArguments = true;
-        for (int i = 0; i < e.NumArgs; i++) {
-            if (e.GetArg(i) is Expression) {
-                width += SecondCallGetWidth((Expression) e.GetArg(i));
-                allEmptyArguments = false;
-            } else {
-                emptiesWidth++;
-            }
-        }
-
-        if (!allEmptyArguments) {
-            width += emptiesWidth;
-        }
-
-        if (width == 1 || DrawFirstArgumentDiagonally) {
-            return width;
-        }
-
-        return width - 1;
-    }
-
-    // returns the width of this expression.
-    private int GetWidth(Argument arg) {
-        int width = 1;
-
-        if (arg is Empty) {
-            return width;
-        }
-
-        Expression e = (Expression) arg;
-
-        for (int i = 0; i < e.NumArgs; i++) {
-            if (e.GetArg(i) is Empty) {
-                width++;
-            } else {
-                width += SecondCallGetWidth((Expression) e.GetArg(i));    
-            }
-        }
-
-        if (width == 1 || DrawFirstArgumentDiagonally) {
-            return width;
-        }
-
-        return width - 1;
-    }
-
-    private int SecondCallGetHeight(Expression e) {
-        int maxArgHeight = 0;
-        for (int i = 0; i < e.NumArgs; i++) {
-            var nextArg = e.GetArg(i);
-            if (nextArg is Expression) {
-                int argHeight = SecondCallGetHeight((Expression) nextArg);
-                if (argHeight > maxArgHeight) {
-                    maxArgHeight = argHeight;
-                }
-            }
-        }
-        return maxArgHeight + 1;
-    }
-
-    private int GetHeight(Argument arg) {
-        if (arg is Empty) {
-            return 1;
-        }
-
-        Expression e = (Expression) arg;
-
-        int maxArgHeight = 0;
-        for (int i = 0; i < e.NumArgs; i++) {
-            var nextArg = e.GetArg(i);
-            if (nextArg is Empty) {
-                if (maxArgHeight < 1) {
-                    maxArgHeight += 1;    
-                }
-            } else {
-                int argHeight = SecondCallGetHeight((Expression) nextArg);
-                if (argHeight > maxArgHeight) {
-                    maxArgHeight = argHeight;
-                }
-            }
-        }
-
-        return maxArgHeight + 1;
     }
 
     // Resizes the quad according to the dimensions of the
@@ -211,18 +90,18 @@ public class ExpressionContainer : MonoBehaviour
                 for (int x = startingX; x < endingX; x++)
                 {
                     SemanticType fillType = currentDrawInfo.Argument.Type;
-                    if (FillMode == FillMode.Complete) {
+                    if (RenderingOptions.FillMode == FillMode.Complete) {
                         // already set
                     }
 
-                    if (FillMode == FillMode.Output &&
+                    if (RenderingOptions.FillMode == FillMode.Output &&
                         fillType is FunctionalType &&
                         currentDrawInfo.Argument is Expression &&
                         isFirstLevel) {
                         fillType = ((FunctionalType) fillType).Output;   
                     }
 
-                    if (FillMode == FillMode.Head && currentDrawInfo.Argument is Expression) {
+                    if (RenderingOptions.FillMode == FillMode.Head && currentDrawInfo.Argument is Expression) {
                         fillType = ((Expression) currentDrawInfo.Argument).Head.Type;
                     }
 
@@ -357,18 +236,4 @@ public class ExpressionContainer : MonoBehaviour
         texture.Apply();
         GetComponent<Renderer>().material.mainTexture = texture;
     }
-
-    private static readonly Dictionary<SemanticType, Color> ColorsByType = new Dictionary<SemanticType, Color>{
-        [TRUTH_VALUE] = new Color(0.2f, 0.3f, 0.85f, 1),
-        [INDIVIDUAL]  = new Color(0.9f, 0.2f, 0.01f, 1),
-        [RELATION_2]  = new Color(0.8f, 0.9f, 0.1f, 1),
-        [PREDICATE]   = new Color(0.2f, 0.7f, 0.3f, 1),
-        [QUANTIFIER]  = new Color(0.6f, 0.3f, 0.9f, 1),
-        [TRUTH_FUNCTION_2] = new Color(0.1f, 0.9f, 0.86f, 1),
-        [TRUTH_FUNCTION] = new Color(0.7f, 0.7f, 0.86f, 1),
-        [ASSERTION]   = new Color(1, 1, 1, 1),
-        [QUESTION]    = new Color(0.9f, 0.2f, 0.9f, 1),
-        [TRUTH_ASSERTION_FUNCTION] = new Color(0.9f, 0.9f, 1, 1),
-        [TRUTH_QUESTION_FUNCTION]  = new Color(0.9f, 0.4f, 0.7f, 1)
-    };
 }
