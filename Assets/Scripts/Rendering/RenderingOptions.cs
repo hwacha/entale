@@ -25,8 +25,8 @@ public class RenderingOptions {
     public static float FillTransparency = 0.6f;
     public static float BorderTransparency = 0.2f;
     public static int BorderSize = 8;
-    public static float BorderRatio = 0.1f;
-    public static int Scale = 80;
+    public static float BorderRatio = 0.125f;
+    public static int Scale = 320;
     public static bool DrawFirstArgumentDiagonally = false;
     public static bool DrawInaccessibleArgumentSlot = false;
     public static FillMode FillMode = FillMode.Head;

@@ -30,7 +30,6 @@ public class Actuator : MonoBehaviour {
         yield return new WaitForSeconds(time);
         Destroy(eContainer);
         yield break;
-        yield return null;
     }
 
 
@@ -50,12 +49,12 @@ public class Actuator : MonoBehaviour {
                     throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
                 }
 
-                StartCoroutine(Say(action, 2));
+                StartCoroutine(Say(action, 1));
 
                 var content = action.GetArgAsExpression(0);
 
                 if (content.Equals(NEUTRAL)) {
-                    Debug.Log("Busy doin' nothin'");
+                    // Debug.Log("Busy doin' nothin'");
                 }
 
                 // at(self, that ~> #forest1)

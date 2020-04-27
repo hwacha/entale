@@ -48,10 +48,10 @@ public class RenderExpressionTesting : MonoBehaviour
 
         // ArgumentContainer.From(new Expression(ITSELF, AT, BOB)).GetComponent<ArgumentContainer>().GenerateVisual();
 
-        // SpawnArgumentContainer(
-        //     new Expression(IF,
-        //         new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(RED, BOB)),
-        //      new Expression(SOME, GREEN, BLUE)), new Vector3(25, 2, 0), Quaternion.identity);
+        SpawnArgumentContainer(
+            new Expression(IF,
+                new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(RED, BOB)),
+             new Expression(SOME, GREEN, BLUE)), new Vector3(25, 2, 0), Quaternion.identity);
         
         // SpawnArgumentContainer(new Expression(IF, new Expression(AT, ALICE, BOB), new Expression(GREEN, BOB)));
         // SpawnArgumentContainer(new Expression(ITSELF, AT, ALICE));
@@ -67,5 +67,9 @@ public class RenderExpressionTesting : MonoBehaviour
     //     SpawnExpressionContainer(new Expression(SOME, BLUE, new Expression(AT, new Empty(SemanticType.INDIVIDUAL), ALICE)),
     //         new Vector3(-20, 2, -1), Quaternion.identity);
 
+    }
+
+    public static void Draw(Texture tex) {
+        GameObject.Find("TestScreen").GetComponent<Renderer>().material.SetTexture("_MainTex", tex);
     }
 }

@@ -203,14 +203,14 @@ public class ArgumentContainer : MonoBehaviour {
         }
     }
 
-    public void DisbaleRenderers() {
+    public void DisableRenderers() {
         gameObject.layer = LayerMask.NameToLayer("Default");
         gameObject.GetComponent<Renderer>().enabled = false;
 
         foreach (Transform child in gameObject.transform) {
             ArgumentContainer childArgumentContainer = child.gameObject.GetComponent<ArgumentContainer>();
             if (childArgumentContainer != null) {
-                childArgumentContainer.DisbaleRenderers();
+                childArgumentContainer.DisableRenderers();
             } else {
                 child.gameObject.layer = gameObject.layer = LayerMask.NameToLayer("Default");
                 var r = child.gameObject.GetComponent<Renderer>();
@@ -224,9 +224,8 @@ public class ArgumentContainer : MonoBehaviour {
         GameObject prePassCamera = GameObject.Find("ExpressionPrePass");
         prePassCamera.transform.parent = this.gameObject.transform;
         prePassCamera.transform.localPosition =
-            Vector3.Scale(prePassCamera.transform.localPosition, new Vector3(0, 0, 1));
-        prePassCamera.transform.position =
-            Vector3.Scale(prePassCamera.transform.position, new Vector3(1, 1, Argument.Depth * 2));
+            Vector3.Scale(prePassCamera.transform.localPosition, new Vector3(0, 0, 0));
+        prePassCamera.transform.position += new Vector3(0, 0, -Argument.Depth * 2);
 
         Camera prePassCameraComponent = prePassCamera.GetComponent<Camera>();
         prePassCameraComponent.enabled = true;
@@ -245,7 +244,7 @@ public class ArgumentContainer : MonoBehaviour {
         prePassCameraComponent.targetTexture = fillTexture;
         prePassCamera.GetComponent<ApplyTransparency>().Opacity = 1 - FillTransparency;
         prePassCameraComponent.Render();
-        
+
         // place borders and symbols in front of the prepass camera
         SpawnBordersAndSymbols();
         RenderTexture borderAndSymbolTexture =
@@ -257,7 +256,7 @@ public class ArgumentContainer : MonoBehaviour {
         prePassCamera.GetComponent<ApplyTransparency>().Opacity = 1 - BorderTransparency;
         prePassCameraComponent.Render();
 
-        DisbaleRenderers();
+        DisableRenderers();
 
         // Now, we combine the two textures.
         GameObject fillQuad = Instantiate(Resources.Load<GameObject>("Prefabs/Symbol"),
