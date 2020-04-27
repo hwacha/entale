@@ -102,10 +102,11 @@ public class ArgumentContainer : MonoBehaviour {
 
             gameObject.GetComponent<Renderer>().material.SetColor("_Color", ColorsByType[fillType]);
 
-            var childArgumentContainers = gameObject.GetComponentsInChildren<ArgumentContainer>();
-            foreach (var childArgumentContainer in childArgumentContainers) {
-                if (childArgumentContainer != this) {
-                    childArgumentContainer.SpawnFill(depth + 1);
+            foreach (Transform childArgumentContainer in gameObject.transform) {
+                ArgumentContainer childArgumentContainerScript =
+                    childArgumentContainer.gameObject.GetComponent<ArgumentContainer>();
+                if (childArgumentContainerScript != null) {
+                    childArgumentContainerScript.SpawnFill(depth + 1);    
                 }
             }
         }
@@ -188,10 +189,11 @@ public class ArgumentContainer : MonoBehaviour {
             northBorder.GetComponent<Renderer>().material.SetColor("_Color", ColorsByType[fillType]);
             southBorder.GetComponent<Renderer>().material.SetColor("_Color", ColorsByType[fillType]);
 
-            var childArgumentContainers = gameObject.GetComponentsInChildren<ArgumentContainer>();
-            foreach (var childArgumentContainer in childArgumentContainers) {
-                if (childArgumentContainer != this) {
-                    childArgumentContainer.SpawnBordersAndSymbols(depth + 1);
+            foreach (Transform childArgumentContainer in gameObject.transform) {
+                ArgumentContainer childArgumentContainerScript =
+                    childArgumentContainer.gameObject.GetComponent<ArgumentContainer>();
+                if (childArgumentContainerScript != null) {
+                    childArgumentContainerScript.SpawnBordersAndSymbols(depth + 1);    
                 }
             }
         }
