@@ -170,19 +170,18 @@ public class Testing : MonoBehaviour {
         // Log("QUERY");
 
         // Test hack quantifier
-        // Expression bobLikesAllBlue = new Expression(LIKES_ALL, BOB, BLUE);
-        // Expression aliceIsBlue    = new Expression(BLUE, ALICE);
-        // Expression bobLikesAlice  = new Expression(LIKES, BOB, ALICE);
+        Expression bobLikesAllBlue = new Expression(LIKES_ALL, BOB, BLUE);
+        Expression aliceIsBlue    = new Expression(BLUE, ALICE);
+        Expression bobLikesAlice  = new Expression(LIKES, BOB, ALICE);
 
-        // MentalState testLikesAll = new MentalState();
-        // testLikesAll.FrameTimer = FrameTimer;
-        // testLikesAll.Initialize(
-        //     bobLikesAllBlue,
-        //     aliceIsBlue
-        // );
-        // testLikesAll.ProofMode = Proof;
-        // StartCoroutine(LogBases(MentalState, bobLikesAlice));
-        // Log(BasesString(testLikesAll, bobLikesAlice));
+        MentalState testLikesAll = new MentalState();
+        testLikesAll.FrameTimer = FrameTimer;
+        testLikesAll.Initialize(
+            bobLikesAllBlue,
+            aliceIsBlue
+        );
+        testLikesAll.ProofMode = Proof;
+        StartCoroutine(LogBases(MentalState, bobLikesAlice));
 
         Log("-----");
 
@@ -234,7 +233,7 @@ public class Testing : MonoBehaviour {
             new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
         MentalState.ProofMode = Proof;
-        StartCoroutine(LogBases(MentalState, aliceIsRed));
+        // StartCoroutine(LogBases(MentalState, aliceIsRed));
         // StartCoroutine(LogBases(MentalState, bobIsBlue));
         // StartCoroutine(LogBases(MentalState, bobIsRed));
         // StartCoroutine(LogBases(MentalState, aliceIsBlue));

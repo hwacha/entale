@@ -46,7 +46,7 @@ public enum DecisionPolicy {
 // A model of the mental state of an NPC.
 // Includes their beliefs, preferences, goals, etc.,
 // for use by perception and in inference and action.
-// 
+//
 // currently represented by sets of sentences,
 // (all of which correspond to a belief)
 // but the format of representation may change
@@ -57,7 +57,7 @@ public enum DecisionPolicy {
 // a proof from the NPCs core beliefs to some target sentence,
 // returning the free premises of the proof so that
 // inconsistencies can be resolved.
-// 
+//
 public class MentalState : MonoBehaviour {
     // the time, in seconds, that the mental
     // state is allowed to run search in one frame
@@ -162,7 +162,7 @@ public class MentalState : MonoBehaviour {
     }
 
     // composes two substitutions together a * b,
-    // according the rule that the A[a * b] = (A[a])[b] 
+    // according the rule that the A[a * b] = (A[a])[b]
     private static Substitution Compose(Substitution a, Substitution b) {
         Substitution composition = new Substitution();
         foreach (KeyValuePair<Variable, Expression> aAssignment in a) {
@@ -192,47 +192,47 @@ public class MentalState : MonoBehaviour {
     // that is, the premises needed to prove the goal,
     // (that is, they aren't lemmas which are derived
     // elsewhere in the proof).
-    // 
+    //
     // ====
-    // 
+    //
     // Why a set of lists?
-    // 
+    //
     // This returns the set of alternative bases that
     // each independently prove the goal. If the set
     // is empty, that means this mental state doesn't
     // prove the goal.
-    // 
+    //
     // Also includes a substitution in case the goal
     // is a formula.
-    // 
+    //
     // ====
-    // 
+    //
     // Why a list, and not a set?
-    // 
+    //
     // The basis is a partially ordered collection, where the
     // order corresponds to the proof depth of the premise:
     // If one premise P occurs in the application of a rule
     // whose other sentence is a lemma over a second premise Q,
     // then Q comes before P in the list.
-    // 
+    //
     // This corresponds to the order in which the NPC should perform
     // actions. This is because the premises earlier in the order
     // will serve as preconditions to the success of a later action.
     // Also, duplicates in the sequence are allowed; a sequence
     // where the same sentence occurs multiple times corresponds
     // to the same action being performed again.
-    // 
+    //
     // As for normal proofs, the order doesn't have a concrete interpretation,
     // and can be ignored. Furthermore, duplicate premises should ultimately be
     // discarded, in case a belief is discard to resolve an inconsistency.
     // ====
-    // 
+    //
     // @BUG pending expressions shouldn't be mutated in branches
     // that don't have the expression as its ancestor.
     // This'll cause false negatives.
-    // 
+    //
     // ====
-    // 
+    //
     // goal: the sentence to be proved
     // suppositions: the set of sentences supposed at this point in search
     //               due to  a conditional
@@ -242,7 +242,7 @@ public class MentalState : MonoBehaviour {
     // completeExpressions: expressions that have been tried and found.
     // alternativeBases: the resulting set of bases that each prove the goal.
     // done: a flag that indicates when search has been completed.
-    // 
+    //
     public IEnumerator GetBases(Expression goal,
         HashSet<Expression> suppositions,
         Dictionary<Expression, List<HashSet<Expression>>> pendingExpressions,
@@ -289,7 +289,7 @@ public class MentalState : MonoBehaviour {
         // nothing in our belief base will be under risk
         // of being falsified by ~goal. So, our basis
         // shouldn't include any premises in our basis.
-        // 
+        //
         // @Note: the basis might include a stack of
         // conclusions proved via supposition, and then
         // pop them off. Maybe? Potentially not necessary.
@@ -301,7 +301,7 @@ public class MentalState : MonoBehaviour {
             foreach (Expression supposition in suppositions) {
                 // @Note: now that get matches is unidirectional
                 // as opposed to unification, we may now want
-                // to make a second call, here, in case we want to make 
+                // to make a second call, here, in case we want to make
                 // some sort of supposition -> goal match, interpreted
                 // universally instead of existentially.
                 HashSet<Substitution> unifiers = goal.GetMatches(supposition);
@@ -313,7 +313,7 @@ public class MentalState : MonoBehaviour {
                 // logical vacuity, I used to return
                 // the basis set here. But, we actually
                 // probably want to know the other bases, too.
-                // 
+                //
                 // What will happen is that, because there's
                 // no premise to discard in this basis,
                 // no other sentence from another basis
@@ -363,7 +363,7 @@ public class MentalState : MonoBehaviour {
             Expression[] premises = new Expression[rule.Premises.Length];
             Expression[] assumptions = new Expression[rule.Assumptions.Length];
             Expression[] conclusions = new Expression[rule.Conclusions.Length];
-            
+
             // change out variables in the rule to not collide
             // with the variables in goal.
             var usedVariables = goal.GetVariables();
@@ -413,7 +413,7 @@ public class MentalState : MonoBehaviour {
                             while (!doneFlag.Item) {
                                 yield return null;
                             }
-                            
+
                             foreach (var premiseBasis in premiseBases) {
                                 List<Expression> meetPremises = new List<Expression>();
                                 meetPremises.AddRange(currentBasis.Key);
@@ -509,13 +509,15 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(TRULY_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION));
 
+        StartCoroutine(ApplyInferenceRule(LIKES_ALL_TO_LIKES));
+
         // @Note: not working. Something is up with Unify()
         StartCoroutine(ApplyInferenceRule(ITSELF_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(ITSELF_ELIMINATION));
-        
+
         StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT));
         StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT));
-        
+
         StartCoroutine(ApplyInferenceRule(CONJUNCTION_INTRODUCTION));
 
         StartCoroutine(ApplyInferenceRule(EXISTENTIAL_INTRODUCTION));
@@ -523,7 +525,7 @@ public class MentalState : MonoBehaviour {
 
         // conjunction elimination
         // A & B |- A; A & B |- B
-        
+
         if (FrameTimer.FrameDuration >= TIME_BUDGET) {
             yield return null;
         }
@@ -587,7 +589,7 @@ public class MentalState : MonoBehaviour {
         //  the depth check only applies if we don't want the size
         //  of the premise to explode. It's fine to prove conclusions
         //  that are very large (i.e. with DNE).
-        if (goal.Depth <= MaxDepth) {            
+        if (goal.Depth <= MaxDepth) {
             StartCoroutine(ApplyInferenceRule(PERCEPTUAL_BELIEF));
             // StartCoroutine(ApplyInferenceRule(ALWAYS_ELIMINATION));
             StartCoroutine(ApplyInferenceRule(MODUS_PONENS));
@@ -601,7 +603,7 @@ public class MentalState : MonoBehaviour {
             // @Note we might in the future add a check to see if there is
             // no other proof of G. This is because you don't want to enact
             // something you already believe to be true.
-            // 
+            //
             // M |- able(self, A),  M :: will(A) => M |- A
             if (ProofMode == Plan) {
 
@@ -690,16 +692,16 @@ public class MentalState : MonoBehaviour {
     }
 
     // Asserts a sentence to this mental state.
-    // 
+    //
     // If the assertion is incompatible (i.e. inconsistent)
     // with the NPC's current beliefs, then the NPC's
     // are resolved by either rejecting the assertion,
     // or discarding one of the NPC's beliefs
     // that is incompatible with the assertion.
-    // 
+    //
     // If accepted, then the sentence is added to
     // the state's beliefs.
-    // 
+    //
     // Assert() returns true if the assertion is
     // accepted, false if it is rejected.
     public IEnumerator Assert(Expression assertion) {
@@ -769,7 +771,7 @@ public class MentalState : MonoBehaviour {
         // NOTE: this strategy excludes any sentences not known to be better than
         // netural, because they might be worse than neutral, for all we know.
         // (Hence "risk averse")
-        
+
         // @Note right now, the ranking is represented as a stack.
         // This is wrong, as our preferences are only a partial
         // ordering. Instead, we should have a tree structure
@@ -786,7 +788,7 @@ public class MentalState : MonoBehaviour {
         foreach (var preferable in preferables) {
             while (ranking.Count != 0) {
                 var bestSoFar = ranking.Peek();
-                
+
                 var answer = new Container<bool>(false);
                 var doneFlag = new Container<bool>(false);
                 StartCoroutine(Query(new Expression(BETTER, preferable, bestSoFar), answer, doneFlag));
@@ -832,7 +834,7 @@ public class MentalState : MonoBehaviour {
                 // we'll want to incorporate the cost
                 // of actions in later.
                 var currentPlan = new List<Expression>();
-                
+
                 foreach (var premise in goalBasis.Key) {
                     var boundPremise = premise.Substitute(goalBasis.Value);
                     if (boundPremise.Head.Equals(WILL.Head)) {
