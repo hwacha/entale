@@ -188,4 +188,14 @@ public class InferenceRule
             },
             new Expression[]{},
             new Expression[]{new Expression(AT, XE, ZE)});
+
+    public static readonly InferenceRule LIKES_ALL_TO_LIKES =
+        new InferenceRule(
+            new Expression[]{
+                new Expression(LIKES_ALL, XE, FET),
+                new Expression(FET, YE)
+            },
+            new Expression[]{},
+            new Expression[]{new Expression(LIKES, XE, YE)}
+        );
 }

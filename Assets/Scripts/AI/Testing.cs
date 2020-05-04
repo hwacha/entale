@@ -31,7 +31,7 @@ public class Testing : MonoBehaviour {
         int counter = 0;
         while (counter < 100000000) {
             while (FrameTimer.FrameDuration < timeBudget) {
-                counter++;    
+                counter++;
             }
             Log(counter);
             yield return null;
@@ -116,11 +116,11 @@ public class Testing : MonoBehaviour {
         // } catch (ArgumentException e) {
         //     Log("Got expected error: " + e);
         // }
-        
+
         // Log("Deictic Constructor");
         // Deictic thatEmpty = new Deictic(THAT, new GameObject());
         // Log(Verbose(thatEmpty));
-        
+
         // Log("equality");
         // Log(thatEmpty.Equals(thatEmpty));
         // Deictic thatTree = new Deictic(THAT, GameObject.Find("tree"));
@@ -164,10 +164,28 @@ public class Testing : MonoBehaviour {
         // Log(MatchesString(new Expression(ITSELF, REET, XE), new Expression(FET, BOB)));
 
         // @TODO Test potential bug in mutating expressions
-        
+
         // Testing mental state.
         // Log("Testing mental state.");
         // Log("QUERY");
+
+        // Test hack quantifier
+        // Expression bobLikesAllBlue = new Expression(LIKES_ALL, BOB, BLUE);
+        // Expression aliceIsBlue    = new Expression(BLUE, ALICE);
+        // Expression bobLikesAlice  = new Expression(LIKES, BOB, ALICE);
+
+        // MentalState testLikesAll = new MentalState();
+        // testLikesAll.FrameTimer = FrameTimer;
+        // testLikesAll.Initialize(
+        //     bobLikesAllBlue,
+        //     aliceIsBlue
+        // );
+        // testLikesAll.ProofMode = Proof;
+        // StartCoroutine(LogBases(MentalState, bobLikesAlice));
+        // Log(BasesString(testLikesAll, bobLikesAlice));
+
+        Log("-----");
+
         Expression aliceIsRed   = new Expression(RED, ALICE);
         Expression aliceIsAnApple = new Expression(APPLE, ALICE);
         Expression bobIsBlue    = new Expression(BLUE, BOB);
@@ -181,7 +199,7 @@ public class Testing : MonoBehaviour {
         Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
 
         Expression bobIsRed     = new Expression(RED, BOB);
-        Expression aliceIsBlue  = new Expression(BLUE, ALICE);
+        // Expression aliceIsBlue  = new Expression(BLUE, ALICE);
         Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
 
         Expression ifCharlieIsBlueIAmGreen =
@@ -216,11 +234,11 @@ public class Testing : MonoBehaviour {
             new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
         MentalState.ProofMode = Proof;
-        // StartCoroutine(LogBases(MentalState, aliceIsRed));
+        StartCoroutine(LogBases(MentalState, aliceIsRed));
         // StartCoroutine(LogBases(MentalState, bobIsBlue));
         // StartCoroutine(LogBases(MentalState, bobIsRed));
         // StartCoroutine(LogBases(MentalState, aliceIsBlue));
-        
+
         // StartCoroutine(LogBases(MentalState, new Expression(BETTER, new Expression(RED, SELF), NEUTRAL)));
         // StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(BETTER, NEUTRAL, new Expression(RED, SELF)))));
 
@@ -295,12 +313,12 @@ public class Testing : MonoBehaviour {
         // StartCoroutine(LogBases(MentalState, new Expression(TRULY, new Expression(RED, ALICE))));
         // StartCoroutine(LogBases(MentalState, new Expression(SOMETIMES, TRULY, NOT)));
         // StartCoroutine(LogBases(MentalState, new Expression(TRULY, new Expression(RED, CHARLIE))));
-        
+
         // StartCoroutine(LogBases(MentalState, new Expression(SOMETIMES, new Expression(PERCEIVE, SELF), TRULY)));
-        
+
         // StartCoroutine(LogBases(MentalState, VERUM));
         // StartCoroutine(LogBases(MentalState, new Expression(VEROUS, BOB)));
-        
+
         // Log("contraposition of perceptual belief");
         // MentalState ps = new MentalState(new Expression(PERCEIVE, SELF, new Expression(GREEN, SELF)));
         // Log(BasesString(ps, new Expression(GREEN, SELF)));
@@ -308,7 +326,7 @@ public class Testing : MonoBehaviour {
         // Log(BasesString(ps, new Expression(NOT,
         //     new Expression(PERCEIVE, SELF,
         //         new Expression(NOT, new Expression(GREEN, SELF))))));
-        
+
         // MentalState bs = new MentalState(new Expression(RED, SELF));
         // Log(BasesString(bs, new Expression(BELIEVE, SELF, new Expression(RED, SELF))));
         // Log(BasesString(bs, new Expression(NOT, new Expression(BELIEVE, SELF, new Expression(GREEN, SELF)))));
@@ -347,6 +365,7 @@ public class Testing : MonoBehaviour {
         m.StartCoroutine(m.GetBases(e, result, done));
 
         while (!done.Item) {
+            Log("thinkin");
             yield return null;
         }
         Log("'" + e + "'" + " is proved by: " + BasesString(result));

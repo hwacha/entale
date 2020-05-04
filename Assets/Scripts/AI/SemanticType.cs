@@ -4,26 +4,26 @@ using System.Collections.Generic;
 
 // the type of an expression.
 // The type determines the kind of thing an expression refers to (semantics).
-// 
+//
 // expressions of type 'e' refer to individuals like Bob or Mount Everest,
-// 
+//
 // expressions of type 't' refer to truth values, 1 or 0,
 // Donald Trump is president = 1, Bob Dole is president = 0
-// 
+//
 // expressions of type 'e -> t' refer to predicates, which either
 // hold or don't hold of individuals i.e. "runs", or "green"
-// 
+//
 // they're a function that maps an individual to
 // 1 if the predicate holds
 //   (so runs(Bob) -> 1 because Bob does run) and
 // 0 if the predicate doesn't hold
 //   (so runs(Anthony) -> 0 because Anthony doesn't run)
-//   
-// the grammar of the language also determines what expressions can combine. 
+//
+// the grammar of the language also determines what expressions can combine.
 // i.e. runs can only combine with expressions of type 'e' because
 // they consume an individual as input.
 // i.e. runs(Bob) is well-formed but runs(green) is not.
-// 
+//
 // expressions with a functional type combine with expressions of their
 // input types to yield an expression of the output type.
 // expressions can also partially apply to some but not all of their inputs.
@@ -37,9 +37,9 @@ public abstract class SemanticType {
 
     // if you can partially apply arguments to an expression with that type
     // and get an expression of this type, then return true.
-    // 
+    //
     // e -> t is a parital application of e, e -> t
-    // 
+    //
     public abstract bool IsPartialApplicationOf(SemanticType that);
 
     // references to the atomic types.
@@ -54,6 +54,9 @@ public abstract class SemanticType {
         new FunctionalType(new SemanticType[]{INDIVIDUAL}, TRUTH_VALUE);
     public static readonly FunctionalType RELATION_2 =
         new FunctionalType(new SemanticType[]{INDIVIDUAL, INDIVIDUAL}, TRUTH_VALUE);
+
+    public static readonly FunctionalType HACK_QUANTIFIER =
+        new FunctionalType(new SemanticType[]{INDIVIDUAL, PREDICATE}, TRUTH_VALUE);
 
     public static readonly FunctionalType QUANTIFER_PHRASE =
         new FunctionalType(new SemanticType[]{PREDICATE}, TRUTH_VALUE);
@@ -161,7 +164,7 @@ public class FunctionalType : SemanticType {
         if (indexOfThisFirstInputInThat == -1) {
             return false;
         }
-        
+
         return this.RemoveAt(0).IsPartialApplicationOf(thatFunctional.RemoveAt(indexOfThisFirstInputInThat));
     }
 
@@ -175,7 +178,7 @@ public class FunctionalType : SemanticType {
         if (Input.Length != that.GetNumArgs()) {
             return false;
         }
-        
+
         for (int i = 0; i < Input.Length; i++) {
             if (Input[i] != that.GetInput(i)) {
                 return false;

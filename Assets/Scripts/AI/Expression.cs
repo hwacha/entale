@@ -29,7 +29,7 @@ public abstract class Atom {
 
         return this.Type.Equals(that.Type) && this.ID.Equals(that.ID);
     }
- 
+
     public override int GetHashCode() {
         return Type.GetHashCode() * ID.GetHashCode();
     }
@@ -326,7 +326,7 @@ public class Expression : Argument {
     // and that expression. A unifier is a variable substitution that,
     // when applied to both expressions, leads the expressions to
     // be syntactically equal
-    // 
+    //
     // @Note we want to change this to be pattern matching instead
     // of unification (or closer to pattern matching, in any case.)
     private HashSet<Dictionary<Variable, Expression>> GetMatches(Expression that,
@@ -392,7 +392,7 @@ public class Expression : Argument {
             }
 
             var currentSubstitutions = substitutions;
-            
+
             // we now know they're the same head symbol, and that the overall
             // expression has the same type, so we can safely say they
             // have the same number of arguments, although some may
@@ -417,7 +417,7 @@ public class Expression : Argument {
                 // @Note: should we be substituting the expressions when we
                 // first call Unify() with a substitution?
                 // It shouldn't be, because we're checking to see
-                // if x is bound to anything 
+                // if x is bound to anything
                 // Let see if it's necessary in testing.
                 currentSubstitutions =
                     ((Expression) this.Args[i]).GetMatches((Expression) that.Args[i],
@@ -426,15 +426,15 @@ public class Expression : Argument {
 
             return currentSubstitutions;
         }
-        
-        // 
+
+        //
         // @Note this is a naive implementation with O(2^n) complexity.
         // Is there a way to improve this?
-        // 
+        //
         // decomposes an expression with respect to another pattern to match
-        // 
+        //
         // e.g. R(a, b) will decompose into R(a,_)(b) and R(_, b)(a) w/r/t F(x)
-        // 
+        //
         Dictionary<Expression, Argument[]> DecomposeExpression(int patternIndex, int expressionIndex,
             SemanticType patternHeadType, Expression f, Argument[] args) {
             var decompositions = new Dictionary<Expression, Argument[]>();
@@ -515,7 +515,7 @@ public class Expression : Argument {
                 }
 
                 if (currentSubstitutions.Count != 0) {
-                    alternativeSubstitutions.Add(currentSubstitutions);    
+                    alternativeSubstitutions.Add(currentSubstitutions);
                 }
             }
 
@@ -538,13 +538,13 @@ public class Expression : Argument {
 
         // // @Note this is commented out because we want unification
         // // to only occur from the left to the right.
-        
+
         // if (patternSubstitutions.Count == 0) {
         //     var thatMatchThisSubstitutions = patternMatch(that, this);
 
         //     foreach (var thatMatchThisSubstitution in thatMatchThisSubstitutions) {
         //         patternSubstitutions.UnionWith(thatMatchThisSubstitution);
-        //     }            
+        //     }
         // }
 
         return patternSubstitutions;
@@ -562,7 +562,7 @@ public class Expression : Argument {
         StringBuilder s = new StringBuilder();
 
         s.Append(Head);
-        
+
         // if an expression doesn't have any arguments,
         // don't draw any parentheses
         if (Args.Length == 0) {
@@ -674,6 +674,7 @@ public class Expression : Argument {
     public static readonly Expression IDENTITY = new Expression(new Constant(RELATION_2, "="));
     public static readonly Expression AT       = new Expression(new Constant(RELATION_2, "at"));
     public static readonly Expression ADDED_TO = new Expression(new Constant(RELATION_2, "added_to"));
+    public static readonly Expression LIKES = new Expression(new Constant(RELATION_2, "likes"));
 
     // 2-place relation variables
     public static readonly Expression REET = new Expression(new Variable(RELATION_2, "R"));
@@ -704,6 +705,9 @@ public class Expression : Argument {
     public static readonly Expression PERCEIVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceive"));
     public static readonly Expression VERIDICAL = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "veridical"));
     public static readonly Expression TRIED = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "tried"));
+
+    // hack quantifiers
+    public static readonly Expression LIKES_ALL = new Expression(new Constant(HACK_QUANTIFIER, "likes_all"));
 
     // quantifiers
     public static readonly Expression SOME = new Expression(new Constant(QUANTIFIER, "some"));
