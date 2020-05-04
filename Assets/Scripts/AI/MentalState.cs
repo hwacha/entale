@@ -509,8 +509,6 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(TRULY_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION));
 
-        StartCoroutine(ApplyInferenceRule(LIKES_ALL_TO_LIKES));
-
         // @Note: not working. Something is up with Unify()
         StartCoroutine(ApplyInferenceRule(ITSELF_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(ITSELF_ELIMINATION));
@@ -590,6 +588,7 @@ public class MentalState : MonoBehaviour {
         //  of the premise to explode. It's fine to prove conclusions
         //  that are very large (i.e. with DNE).
         if (goal.Depth <= MaxDepth) {
+            StartCoroutine(ApplyInferenceRule(LIKES_ALL_TO_LIKES));
             StartCoroutine(ApplyInferenceRule(PERCEPTUAL_BELIEF));
             // StartCoroutine(ApplyInferenceRule(ALWAYS_ELIMINATION));
             StartCoroutine(ApplyInferenceRule(MODUS_PONENS));
