@@ -21,9 +21,10 @@ public class WorkspaceController : MonoBehaviour
         GameObject wordContainer = ArgumentContainer.From(new Expression(word));
         wordContainer.GetComponent<ArgumentContainer>().GenerateVisual();
         wordContainer.transform.SetParent(Workspace.transform);
-        wordContainer.transform.localPosition = new Vector3(0, 0, -0.01f);
-        wordContainer.transform.localRotation = Quaternion.identity;
         wordContainer.transform.localScale = new Vector3(0.125f, 0.125f, 1);
+        wordContainer.transform.localPosition = new Vector3(-0.5f + 0.125f, 0.5f - 0.125f, -0.01f);
+        wordContainer.transform.localRotation = Quaternion.identity;
+        
     }
 
     // Start is called before the first frame update
