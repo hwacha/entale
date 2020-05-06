@@ -681,6 +681,9 @@ public class Expression : Argument {
     // 1-place truth functions
     public static readonly Expression NOT = new Expression(new Constant(TRUTH_FUNCTION, "not"));
     public static readonly Expression TRULY = new Expression(new Constant(TRUTH_FUNCTION, "truly"));
+    // the question of whether "A" is closed,
+    // so you either believe A or ~A
+    public static readonly Expression CLOSED = new Expression(new Constant(TRUTH_FUNCTION, "closed"));
 
     public static readonly Expression FTF = new Expression(new Variable(TRUTH_FUNCTION, "FTF"));
     public static readonly Expression GTF = new Expression(new Variable(TRUTH_FUNCTION, "GTF"));
@@ -704,6 +707,8 @@ public class Expression : Argument {
     public static readonly Expression PERCEIVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceive"));
     public static readonly Expression VERIDICAL = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "veridical"));
     public static readonly Expression TRIED = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "tried"));
+    public static readonly Expression PERCEPTUALLY_CLOSED =
+        new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
 
     // quantifiers
     public static readonly Expression SOME = new Expression(new Constant(QUANTIFIER, "some"));

@@ -40,13 +40,13 @@ public class InferenceRule
         for (int i = 0; i < Premises.Length; i++) {
             s.Append("M |- ");
             s.Append(Premises[i]);
-            s.Append(";");
+            s.Append("; ");
         }
 
         for (int i = 0; i < Assumptions.Length; i++) {
             s.Append("M :: ");
             s.Append(Assumptions[i]);
-            s.Append(";");
+            s.Append("; ");
         }
 
         s.Append(" => ");
@@ -54,7 +54,7 @@ public class InferenceRule
         for (int i = 0; i < Conclusions.Length; i++) {
             s.Append("M |- ");
             s.Append(Conclusions[i]);
-            s.Append(";");
+            s.Append("; ");
         }
 
         s.Append("\n");
@@ -120,6 +120,13 @@ public class InferenceRule
             new Expression[]{new Expression(IF, ST, TT), ST},
             new Expression[]{},
             new Expression[]{TT});
+
+    // @Note: this isn't working with conditional proof.
+    public static readonly InferenceRule MODUS_TOLLENS =
+        new InferenceRule(
+            new Expression[]{new Expression(IF, ST, TT), new Expression(NOT, TT)},
+            new Expression[]{},
+            new Expression[]{new Expression(NOT, ST)});
 
     public static readonly InferenceRule ITSELF_INTRODUCTION =
         new InferenceRule(
@@ -188,4 +195,17 @@ public class InferenceRule
             },
             new Expression[]{},
             new Expression[]{new Expression(AT, XE, ZE)});
+
+    public static readonly InferenceRule CLOSED_QUESTION_ASSUMPTION =
+        new InferenceRule(
+            new Expression[]{new Expression(CLOSED, ST)},
+            new Expression[]{new Expression(NOT, ST)},
+            new Expression[]{new Expression(NOT, ST)});
+
+    public static readonly InferenceRule PERCEPTUALLY_CLOSED_ASSUMPTION =
+        new InferenceRule(
+            new Expression[]{new Expression(PERCEPTUALLY_CLOSED, XE, ST)},
+            new Expression[]{new Expression(NOT, new Expression(PERCEIVE, XE, ST))},
+            new Expression[]{new Expression(new Expression(PERCEIVE, XE, new Expression(NOT, ST)))}
+        );
 }

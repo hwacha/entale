@@ -41,7 +41,10 @@ public class Testing : MonoBehaviour {
     }
 
     void Start() {
-        // FrameTimer = gameObject.GetComponent<FrameTimer>();
+        FrameTimer = gameObject.GetComponent<FrameTimer>();
+
+        // DON'T COMMENT ABOVE THIS LINE
+
         // Log(FrameTimer);
         // Log("Testing coroutines.");
         // StartCoroutine(TestRoutine());
@@ -195,27 +198,36 @@ public class Testing : MonoBehaviour {
 
         MentalState.FrameTimer = FrameTimer;
 
-        MentalState.Initialize(
-            aliceIsRed,
-            aliceIsAnApple,
-            bobIsBlue,
-            aliceIsAtBob,
-            aliceIsAlice,
-            bobIsBob,
-            charlieIsAMacintosh,
-            allApplesAreRed,
-            allMacintoshesAreApples,
-            iCanMakeCharlieBlue,
-            charlieIsBlue,
-            iSeeCharlieAsRed,
-            ifCharlieIsBlueIAmGreen,
-            bobIsAtCharlie,
-            everythingIsSelfIdentical,
-            whatIseeIsAlwaysTrue,
-            new Expression(BETTER, new Expression(BLUE, SELF), NEUTRAL),
-            new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
+        // MentalState.Initialize(
+        //     aliceIsRed,
+        //     aliceIsAnApple,
+        //     bobIsBlue,
+        //     aliceIsAtBob,
+        //     aliceIsAlice,
+        //     bobIsBob,
+        //     charlieIsAMacintosh,
+        //     allApplesAreRed,
+        //     allMacintoshesAreApples,
+        //     iCanMakeCharlieBlue,
+        //     charlieIsBlue,
+        //     iSeeCharlieAsRed,
+        //     ifCharlieIsBlueIAmGreen,
+        //     bobIsAtCharlie,
+        //     everythingIsSelfIdentical,
+        //     whatIseeIsAlwaysTrue,
+        //     new Expression(BETTER, new Expression(BLUE, SELF), NEUTRAL),
+        //     new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
-        MentalState.ProofMode = Proof;
+        // MentalState.ProofMode = Proof;
+        MentalState.Initialize(
+            new Expression(ABLE, SELF,  new Expression(AT, SELF, BOB)),
+            new Expression(IF, new Expression(AT, SELF, BOB), new Expression(PERCEPTUALLY_CLOSED, SELF, new Expression(GREEN, BOB))),
+            new Expression(PERCEIVE, SELF, new Expression(GREEN, BOB))
+        );
+
+        MentalState.ProofMode = Plan;
+        StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(GREEN, BOB))));
+
         // StartCoroutine(LogBases(MentalState, aliceIsRed));
         // StartCoroutine(LogBases(MentalState, bobIsBlue));
         // StartCoroutine(LogBases(MentalState, bobIsRed));

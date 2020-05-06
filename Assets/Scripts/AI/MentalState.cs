@@ -38,7 +38,7 @@ public enum BeliefRevisionPolicy {
 }
 
 // @Note: this might be the difference
-// between risk aversion, ratinoal calculus, etc.
+// between risk aversion, rational calculus, etc.
 public enum DecisionPolicy {
     Default
 }
@@ -425,7 +425,11 @@ public class MentalState : MonoBehaviour {
                     }
 
                     // we try to disprove each of the other conclusions
-                    for (int j = 0; j < conclusions.Length && j != i; j++) {
+                    for (int j = 0; j < conclusions.Length; j++) {
+                        if (j == i) {
+                            continue;
+                        }
+                        UnityEngine.Debug.Log(rule);
                         var meetBases = new HashSet<Basis>();
                         foreach (var currentBasis in currentBases) {
                             var notConclusion = new Expression(NOT, conclusions[j].Substitute(currentBasis.Value));
@@ -471,11 +475,19 @@ public class MentalState : MonoBehaviour {
                                     assumptionDisbases,
                                     doneFlag));
 
+                            bool disproven = false;
+
                             while (!doneFlag.Item) {
+                                // if we have even one proof of ~A,
+                                // then we're good to break out of the search.
+                                if (assumptionDisbases.Count > 0) {
+                                    disproven = true;
+                                    break;
+                                }
                                 yield return null;
                             }
 
-                            if (assumptionDisbases.Count == 0) {
+                            if (!disproven) {
                                 List<Expression> meetPremises = new List<Expression>();
                                 meetPremises.AddRange(currentBasis.Key);
                                 meetPremises.Add(assumption);
@@ -491,8 +503,10 @@ public class MentalState : MonoBehaviour {
                         collectedBases.Add(new Basis(currentBasis.Key, DiscardUnusedAssignments(currentBasis.Value)));
                     }
                     alternativeBases.UnionWith(collectedBases);
-                }
+                }                
             }
+
+            
             numRoutines--;
         }
 
@@ -569,6 +583,8 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(BETTER_TRANSITIVITY));
         StartCoroutine(ApplyInferenceRule(SELF_BELIEF_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(CLOSED_QUESTION_ASSUMPTION));
+        StartCoroutine(ApplyInferenceRule(PERCEPTUALLY_CLOSED_ASSUMPTION));
 
         // StartCoroutine(ApplyInferenceRule(SYMMETRY_OF_LOCATION));
         // StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
@@ -594,7 +610,7 @@ public class MentalState : MonoBehaviour {
             // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_LEFT)));
             // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
             // StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
-            StartCoroutine(ApplyInferenceRule(Contrapose(MODUS_PONENS)));
+            // StartCoroutine(ApplyInferenceRule(MODUS_TOLLENS));
 
             // PLANNING
             // ====
@@ -629,7 +645,7 @@ public class MentalState : MonoBehaviour {
                     yield return null;
                 }
 
-                if (abilityBases.Count != 0) {
+                if (abilityBases.Count > 0) {
                     foreach (Basis abilityBasis in abilityBases) {
                         abilityBasis.Key.Add(new Expression(WILL, goal));
                         alternativeBases.Add(abilityBasis);
