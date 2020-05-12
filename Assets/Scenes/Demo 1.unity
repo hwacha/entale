@@ -121,6 +121,25 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 23800000, guid: 4f73066478b2a4270a6e7e8bb0834af6, type: 2}
+--- !u!1 &65078755 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 9111962883125049612, guid: 320b1c2af77554f99a1658df4a6d3d5c,
+    type: 3}
+  m_PrefabInstance: {fileID: 1554895230}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &65078757
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 65078755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 293a409534a604b6a8a9fb9db0723cb9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Agent: {fileID: 1416950223}
 --- !u!1 &130378973
 GameObject:
   m_ObjectHideFlags: 0
@@ -1707,19 +1726,6 @@ MonoBehaviour:
   DecisionPolicy: 0
   ProofMode: 0
   FrameTimer: {fileID: 1416950224}
---- !u!114 &1416950222
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1416950219}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 293a409534a604b6a8a9fb9db0723cb9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Agent: {fileID: 1416950223}
 --- !u!114 &1416950223
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1732,7 +1738,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec949c6a884f044d582503e72b3e2f81, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Sensor: {fileID: 1416950222}
+  Sensor: {fileID: 65078757}
   MentalState: {fileID: 1416950221}
   Actuator: {fileID: 1416950220}
 --- !u!114 &1416950224
