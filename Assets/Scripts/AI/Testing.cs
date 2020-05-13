@@ -40,6 +40,26 @@ public class Testing : MonoBehaviour {
         yield break;
     }
 
+    private IEnumerator TestAssertion() {
+        StartCoroutine(LogBases(MentalState, new Expression(RED, ALICE)));
+        yield return new WaitForSeconds(2);
+
+        StartCoroutine(LogBases(MentalState,
+            new Expression(NOT, new Expression(PERCEIVE, SELF,
+                new Expression(NOT, new Expression(RED, ALICE))))));
+
+        MentalState.StartCoroutine(MentalState.Assert(
+            new Expression(PERCEIVE, SELF,
+                new Expression(NOT, new Expression(RED, ALICE)))));
+        yield return new WaitForSeconds(2);
+
+        // StartCoroutine(LogBases(MentalState, new Expression(RED, ALICE)));
+        // yield return new WaitForSeconds(2);
+        // StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(RED, ALICE))));
+        // yield return new WaitForSeconds(2);
+        yield break;
+    }
+
     void Start() {
         FrameTimer = gameObject.GetComponent<FrameTimer>();
 
@@ -171,30 +191,30 @@ public class Testing : MonoBehaviour {
         // Testing mental state.
         // Log("Testing mental state.");
         // Log("QUERY");
-        Expression aliceIsRed   = new Expression(RED, ALICE);
-        Expression aliceIsAnApple = new Expression(APPLE, ALICE);
-        Expression bobIsBlue    = new Expression(BLUE, BOB);
-        Expression aliceIsAtBob = new Expression(AT, ALICE, BOB);
-        Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
-        Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
-        Expression allMacintoshesAreApples = new Expression(ALL, new Expression(new Constant(PREDICATE, "macintosh")), APPLE);
-        Expression allApplesAreRed = new Expression(ALL, APPLE, RED);
-        Expression charlieIsAMacintosh = new Expression(new Expression(new Constant(PREDICATE, "macintosh")), CHARLIE);
-        Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
-        Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
+        // Expression aliceIsRed   = new Expression(RED, ALICE);
+        // Expression aliceIsAnApple = new Expression(APPLE, ALICE);
+        // Expression bobIsBlue    = new Expression(BLUE, BOB);
+        // Expression aliceIsAtBob = new Expression(AT, ALICE, BOB);
+        // Expression aliceIsAlice = new Expression(IDENTITY, ALICE, ALICE);
+        // Expression bobIsBob     = new Expression(IDENTITY, BOB, BOB);
+        // Expression allMacintoshesAreApples = new Expression(ALL, new Expression(new Constant(PREDICATE, "macintosh")), APPLE);
+        // Expression allApplesAreRed = new Expression(ALL, APPLE, RED);
+        // Expression charlieIsAMacintosh = new Expression(new Expression(new Constant(PREDICATE, "macintosh")), CHARLIE);
+        // Expression iCanMakeCharlieBlue = new Expression(ABLE, SELF, new Expression(BLUE, CHARLIE));
+        // Expression iSeeCharlieAsRed = new Expression(PERCEIVE, SELF, new Expression(RED, CHARLIE));
 
-        Expression bobIsRed     = new Expression(RED, BOB);
-        Expression aliceIsBlue  = new Expression(BLUE, ALICE);
-        Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
+        // Expression bobIsRed     = new Expression(RED, BOB);
+        // Expression aliceIsBlue  = new Expression(BLUE, ALICE);
+        // Expression charlieIsBlue  = new Expression(BLUE, CHARLIE);
 
-        Expression ifCharlieIsBlueIAmGreen =
-            new Expression(IF, charlieIsBlue, new Expression(GREEN, SELF));
+        // Expression ifCharlieIsBlueIAmGreen =
+        //     new Expression(IF, charlieIsBlue, new Expression(GREEN, SELF));
 
-        Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
+        // Expression bobIsAtCharlie = new Expression(AT, BOB, CHARLIE);
 
-        Expression everythingIsSelfIdentical = new Expression(ALL, VEROUS, new Expression(ITSELF, IDENTITY));
+        // Expression everythingIsSelfIdentical = new Expression(ALL, VEROUS, new Expression(ITSELF, IDENTITY));
 
-        var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
+        // var whatIseeIsAlwaysTrue = new Expression(ALWAYS, new Expression(PERCEIVE, SELF), TRULY);
 
         MentalState.FrameTimer = FrameTimer;
 
@@ -219,14 +239,20 @@ public class Testing : MonoBehaviour {
         //     new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
 
         // MentalState.ProofMode = Proof;
+        // MentalState.Initialize(
+        //     new Expression(ABLE, SELF,  new Expression(AT, SELF, BOB)),
+        //     new Expression(IF, new Expression(AT, SELF, BOB), new Expression(PERCEPTUALLY_CLOSED, SELF, new Expression(GREEN, BOB))),
+        //     new Expression(PERCEIVE, SELF, new Expression(GREEN, BOB))
+        // );
+
+        // MentalState.ProofMode = Plan;
+        // StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(GREEN, BOB))));
+        
         MentalState.Initialize(
-            new Expression(ABLE, SELF,  new Expression(AT, SELF, BOB)),
-            new Expression(IF, new Expression(AT, SELF, BOB), new Expression(PERCEPTUALLY_CLOSED, SELF, new Expression(GREEN, BOB))),
-            new Expression(PERCEIVE, SELF, new Expression(GREEN, BOB))
+            new Expression(PERCEIVE, SELF, new Expression(RED, ALICE))
         );
 
-        MentalState.ProofMode = Plan;
-        StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(GREEN, BOB))));
+        StartCoroutine(TestAssertion());
 
         // StartCoroutine(LogBases(MentalState, aliceIsRed));
         // StartCoroutine(LogBases(MentalState, bobIsBlue));

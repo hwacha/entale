@@ -715,42 +715,104 @@ public class MentalState : MonoBehaviour {
     // 
     // If accepted, then the sentence is added to
     // the state's beliefs.
-    // 
-    // Assert() returns true if the assertion is
-    // accepted, false if it is rejected.
     public IEnumerator Assert(Expression assertion) {
         // We already believe assertion A.
         // We accept it, but don't change our belief state.
         var answer = new Container<bool>(false);
         var queryDone = new Container<bool>(false);
-        StartCoroutine(Query(assertion, answer, queryDone));
+        var query = Query(assertion, answer, queryDone);
+        StartCoroutine(query);
 
         while (!queryDone.Item) {
             yield return null;
         }
 
         if (answer.Item) {
+            StopCoroutine(query);
             yield break;
         }
 
         var notAssertionBases = new HashSet<Basis>();
         var done = new Container<bool>(false);
         ProofMode = Proof;
-        StartCoroutine(GetBases(new Expression(NOT, assertion), notAssertionBases, done));
+        var disproof = GetBases(new Expression(NOT, assertion), notAssertionBases, done);
+        StartCoroutine(disproof);
 
-        while (!done.Item) {
+        var weakestPremises = new HashSet<Expression>();
+
+        while (!done.Item || notAssertionBases.Count > 0) {
+            // if we have a proof of ~A come in,
+            // we want to evaluate the premises of the proof.
+            if (notAssertionBases.Count > 0) {
+                Debug.Log("found a proof of ~" + assertion);
+                foreach (var notAssertionBasis in notAssertionBases) {
+                    Expression weakestPremise = VERUM;
+                    float weakestPlausibility = float.PositiveInfinity;
+                    foreach (var notAssertionPremise in notAssertionBasis.Key) {
+                        float premisePlausibility;
+                        
+                        // here, we estimate the plausibility of the premises.
+                        // We'll want this probably to be its own judgement
+                        // which can be proven, but details for that aren't
+                        // clear yet.
+                        if (notAssertionPremise.Head.Equals(PERCEIVE.Head)) {
+                            premisePlausibility = 2;
+                        } else if (notAssertionPremise.Head.Equals(BELIEVE.Head)) {
+                            premisePlausibility = 1;
+                        } else {
+                            premisePlausibility = 3;
+                        }
+
+                        if (premisePlausibility < weakestPlausibility) {
+                            weakestPremise = notAssertionPremise;
+                            weakestPlausibility = premisePlausibility;
+                        } else if (premisePlausibility == weakestPlausibility) {
+                            // unclear what we want in this case.
+                            // should it be a coin flip, or should it be
+                            // a function of premise order? Right now,
+                            // I'll always remove the rightmost premise.
+                            weakestPremise = notAssertionPremise;
+                            weakestPlausibility = premisePlausibility;
+                        }
+                    }
+
+                    float assertionPlausibility;
+                    if (assertion.Head.Equals(PERCEIVE.Head)) {
+                        assertionPlausibility = 2.5f;
+                    } else if (assertion.Head.Equals(BELIEVE.Head)) {
+                        assertionPlausibility = 1.5f;
+                    } else {
+                        assertionPlausibility = 3.5f;
+                    }
+
+                    if (assertionPlausibility > weakestPlausibility) {
+                        weakestPremises.Add(weakestPremise);
+                    } else {
+                        // in this case, the assertion is
+                        // weaker than the weakest premise.
+                        // 
+                        // in this case, we reject the assertion.
+                        StopCoroutine(disproof);
+                        yield break;
+                    }
+                }
+                // here, we clear the bases so
+                // we don't repeat work next time.
+                notAssertionBases.Clear();
+            }
             yield return null;
         }
 
-        // We're agnostic about A. We add this belief to our base.
-        if (notAssertionBases.Count == 0) {
-            Add(assertion);
-            yield break;
+        // A is more plausible than
+        // at least one premise in each proof.
+        foreach (var weakPremise in weakestPremises) {
+            Debug.Log(weakPremise + " is being removed.");
+            Remove(weakPremise);
         }
 
-        // We believe ~A. This is inconsistent with the assertion.
-        // TODO: implement revision policy whereby we accept or
-        // reject information based on its epistemic strength
+        // now, we add A.
+        Add(assertion);
+        yield break;
     }
 
     // ranks the goals according to this mental state,
