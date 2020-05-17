@@ -55,10 +55,13 @@ public abstract class SemanticType {
     public static readonly FunctionalType RELATION_2 =
         new FunctionalType(new SemanticType[]{INDIVIDUAL, INDIVIDUAL}, TRUTH_VALUE);
 
-    public static readonly FunctionalType QUANTIFER_PHRASE =
+    public static readonly FunctionalType QUANTIFIER_PHRASE =
         new FunctionalType(new SemanticType[]{PREDICATE}, TRUTH_VALUE);
     public static readonly FunctionalType QUANTIFIER =
         new FunctionalType(new SemanticType[]{PREDICATE, PREDICATE}, TRUTH_VALUE);
+    public static readonly FunctionalType QUANTIFIER_PHRASE_COORDINATOR_2 =
+        new FunctionalType(new SemanticType[]{
+            RELATION_2, QUANTIFIER_PHRASE, QUANTIFIER_PHRASE}, TRUTH_VALUE);
 
     public static readonly FunctionalType TRUTH_FUNCTION =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE}, TRUTH_VALUE);
@@ -77,6 +80,16 @@ public abstract class SemanticType {
 
     public static readonly FunctionalType RELATION_2_REDUCER =
         new FunctionalType(new SemanticType[]{RELATION_2, INDIVIDUAL}, TRUTH_VALUE);
+    public static readonly FunctionalType RELATION_2_MODIFIER =
+        new FunctionalType(new SemanticType[]{RELATION_2, INDIVIDUAL, INDIVIDUAL}, TRUTH_VALUE);
+
+    public static readonly FunctionalType GEACH_TRUTH_FUNCTION =
+        new FunctionalType(new SemanticType[]{TRUTH_FUNCTION, PREDICATE, INDIVIDUAL}, TRUTH_VALUE);
+    public static readonly FunctionalType GEACH_TRUTH_FUNCTION_2 =
+        new FunctionalType(new SemanticType[]{TRUTH_FUNCTION_2, PREDICATE, PREDICATE, INDIVIDUAL}, TRUTH_VALUE);
+
+    public static readonly FunctionalType GEACH_QUANTIFIER_PHRASE =
+        new FunctionalType(new SemanticType[]{QUANTIFIER_PHRASE, RELATION_2, INDIVIDUAL}, TRUTH_VALUE);
 
     public static readonly FunctionalType PROPOSITIONAL_QUANTIFIER =
         new FunctionalType(new SemanticType[]{TRUTH_FUNCTION, TRUTH_FUNCTION}, TRUTH_VALUE);

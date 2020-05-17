@@ -248,11 +248,33 @@ public class Testing : MonoBehaviour {
         // MentalState.ProofMode = Plan;
         // StartCoroutine(LogBases(MentalState, new Expression(NOT, new Expression(GREEN, BOB))));
         
-        MentalState.Initialize(
-            new Expression(PERCEIVE, SELF, new Expression(RED, ALICE))
-        );
+        // MentalState.Initialize(
+        //     new Expression(PERCEIVE, SELF, new Expression(RED, ALICE))
+        // );
 
-        StartCoroutine(TestAssertion());
+        // StartCoroutine(TestAssertion());
+        
+        MentalState.Initialize(
+            new Expression(AT, ALICE, BOB),
+            new Expression(NOT, new Expression(RED, ALICE)),
+            new Expression(BLUE, CHARLIE),
+            new Expression(GREEN, CHARLIE),
+            new Expression(BLUE, BOB),
+            new Expression(AT, BOB, CHARLIE),
+            new Expression(RED, SELF),
+            new Expression(Expression.QUANTIFIER_PHRASE_COORDINATOR_2,
+                AT, new Expression(ALL, RED), new Expression(ALL, GREEN)));
+
+        StartCoroutine(LogBases(MentalState, new Expression(AT, ALICE, BOB)));
+
+        StartCoroutine(LogBases(MentalState, new Expression(CONVERSE, AT, BOB, ALICE)));
+        StartCoroutine(LogBases(MentalState, new Expression(CONVERSE, AT, ALICE, BOB)));
+
+        StartCoroutine(LogBases(MentalState, new Expression(Expression.GEACH_TRUTH_FUNCTION, NOT, RED, ALICE)));
+        StartCoroutine(LogBases(MentalState, new Expression(Expression.GEACH_TRUTH_FUNCTION_2, AND, BLUE, GREEN, CHARLIE)));
+        StartCoroutine(LogBases(MentalState, new Expression(SOME, BLUE,
+            new Expression(Expression.GEACH_QUANTIFIER_PHRASE, new Expression(SOME, GREEN), AT))));
+        StartCoroutine(LogBases(MentalState, new Expression(AT, SELF, CHARLIE)));
 
         // StartCoroutine(LogBases(MentalState, aliceIsRed));
         // StartCoroutine(LogBases(MentalState, bobIsBlue));

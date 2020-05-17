@@ -523,9 +523,15 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(TRULY_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION));
 
-        // @Note: not working. Something is up with Unify()
         StartCoroutine(ApplyInferenceRule(ITSELF_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(ITSELF_ELIMINATION));
+
+        StartCoroutine(ApplyInferenceRule(CONVERSE_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_ELIMINATION));
         
         StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT));
         StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT));
@@ -611,6 +617,10 @@ public class MentalState : MonoBehaviour {
             // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
             // StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
             // StartCoroutine(ApplyInferenceRule(MODUS_TOLLENS));
+            StartCoroutine(ApplyInferenceRule(CONVERSE_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_ELIMINATION));
 
             // PLANNING
             // ====
@@ -806,7 +816,6 @@ public class MentalState : MonoBehaviour {
         // A is more plausible than
         // at least one premise in each proof.
         foreach (var weakPremise in weakestPremises) {
-            Debug.Log(weakPremise + " is being removed.");
             Remove(weakPremise);
         }
 
