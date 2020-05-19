@@ -681,9 +681,16 @@ public class Expression : Argument {
     // 1-place truth functions
     public static readonly Expression NOT = new Expression(new Constant(TRUTH_FUNCTION, "not"));
     public static readonly Expression TRULY = new Expression(new Constant(TRUTH_FUNCTION, "truly"));
+    // the question of whether "A" is closed,
+    // so you either believe A or ~A
+    public static readonly Expression CLOSED = new Expression(new Constant(TRUTH_FUNCTION, "closed"));
 
+    // higher-order variables
     public static readonly Expression FTF = new Expression(new Variable(TRUTH_FUNCTION, "FTF"));
     public static readonly Expression GTF = new Expression(new Variable(TRUTH_FUNCTION, "GTF"));
+    public static readonly Expression FTTF = new Expression(new Variable(TRUTH_FUNCTION_2, "FTTF"));
+    public static readonly Expression PQP = new Expression(new Variable(QUANTIFIER_PHRASE, "PQP"));
+    public static readonly Expression QQP = new Expression(new Variable(QUANTIFIER_PHRASE, "QQP"));
 
     // 2-place truth functions
     public static readonly Expression AND = new Expression(new Constant(TRUTH_FUNCTION_2, "and"));
@@ -704,10 +711,14 @@ public class Expression : Argument {
     public static readonly Expression PERCEIVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceive"));
     public static readonly Expression VERIDICAL = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "veridical"));
     public static readonly Expression TRIED = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "tried"));
+    public static readonly Expression PERCEPTUALLY_CLOSED =
+        new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
 
     // quantifiers
     public static readonly Expression SOME = new Expression(new Constant(QUANTIFIER, "some"));
     public static readonly Expression ALL  = new Expression(new Constant(QUANTIFIER, "all"));
+    public static readonly Expression QUANTIFIER_PHRASE_COORDINATOR_2 =
+        new Expression(new Constant(SemanticType.QUANTIFIER_PHRASE_COORDINATOR_2, "rel2"));
 
     // sentential adverbs/quantifiers
     public static readonly Expression ALWAYS = new Expression(new Constant(PROPOSITIONAL_QUANTIFIER, "always"));
@@ -717,6 +728,13 @@ public class Expression : Argument {
 
     // weird function words
     public static readonly Expression ITSELF = new Expression(new Constant(RELATION_2_REDUCER, "itself"));
+    // for permutations of arguments for higher-arity functions,
+    // 'shift': ABC -> CAB and 'swap': ABC -> BAC should do the trick
+    public static readonly Expression CONVERSE = new Expression(new Constant(RELATION_2_MODIFIER, "converse"));
+    // more function words: Geach
+    public static readonly Expression GEACH_TRUTH_FUNCTION = new Expression(new Constant(SemanticType.GEACH_TRUTH_FUNCTION, "geach"));
+    public static readonly Expression GEACH_TRUTH_FUNCTION_2 = new Expression(new Constant(SemanticType.GEACH_TRUTH_FUNCTION_2, "geach"));
+    public static readonly Expression GEACH_QUANTIFIER_PHRASE = new Expression(new Constant(SemanticType.GEACH_QUANTIFIER_PHRASE, "geach"));
 
     // question and assert functions
     public static readonly Expression ASK = new Expression(new Constant(TRUTH_QUESTION_FUNCTION, "ask"));

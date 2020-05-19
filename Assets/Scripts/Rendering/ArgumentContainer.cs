@@ -15,10 +15,6 @@ public class ArgumentContainer : MonoBehaviour {
     // public Camera camera;
     #endregion
 
-    void Update() {
-        transform.Rotate(0, 0, 10 * Mathf.Sin(Time.time * 10) * Time.deltaTime);
-    }
-
     public static GameObject From(Argument argument, int depth = 0) {
         GameObject argumentContainerPrefab = Resources.Load("Prefabs/ArgumentContainer") as GameObject;
         GameObject argumentContainerInstance =

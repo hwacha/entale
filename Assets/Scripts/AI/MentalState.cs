@@ -38,7 +38,7 @@ public enum BeliefRevisionPolicy {
 }
 
 // @Note: this might be the difference
-// between risk aversion, ratinoal calculus, etc.
+// between risk aversion, rational calculus, etc.
 public enum DecisionPolicy {
     Default
 }
@@ -425,7 +425,11 @@ public class MentalState : MonoBehaviour {
                     }
 
                     // we try to disprove each of the other conclusions
-                    for (int j = 0; j < conclusions.Length && j != i; j++) {
+                    for (int j = 0; j < conclusions.Length; j++) {
+                        if (j == i) {
+                            continue;
+                        }
+                        UnityEngine.Debug.Log(rule);
                         var meetBases = new HashSet<Basis>();
                         foreach (var currentBasis in currentBases) {
                             var notConclusion = new Expression(NOT, conclusions[j].Substitute(currentBasis.Value));
@@ -471,11 +475,19 @@ public class MentalState : MonoBehaviour {
                                     assumptionDisbases,
                                     doneFlag));
 
+                            bool disproven = false;
+
                             while (!doneFlag.Item) {
+                                // if we have even one proof of ~A,
+                                // then we're good to break out of the search.
+                                if (assumptionDisbases.Count > 0) {
+                                    disproven = true;
+                                    break;
+                                }
                                 yield return null;
                             }
 
-                            if (assumptionDisbases.Count == 0) {
+                            if (!disproven) {
                                 List<Expression> meetPremises = new List<Expression>();
                                 meetPremises.AddRange(currentBasis.Key);
                                 meetPremises.Add(assumption);
@@ -491,8 +503,10 @@ public class MentalState : MonoBehaviour {
                         collectedBases.Add(new Basis(currentBasis.Key, DiscardUnusedAssignments(currentBasis.Value)));
                     }
                     alternativeBases.UnionWith(collectedBases);
-                }
+                }                
             }
+
+            
             numRoutines--;
         }
 
@@ -509,9 +523,15 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(TRULY_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION));
 
-        // @Note: not working. Something is up with Unify()
         StartCoroutine(ApplyInferenceRule(ITSELF_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(ITSELF_ELIMINATION));
+
+        StartCoroutine(ApplyInferenceRule(CONVERSE_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_ELIMINATION));
         
         StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT));
         StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT));
@@ -569,6 +589,8 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(BETTER_TRANSITIVITY));
         StartCoroutine(ApplyInferenceRule(SELF_BELIEF_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(CLOSED_QUESTION_ASSUMPTION));
+        StartCoroutine(ApplyInferenceRule(PERCEPTUALLY_CLOSED_ASSUMPTION));
 
         // StartCoroutine(ApplyInferenceRule(SYMMETRY_OF_LOCATION));
         // StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
@@ -594,7 +616,11 @@ public class MentalState : MonoBehaviour {
             // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_LEFT)));
             // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
             // StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
-            StartCoroutine(ApplyInferenceRule(Contrapose(MODUS_PONENS)));
+            // StartCoroutine(ApplyInferenceRule(MODUS_TOLLENS));
+            StartCoroutine(ApplyInferenceRule(CONVERSE_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_ELIMINATION));
 
             // PLANNING
             // ====
@@ -629,7 +655,7 @@ public class MentalState : MonoBehaviour {
                     yield return null;
                 }
 
-                if (abilityBases.Count != 0) {
+                if (abilityBases.Count > 0) {
                     foreach (Basis abilityBasis in abilityBases) {
                         abilityBasis.Key.Add(new Expression(WILL, goal));
                         alternativeBases.Add(abilityBasis);
@@ -699,42 +725,103 @@ public class MentalState : MonoBehaviour {
     // 
     // If accepted, then the sentence is added to
     // the state's beliefs.
-    // 
-    // Assert() returns true if the assertion is
-    // accepted, false if it is rejected.
     public IEnumerator Assert(Expression assertion) {
         // We already believe assertion A.
         // We accept it, but don't change our belief state.
         var answer = new Container<bool>(false);
         var queryDone = new Container<bool>(false);
-        StartCoroutine(Query(assertion, answer, queryDone));
+        var query = Query(assertion, answer, queryDone);
+        StartCoroutine(query);
 
         while (!queryDone.Item) {
             yield return null;
         }
 
         if (answer.Item) {
+            StopCoroutine(query);
             yield break;
         }
 
         var notAssertionBases = new HashSet<Basis>();
         var done = new Container<bool>(false);
         ProofMode = Proof;
-        StartCoroutine(GetBases(new Expression(NOT, assertion), notAssertionBases, done));
+        var disproof = GetBases(new Expression(NOT, assertion), notAssertionBases, done);
+        StartCoroutine(disproof);
 
-        while (!done.Item) {
+        var weakestPremises = new HashSet<Expression>();
+
+        while (!done.Item || notAssertionBases.Count > 0) {
+            // if we have a proof of ~A come in,
+            // we want to evaluate the premises of the proof.
+            if (notAssertionBases.Count > 0) {
+                Debug.Log("found a proof of ~" + assertion);
+                foreach (var notAssertionBasis in notAssertionBases) {
+                    Expression weakestPremise = VERUM;
+                    float weakestPlausibility = float.PositiveInfinity;
+                    foreach (var notAssertionPremise in notAssertionBasis.Key) {
+                        float premisePlausibility;
+                        
+                        // here, we estimate the plausibility of the premises.
+                        // We'll want this probably to be its own judgement
+                        // which can be proven, but details for that aren't
+                        // clear yet.
+                        if (notAssertionPremise.Head.Equals(PERCEIVE.Head)) {
+                            premisePlausibility = 2;
+                        } else if (notAssertionPremise.Head.Equals(BELIEVE.Head)) {
+                            premisePlausibility = 1;
+                        } else {
+                            premisePlausibility = 3;
+                        }
+
+                        if (premisePlausibility < weakestPlausibility) {
+                            weakestPremise = notAssertionPremise;
+                            weakestPlausibility = premisePlausibility;
+                        } else if (premisePlausibility == weakestPlausibility) {
+                            // unclear what we want in this case.
+                            // should it be a coin flip, or should it be
+                            // a function of premise order? Right now,
+                            // I'll always remove the rightmost premise.
+                            weakestPremise = notAssertionPremise;
+                            weakestPlausibility = premisePlausibility;
+                        }
+                    }
+
+                    float assertionPlausibility;
+                    if (assertion.Head.Equals(PERCEIVE.Head)) {
+                        assertionPlausibility = 2.5f;
+                    } else if (assertion.Head.Equals(BELIEVE.Head)) {
+                        assertionPlausibility = 1.5f;
+                    } else {
+                        assertionPlausibility = 3.5f;
+                    }
+
+                    if (assertionPlausibility > weakestPlausibility) {
+                        weakestPremises.Add(weakestPremise);
+                    } else {
+                        // in this case, the assertion is
+                        // weaker than the weakest premise.
+                        // 
+                        // in this case, we reject the assertion.
+                        StopCoroutine(disproof);
+                        yield break;
+                    }
+                }
+                // here, we clear the bases so
+                // we don't repeat work next time.
+                notAssertionBases.Clear();
+            }
             yield return null;
         }
 
-        // We're agnostic about A. We add this belief to our base.
-        if (notAssertionBases.Count == 0) {
-            Add(assertion);
-            yield break;
+        // A is more plausible than
+        // at least one premise in each proof.
+        foreach (var weakPremise in weakestPremises) {
+            Remove(weakPremise);
         }
 
-        // We believe ~A. This is inconsistent with the assertion.
-        // TODO: implement revision policy whereby we accept or
-        // reject information based on its epistemic strength
+        // now, we add A.
+        Add(assertion);
+        yield break;
     }
 
     // ranks the goals according to this mental state,

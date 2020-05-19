@@ -40,13 +40,13 @@ public class InferenceRule
         for (int i = 0; i < Premises.Length; i++) {
             s.Append("M |- ");
             s.Append(Premises[i]);
-            s.Append(";");
+            s.Append("; ");
         }
 
         for (int i = 0; i < Assumptions.Length; i++) {
             s.Append("M :: ");
             s.Append(Assumptions[i]);
-            s.Append(";");
+            s.Append("; ");
         }
 
         s.Append(" => ");
@@ -54,7 +54,7 @@ public class InferenceRule
         for (int i = 0; i < Conclusions.Length; i++) {
             s.Append("M |- ");
             s.Append(Conclusions[i]);
-            s.Append(";");
+            s.Append("; ");
         }
 
         s.Append("\n");
@@ -121,6 +121,13 @@ public class InferenceRule
             new Expression[]{},
             new Expression[]{TT});
 
+    // @Note: this isn't working with conditional proof.
+    public static readonly InferenceRule MODUS_TOLLENS =
+        new InferenceRule(
+            new Expression[]{new Expression(IF, ST, TT), new Expression(NOT, TT)},
+            new Expression[]{},
+            new Expression[]{new Expression(NOT, ST)});
+
     public static readonly InferenceRule ITSELF_INTRODUCTION =
         new InferenceRule(
             new Expression[]{new Expression(REET, XE, XE)},
@@ -132,6 +139,66 @@ public class InferenceRule
             new Expression[]{new Expression(ITSELF, REET, XE)},
             new Expression[]{},
             new Expression[]{new Expression(REET, XE, XE)});
+
+    public static readonly InferenceRule CONVERSE_INTRODUCTION =
+        new InferenceRule(
+            new Expression[]{new Expression(REET, XE, YE)},
+            new Expression[]{},
+            new Expression[]{new Expression(CONVERSE, REET, YE, XE)});
+
+    public static readonly InferenceRule CONVERSE_ELIMINATION =
+        new InferenceRule(
+            new Expression[]{new Expression(CONVERSE, REET, YE, XE)},
+            new Expression[]{},
+            new Expression[]{new Expression(REET, XE, YE)});
+
+    public static readonly InferenceRule GEACH_TRUTH_FUNCTION_INTRODUCTION =
+        new InferenceRule(
+            new Expression[]{new Expression(FTF, new Expression(FET, XE))},
+            new Expression[]{},
+            new Expression[]{new Expression(GEACH_TRUTH_FUNCTION, FTF, FET, XE)});
+
+    public static readonly InferenceRule GEACH_TRUTH_FUNCTION_ELIMINATION =
+        new InferenceRule(
+            new Expression[]{new Expression(GEACH_TRUTH_FUNCTION, FTF, FET, XE)},
+            new Expression[]{},
+            new Expression[]{new Expression(FTF, new Expression(FET, XE))});
+
+    public static readonly InferenceRule GEACH_TRUTH_FUNCTION_2_INTRODUCTION =
+        new InferenceRule(
+            new Expression[]{new Expression(FTTF, new Expression(FET, XE), new Expression(GET, XE))},
+            new Expression[]{},
+            new Expression[]{new Expression(GEACH_TRUTH_FUNCTION_2, FTTF, FET, GET, XE)});
+
+    public static readonly InferenceRule GEACH_TRUTH_FUNCTION_2_ELIMINATION =
+        new InferenceRule(
+            new Expression[]{new Expression(GEACH_TRUTH_FUNCTION_2, FTTF, FET, GET, XE)},
+            new Expression[]{},
+            new Expression[]{new Expression(FTTF, new Expression(FET, XE), new Expression(GET, XE))});
+
+    public static readonly InferenceRule GEACH_QUANTIFIER_PHRASE_INTRODUCTION =
+        new InferenceRule(
+            new Expression[]{new Expression(PQP, new Expression(REET, XE))},
+            new Expression[]{},
+            new Expression[]{new Expression(GEACH_QUANTIFIER_PHRASE, PQP, REET, XE)});
+
+    public static readonly InferenceRule GEACH_QUANTIFIER_PHRASE_ELIMINATION =
+        new InferenceRule(
+            new Expression[]{new Expression(GEACH_QUANTIFIER_PHRASE, PQP, REET, XE)},
+            new Expression[]{},
+            new Expression[]{new Expression(PQP, new Expression(REET, XE))});
+
+    public static readonly InferenceRule QUANTIFIER_PHRASE_COORDINATOR_2_INTRODUCTION =
+        new InferenceRule(
+            new Expression[]{new Expression(PQP, new Expression(GEACH_QUANTIFIER_PHRASE, QQP, REET))},
+            new Expression[]{},
+            new Expression[]{new Expression(QUANTIFIER_PHRASE_COORDINATOR_2, REET, PQP, QQP)});
+
+    public static readonly InferenceRule QUANTIFIER_PHRASE_COORDINATOR_2_ELIMINATION =
+        new InferenceRule(
+            new Expression[]{new Expression(QUANTIFIER_PHRASE_COORDINATOR_2, REET, PQP, QQP)},
+            new Expression[]{},
+            new Expression[]{new Expression(PQP, new Expression(GEACH_QUANTIFIER_PHRASE, QQP, REET))});
 
     public static readonly InferenceRule BETTER_ANTISYMMETRY =
         new InferenceRule(
@@ -188,4 +255,17 @@ public class InferenceRule
             },
             new Expression[]{},
             new Expression[]{new Expression(AT, XE, ZE)});
+
+    public static readonly InferenceRule CLOSED_QUESTION_ASSUMPTION =
+        new InferenceRule(
+            new Expression[]{new Expression(CLOSED, ST)},
+            new Expression[]{new Expression(NOT, ST)},
+            new Expression[]{new Expression(NOT, ST)});
+
+    public static readonly InferenceRule PERCEPTUALLY_CLOSED_ASSUMPTION =
+        new InferenceRule(
+            new Expression[]{new Expression(PERCEPTUALLY_CLOSED, XE, ST)},
+            new Expression[]{new Expression(NOT, new Expression(PERCEIVE, XE, ST))},
+            new Expression[]{new Expression(new Expression(PERCEIVE, XE, new Expression(NOT, ST)))}
+        );
 }

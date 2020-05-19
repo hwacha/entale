@@ -42,22 +42,19 @@ public class RadialMenu : MonoBehaviour {
         }
     }
 
-    void HandleMenuOpen() {
-        if (Input.GetKeyDown(KeyCode.M)) {
-            if (!semanticMenuOpen && !constantMenuOpen) {
-                OpenSemanticMenu();
-                Cursor.lockState = CursorLockMode.None;
-                playerMouseLook.disable();
-            } else {
-                ExitMenu();
-            }
+    public void HandleMenuOpen() {
+        if (!semanticMenuOpen && !constantMenuOpen) {
+            OpenSemanticMenu();
+            Cursor.lockState = CursorLockMode.None;
         }
     }
 
-    void ExitMenu() {
+    public void ExitMenu() {
         CloseSemanticMenu();
         CloseConstantMenu();
-        playerMouseLook.enable();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.lockState = CursorLockMode.Confined;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     void OpenSemanticMenu() {
