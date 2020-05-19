@@ -65,7 +65,6 @@ public class MentalState : MonoBehaviour {
 
     public BeliefRevisionPolicy BeliefRevisionPolicy = Conservative;
     public DecisionPolicy DecisionPolicy = Default;
-    public ProofType ProofMode = Proof;
 
     public FrameTimer FrameTimer;
 
@@ -243,7 +242,9 @@ public class MentalState : MonoBehaviour {
     // alternativeBases: the resulting set of bases that each prove the goal.
     // done: a flag that indicates when search has been completed.
     // 
-    public IEnumerator GetBases(Expression goal,
+    public IEnumerator GetBases(
+        ProofType proofType,
+        Expression goal,
         HashSet<Expression> suppositions,
         Dictionary<Expression, List<HashSet<Expression>>> pendingExpressions,
         Dictionary<Expression, KeyValuePair<HashSet<Expression>, HashSet<Basis>>> completeExpressions,
@@ -269,6 +270,11 @@ public class MentalState : MonoBehaviour {
             }
         }
 
+        // @Note: a bug where different formulas return the same proof
+        // allow duplicate proofs. We'd want a unify check here to fix that,
+        // or even something more sophisticated. It doesn't seem like the duplication
+        // is causing a problem, so no worry yet.
+        // 
         // here, we eliminate repeated attempts to prove the same
         // goal within the same proof.
         if (pendingExpressions.ContainsKey(goal)) {
@@ -403,7 +409,9 @@ public class MentalState : MonoBehaviour {
                         foreach (var currentBasis in currentBases) {
                             var premiseBases = new HashSet<Basis>();
                             var doneFlag = new Container<bool>(false);
-                            StartCoroutine(GetBases(premises[j].Substitute(currentBasis.Value),
+                            StartCoroutine(
+                                    GetBases(proofType,
+                                    premises[j].Substitute(currentBasis.Value),
                                     suppositions,
                                     pendingExpressions,
                                     completeExpressions,
@@ -429,14 +437,14 @@ public class MentalState : MonoBehaviour {
                         if (j == i) {
                             continue;
                         }
-                        UnityEngine.Debug.Log(rule);
                         var meetBases = new HashSet<Basis>();
                         foreach (var currentBasis in currentBases) {
                             var notConclusion = new Expression(NOT, conclusions[j].Substitute(currentBasis.Value));
                             var conclusionBases = new HashSet<Basis>();
                             var doneFlag = new Container<bool>(false);
 
-                            StartCoroutine(GetBases(notConclusion,
+                            StartCoroutine(GetBases(proofType,
+                                notConclusion,
                                 suppositions,
                                 pendingExpressions,
                                 completeExpressions,
@@ -468,7 +476,8 @@ public class MentalState : MonoBehaviour {
                             var assumptionDisbases = new HashSet<Basis>();
                             var doneFlag = new Container<bool>(false);
 
-                            StartCoroutine(GetBases(new Expression(NOT, assumption),
+                            StartCoroutine(GetBases(proofType,
+                                    new Expression(NOT, assumption),
                                     suppositions,
                                     pendingExpressions,
                                     completeExpressions,
@@ -503,10 +512,9 @@ public class MentalState : MonoBehaviour {
                         collectedBases.Add(new Basis(currentBasis.Key, DiscardUnusedAssignments(currentBasis.Value)));
                     }
                     alternativeBases.UnionWith(collectedBases);
-                }                
+                }
             }
 
-            
             numRoutines--;
         }
 
@@ -526,12 +534,12 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(ITSELF_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(ITSELF_ELIMINATION));
 
-        StartCoroutine(ApplyInferenceRule(CONVERSE_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_ELIMINATION));
+        // StartCoroutine(ApplyInferenceRule(CONVERSE_INTRODUCTION));
+        // StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_INTRODUCTION));
+        // StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_INTRODUCTION));
+        // StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_INTRODUCTION));
+        // StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_INTRODUCTION));
+        // StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_ELIMINATION));
         
         StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT));
         StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT));
@@ -540,9 +548,6 @@ public class MentalState : MonoBehaviour {
 
         StartCoroutine(ApplyInferenceRule(EXISTENTIAL_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(UNIVERSAL_ELIMINATION));
-
-        // conjunction elimination
-        // A & B |- A; A & B |- B
         
         if (FrameTimer.FrameDuration >= TIME_BUDGET) {
             yield return null;
@@ -572,7 +577,8 @@ public class MentalState : MonoBehaviour {
                 // add the proofs of the consequent
                 // under the supposition of the antecedent.
                 var doneFlag = new Container<bool>(false);
-                StartCoroutine(GetBases((Expression) goal.GetArg(1),
+                StartCoroutine(GetBases(proofType,
+                    (Expression) goal.GetArg(1),
                     newSuppositions,
                     pendingExpressions,
                     completeExpressions,
@@ -592,11 +598,10 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(CLOSED_QUESTION_ASSUMPTION));
         StartCoroutine(ApplyInferenceRule(PERCEPTUALLY_CLOSED_ASSUMPTION));
 
+        // @BUG this rule cause planning not to work.
         // StartCoroutine(ApplyInferenceRule(SYMMETRY_OF_LOCATION));
-        // StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
 
         StartCoroutine(ApplyInferenceRule(SOMETIMES_INTRODUCTION));
-
         StartCoroutine(ApplyInferenceRule(Contrapose(PERCEPTUAL_BELIEF)));
 
         if (FrameTimer.FrameDuration >= TIME_BUDGET) {
@@ -609,7 +614,7 @@ public class MentalState : MonoBehaviour {
         //  the depth check only applies if we don't want the size
         //  of the premise to explode. It's fine to prove conclusions
         //  that are very large (i.e. with DNE).
-        if (goal.Depth <= MaxDepth) {            
+        if (goal.Depth <= MaxDepth) {
             StartCoroutine(ApplyInferenceRule(PERCEPTUAL_BELIEF));
             // StartCoroutine(ApplyInferenceRule(ALWAYS_ELIMINATION));
             StartCoroutine(ApplyInferenceRule(MODUS_PONENS));
@@ -617,10 +622,12 @@ public class MentalState : MonoBehaviour {
             // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
             // StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
             // StartCoroutine(ApplyInferenceRule(MODUS_TOLLENS));
-            StartCoroutine(ApplyInferenceRule(CONVERSE_ELIMINATION));
-            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_ELIMINATION));
-            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_ELIMINATION));
-            StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
+            
+            // StartCoroutine(ApplyInferenceRule(CONVERSE_ELIMINATION));
+            // StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_ELIMINATION));
+            // StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_ELIMINATION));
+            // StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_ELIMINATION));
 
             // PLANNING
             // ====
@@ -629,7 +636,7 @@ public class MentalState : MonoBehaviour {
             // something you already believe to be true.
             // 
             // M |- able(self, A),  M :: will(A) => M |- A
-            if (ProofMode == Plan) {
+            if (proofType == Plan && alternativeBases.Count == 0) {
 
                 // here we assume it's a logical fact
                 // that we can will the neutral state of affairs.
@@ -643,7 +650,7 @@ public class MentalState : MonoBehaviour {
                 HashSet<Basis> abilityBases = new HashSet<Basis>();
                 var doneFlag = new Container<bool>(false);
 
-                StartCoroutine(GetBases(
+                StartCoroutine(GetBases(proofType,
                     ableToEnactGoal,
                     suppositions,
                     pendingExpressions,
@@ -655,11 +662,9 @@ public class MentalState : MonoBehaviour {
                     yield return null;
                 }
 
-                if (abilityBases.Count > 0) {
-                    foreach (Basis abilityBasis in abilityBases) {
-                        abilityBasis.Key.Add(new Expression(WILL, goal));
-                        alternativeBases.Add(abilityBasis);
-                    }
+                foreach (Basis abilityBasis in abilityBases) {
+                    abilityBasis.Key.Add(new Expression(WILL, goal));
+                    alternativeBases.Add(abilityBasis);
                 }
             }
         }
@@ -685,8 +690,8 @@ public class MentalState : MonoBehaviour {
         // if it is go through the list and remove duplicates.
     }
 
-    public IEnumerator GetBases(Expression goal, HashSet<Basis> result, Container<bool> done) {
-        yield return StartCoroutine(GetBases(goal, new HashSet<Expression>(),
+    public IEnumerator GetBases(ProofType proofType, Expression goal, HashSet<Basis> result, Container<bool> done) {
+        yield return StartCoroutine(GetBases(proofType, goal, new HashSet<Expression>(),
             new Dictionary<Expression, List<HashSet<Expression>>>(),
             new Dictionary<Expression, KeyValuePair<HashSet<Expression>, HashSet<Basis>>>(),
             result, done));
@@ -696,8 +701,7 @@ public class MentalState : MonoBehaviour {
     public IEnumerator Query(Expression query, Container<bool> answer, Container<bool> queryDone) {
         HashSet<Basis> bases = new HashSet<Basis>();
         var doneFlag = new Container<bool>(false);
-        ProofMode = Proof;
-        IEnumerator basesRoutine = GetBases(query, bases, doneFlag);
+        IEnumerator basesRoutine = GetBases(Proof, query, bases, doneFlag);
         StartCoroutine(basesRoutine);
 
         while (!doneFlag.Item) {
@@ -744,8 +748,7 @@ public class MentalState : MonoBehaviour {
 
         var notAssertionBases = new HashSet<Basis>();
         var done = new Container<bool>(false);
-        ProofMode = Proof;
-        var disproof = GetBases(new Expression(NOT, assertion), notAssertionBases, done);
+        var disproof = GetBases(Proof, new Expression(NOT, assertion), notAssertionBases, done);
         StartCoroutine(disproof);
 
         var weakestPremises = new HashSet<Expression>();
@@ -754,7 +757,6 @@ public class MentalState : MonoBehaviour {
             // if we have a proof of ~A come in,
             // we want to evaluate the premises of the proof.
             if (notAssertionBases.Count > 0) {
-                Debug.Log("found a proof of ~" + assertion);
                 foreach (var notAssertionBasis in notAssertionBases) {
                     Expression weakestPremise = VERUM;
                     float weakestPlausibility = float.PositiveInfinity;
@@ -868,7 +870,6 @@ public class MentalState : MonoBehaviour {
         Stack<Expression> ranking = new Stack<Expression>();
         ranking.Push(NEUTRAL);
         var storage = new Stack<Expression>();
-        ProofMode = Proof;
 
         foreach (var preferable in preferables) {
             while (ranking.Count != 0) {
@@ -893,19 +894,21 @@ public class MentalState : MonoBehaviour {
             }
         }
 
-        ProofMode = Plan;
         var bestPlan = new List<Expression>();
         while (ranking.Count != 0) {
             Expression nextBestGoal = ranking.Pop();
             var goalBases = new HashSet<Basis>();
             var doneFlag = new Container<bool>(false);
-            StartCoroutine(GetBases(nextBestGoal, goalBases, doneFlag));
+            StartCoroutine(GetBases(Plan, nextBestGoal, goalBases, doneFlag));
 
             while (!doneFlag.Item) {
                 yield return null;
             }
 
+            Debug.Log(nextBestGoal);
+
             bool alreadyTrue = true;
+
             // we go through each basis of the goal and
             // find the best plan. If there is no plan,
             // then we either can't enact it, or it's
@@ -919,6 +922,8 @@ public class MentalState : MonoBehaviour {
                 // we'll want to incorporate the cost
                 // of actions in later.
                 var currentPlan = new List<Expression>();
+
+                alreadyTrue = true;
                 
                 foreach (var premise in goalBasis.Key) {
                     var boundPremise = premise.Substitute(goalBasis.Value);

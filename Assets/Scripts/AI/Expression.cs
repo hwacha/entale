@@ -94,7 +94,6 @@ public class Deictic : Expression {
 
     public override Expression Substitute(Dictionary<Variable, Expression> substitution) {
         Expression substitutedExpression = base.Substitute(substitution);
-
         return new Deictic(substitutedExpression.Head, Referent);
     }
 
@@ -298,7 +297,10 @@ public class Expression : Argument {
 
         Expression newHead = new Expression(Head);
         if (Head is Variable && s.ContainsKey((Variable) Head)) {
-             newHead = s[(Variable) Head];
+            newHead = s[(Variable) Head];
+            if (newHead is Deictic) {
+                return newHead;
+            }
         }
 
         return new Expression(newHead, substitutedArgs);

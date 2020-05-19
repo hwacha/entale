@@ -37,18 +37,18 @@ public class Sensor : MonoBehaviour {
             bool collided;
 
             collided = Physics.Raycast(
-                Agent.transform.position,
-                Agent.transform.TransformDirection(Vector3.forward),
+                transform.position,
+                transform.TransformDirection(Vector3.forward),
                 out hit,
                 layerMask);
-
+            
             // Debug.DrawRay(transform.position, Vector3.forward * 100, Color.white);
 
             // Here, we can assert whatever information
             // we gather from this raycast hit.
             void OnCollision(RaycastHit theHit) {
                 visibleObjects.Add(theHit.transform.gameObject);
-                if (theHit.distance < 0.6f) {
+                if (theHit.distance < 1f && theHit.transform.gameObject.Equals(GameObject.Find("tree"))) {
                     Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
                     new Expression(PERCEIVE, SELF,
                         new Expression(AT, SELF,
@@ -73,18 +73,18 @@ public class Sensor : MonoBehaviour {
                 float theta = Random.Range(0, i * (Mathf.PI / RAYS_PER_RING));
                 for (int j = 0; j < RAYS_PER_RING; j++) {
                     // here, we set up the components of a conical raycast.
-                    Vector3 zDir = Agent.transform.TransformDirection(Vector3.forward) * (float) i;
-                    Vector3 xDir = Agent.transform.TransformDirection(Vector3.right) * Mathf.Cos(theta);
-                    Vector3 yDir = Agent.transform.TransformDirection(Vector3.up) * Mathf.Sin(theta);
+                    Vector3 zDir = transform.TransformDirection(Vector3.forward) * (float) i;
+                    Vector3 xDir = transform.TransformDirection(Vector3.right) * Mathf.Cos(theta);
+                    Vector3 yDir = transform.TransformDirection(Vector3.up) * Mathf.Sin(theta);
 
                     // Raycast
                     collided = Physics.Raycast(
-                        Agent.transform.position,
-                        Agent.transform.TransformDirection(zDir + xDir + yDir),
+                        transform.position,
+                        transform.TransformDirection(zDir + xDir + yDir),
                         out hit,
                         layerMask);
 
-                    // Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, Color.white);
+                    Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, Color.white);
 
                     if (collided && !visibleObjects.Contains(hit.transform.gameObject)) {
                         OnCollision(hit);
@@ -94,7 +94,7 @@ public class Sensor : MonoBehaviour {
                 }
             }
 
-            yield return new WaitForSeconds(TIME_STEP);
+            yield return null; // new WaitForSeconds(TIME_STEP);
         }
     }
 }

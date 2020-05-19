@@ -185,6 +185,14 @@ public class Testing : MonoBehaviour {
 
         // Log(MatchesString(new Expression(FET, XE), new Expression(ITSELF, REET, XE)));
         // Log(MatchesString(new Expression(ITSELF, REET, XE), new Expression(FET, BOB)));
+        // 
+        var tree = GameObject.Find("tree");
+        var thatTree = new Deictic(THAT, tree);
+
+        HashSet<Substitution> matches = XE.GetMatches(thatTree);
+        foreach (var match in matches) {
+            Log(new Expression(RED, XE).Substitute(match));
+        }
 
         // @TODO Test potential bug in mutating expressions
         
@@ -253,10 +261,10 @@ public class Testing : MonoBehaviour {
         // );
 
         // StartCoroutine(TestAssertion());
-        
         MentalState.Initialize(
             new Expression(AT, ALICE, BOB),
             new Expression(NOT, new Expression(RED, ALICE)),
+            new Expression(ABLE, SELF, new Expression(AT, SELF, new Deictic(THAT, GameObject.Find("tree")))),
             new Expression(BLUE, CHARLIE),
             new Expression(GREEN, CHARLIE),
             new Expression(BLUE, BOB),
@@ -265,16 +273,18 @@ public class Testing : MonoBehaviour {
             new Expression(Expression.QUANTIFIER_PHRASE_COORDINATOR_2,
                 AT, new Expression(ALL, RED), new Expression(ALL, GREEN)));
 
-        StartCoroutine(LogBases(MentalState, new Expression(AT, ALICE, BOB)));
+        StartCoroutine(LogBases(MentalState, new Expression(ABLE, SELF, new Expression(AT, SELF, new Deictic(THAT, GameObject.Find("tree"))))));
 
-        StartCoroutine(LogBases(MentalState, new Expression(CONVERSE, AT, BOB, ALICE)));
-        StartCoroutine(LogBases(MentalState, new Expression(CONVERSE, AT, ALICE, BOB)));
+        // StartCoroutine(LogBases(MentalState, new Expression(AT, ALICE, BOB)));
 
-        StartCoroutine(LogBases(MentalState, new Expression(Expression.GEACH_TRUTH_FUNCTION, NOT, RED, ALICE)));
-        StartCoroutine(LogBases(MentalState, new Expression(Expression.GEACH_TRUTH_FUNCTION_2, AND, BLUE, GREEN, CHARLIE)));
-        StartCoroutine(LogBases(MentalState, new Expression(SOME, BLUE,
-            new Expression(Expression.GEACH_QUANTIFIER_PHRASE, new Expression(SOME, GREEN), AT))));
-        StartCoroutine(LogBases(MentalState, new Expression(AT, SELF, CHARLIE)));
+        // StartCoroutine(LogBases(MentalState, new Expression(CONVERSE, AT, BOB, ALICE)));
+        // StartCoroutine(LogBases(MentalState, new Expression(CONVERSE, AT, ALICE, BOB)));
+
+        // StartCoroutine(LogBases(MentalState, new Expression(Expression.GEACH_TRUTH_FUNCTION, NOT, RED, ALICE)));
+        // StartCoroutine(LogBases(MentalState, new Expression(Expression.GEACH_TRUTH_FUNCTION_2, AND, BLUE, GREEN, CHARLIE)));
+        // StartCoroutine(LogBases(MentalState, new Expression(SOME, BLUE,
+        //     new Expression(Expression.GEACH_QUANTIFIER_PHRASE, new Expression(SOME, GREEN), AT))));
+        // StartCoroutine(LogBases(MentalState, new Expression(AT, SELF, CHARLIE)));
 
         // StartCoroutine(LogBases(MentalState, aliceIsRed));
         // StartCoroutine(LogBases(MentalState, bobIsBlue));
@@ -404,7 +414,7 @@ public class Testing : MonoBehaviour {
         var result = new HashSet<Basis>();
         var done = new Container<bool>(false);
 
-        m.StartCoroutine(m.GetBases(e, result, done));
+        m.StartCoroutine(m.GetBases(Proof, e, result, done));
 
         while (!done.Item) {
             yield return null;
