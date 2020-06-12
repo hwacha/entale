@@ -57,24 +57,22 @@ public class Actuator : MonoBehaviour {
                     // Debug.Log("Busy doin' nothin'");
                 }
 
-                // at(self, that ~> #forest1)
-                else if (content.Head.Equals(AT.Head)) {
-                    if (content.GetArgAsExpression(0).Equals(SELF)) {
-                        var destination = content.GetArg(1);
-                        if (destination is Deictic) {
-                            Deictic destinationD = (Deictic) destination;
-                            NavMeshPath path = new NavMeshPath();
+                // at(self, X)
+                else if (content.Head.Equals(AT.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
+                    var destination = content.GetArgAsExpression(1);
+                    // assumption: if we find this in a plan,
+                    // then the location of X should be known.
+                    var location = Agent.MentalState.Locations[destination];
+                    NavMeshPath path = new NavMeshPath();
 
-                            NavMeshAgent.CalculatePath(destinationD.Referent.transform.position, path);
+                    NavMeshAgent.CalculatePath(location, path);
 
-                            if (path.status != NavMeshPathStatus.PathPartial) {
-                                NavMeshAgent.SetPath(path);
-                                while (NavMeshAgent.remainingDistance > 1) {
-                                    yield return new WaitForSeconds(0.5f);
-                                }
-                                NavMeshAgent.ResetPath();
-                            }
+                    if (path.status != NavMeshPathStatus.PathPartial) {
+                        NavMeshAgent.SetPath(path);
+                        while (NavMeshAgent.remainingDistance > 1.9f) {
+                            yield return null;
                         }
+                        NavMeshAgent.ResetPath();
                     }
                 }
 

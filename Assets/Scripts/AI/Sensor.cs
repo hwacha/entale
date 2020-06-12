@@ -14,6 +14,10 @@ public class Sensor : MonoBehaviour {
         static float D_THETA = (2 * Mathf.PI) / RAYS_PER_RING;
     #endregion
 
+    #region Fields
+        public Transform FullBodyTransform;
+    #endregion
+
     // @Note for separate sense modalities,
     // we'd want this to become an abstract class,
     // making some sort of abstract method like
@@ -36,30 +40,33 @@ public class Sensor : MonoBehaviour {
             RaycastHit hit;
             bool collided;
 
+            var forwardDirection = FullBodyTransform.TransformDirection(Vector3.forward);
+            var rightDirection = FullBodyTransform.TransformDirection(Vector3.right);
+            var upDirection = FullBodyTransform.TransformDirection(Vector3.up);
+
             collided = Physics.Raycast(
                 transform.position,
-                transform.TransformDirection(Vector3.forward),
+                forwardDirection,
                 out hit,
                 layerMask);
-            
-            // Debug.DrawRay(transform.position, Vector3.forward * 100, Color.white);
 
             // Here, we can assert whatever information
             // we gather from this raycast hit.
             void OnCollision(RaycastHit theHit) {
                 visibleObjects.Add(theHit.transform.gameObject);
-                if (theHit.distance < 1f && theHit.transform.gameObject.Equals(GameObject.Find("tree"))) {
-                    Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
-                    new Expression(PERCEIVE, SELF,
-                        new Expression(AT, SELF,
-                            new Deictic(THAT,
-                                theHit.transform.gameObject)))));
-                }
+                var param = new Expression(new Parameter(SemanticType.INDIVIDUAL, Agent.MentalState.GetNextParameterID()));
+                Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
+                    new Expression(PERCEIVE, SELF, new Expression(TREE, param))));
+
+                var position = theHit.transform.gameObject.transform.position;
+                Agent.MentalState.Locations.Add(param, new Vector3(position.x, position.y, position.z));
             }
 
             if (collided) {
                 OnCollision(hit);
             }
+
+            Debug.DrawRay(transform.position, forwardDirection * 100, collided ? Color.blue : Color.white);
 
             for (int i = 1; i < NUM_RINGS + 1; i++) {
                 // @Note here, we randomize the raycast within
@@ -73,9 +80,9 @@ public class Sensor : MonoBehaviour {
                 float theta = Random.Range(0, i * (Mathf.PI / RAYS_PER_RING));
                 for (int j = 0; j < RAYS_PER_RING; j++) {
                     // here, we set up the components of a conical raycast.
-                    Vector3 zDir = transform.TransformDirection(Vector3.forward) * (float) i;
-                    Vector3 xDir = transform.TransformDirection(Vector3.right) * Mathf.Cos(theta);
-                    Vector3 yDir = transform.TransformDirection(Vector3.up) * Mathf.Sin(theta);
+                    Vector3 zDir = forwardDirection * (float) i;
+                    Vector3 xDir = rightDirection * Mathf.Cos(theta);
+                    Vector3 yDir = upDirection * Mathf.Sin(theta);
 
                     // Raycast
                     collided = Physics.Raycast(
@@ -84,7 +91,7 @@ public class Sensor : MonoBehaviour {
                         out hit,
                         layerMask);
 
-                    Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, Color.white);
+                    Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, collided ? Color.blue : Color.white);
 
                     if (collided && !visibleObjects.Contains(hit.transform.gameObject)) {
                         OnCollision(hit);

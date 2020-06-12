@@ -68,14 +68,31 @@ public class MentalState : MonoBehaviour {
 
     public FrameTimer FrameTimer;
 
+    protected uint ParameterID;
+
     // private HashSet<Expression> BeliefBase = new HashSet<Expression>();
     private Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>> BeliefBase;
+
+    // @Note we may want to replace this with another 'private quantity' scheme like
+    // the parameters, but for now, spatial/time points/intervals aren't represented
+    // explicitly in the language.
+    // 
+    // Keyword: @space
+    // 
+    // @Note: this should be a readonly collection to all outside this
+    // class, but I don't know how the access modifiers work on that.
+    // I'll just make it public or now.
+    // 
+    public Dictionary<Expression, Vector3> Locations;
     int MaxDepth = 0;
 
     // @Note this doesn't check to see if
     // the initial belief set is inconsistent.
     // Assume, for now, as an invariant, that it is.
     public void Initialize(params Expression[] initialBeliefs) {
+        ParameterID = 0;
+        Locations = new Dictionary<Expression, Vector3>();
+
         if (BeliefBase != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
@@ -183,6 +200,13 @@ public class MentalState : MonoBehaviour {
             x = new Variable(t, x.ID + "'");
         }
         return x;
+    }
+
+    // gets a parameter that's unused in the mental state
+    public uint GetNextParameterID() {
+        var param = ParameterID;
+        ParameterID++;
+        return param;
     }
 
     // if this mental state, S, can prove the goal
@@ -344,6 +368,18 @@ public class MentalState : MonoBehaviour {
 
             if (satisfiers.Count != 0) {
                 alternativeBases.UnionWith(satisfiers);
+            }
+        }
+
+        if (goal.Head.Equals(ABLE.Head) && goal.GetArgAsExpression(0).Head.Equals(SELF.Head)) {
+            var abilityContent = goal.GetArgAsExpression(1);
+            if (abilityContent.Head.Equals(AT.Head) && abilityContent.GetArgAsExpression(0).Head.Equals(SELF.Head)) {
+                var location = abilityContent.GetArgAsExpression(1);
+                if (Locations.ContainsKey(location)) {
+                    var premises = new List<Expression>();
+                    premises.Add(goal);
+                    alternativeBases.Add(new Basis(premises, new Substitution()));
+                }
             }
         }
 
@@ -823,6 +859,7 @@ public class MentalState : MonoBehaviour {
 
         // now, we add A.
         Add(assertion);
+        Debug.Log("Adding " + assertion);
         yield break;
     }
 

@@ -45,6 +45,11 @@ public class Variable : Atom {
     public Variable(SemanticType type, String id) : base(type, id) {}
 }
 
+// A parameter. A private symbol the mental state can assign as a name.
+public class Parameter : Atom {
+    public Parameter(SemanticType type, uint id) : base(type, "$" + id.ToString()) {}
+}
+
 // a wrapper for what can occur in the
 // argument position in an expression.
 public abstract class Argument {
@@ -76,45 +81,6 @@ public class Empty : Argument {
 
     public override int GetHashCode() {
         return Type.GetHashCode();
-    }
-}
-
-// @Note this is a placeholder, to be replaced
-// by a more clever 'subjective' representation.
-// But right now, we're only concerned with
-// making 'this' words, and we have them
-// directly and objectly refer to their component
-// objects.
-public class Deictic : Expression {
-    public UnityEngine.GameObject Referent { get; protected set; }
-
-    public Deictic(Atom head, UnityEngine.GameObject referent) : base(head) {
-        Referent = referent;
-    }
-
-    public override Expression Substitute(Dictionary<Variable, Expression> substitution) {
-        Expression substitutedExpression = base.Substitute(substitution);
-        return new Deictic(substitutedExpression.Head, Referent);
-    }
-
-    public override bool Equals(Object o) {
-        if (!(o is Deictic)) {
-            return false;
-        }
-
-        if (!base.Equals(o)) {
-            return false;
-        }
-
-        return Referent == (((Deictic) o).Referent);
-    }
-
-    public override String ToString() {
-       return base.ToString() + " ~> " + Referent.ToString();
-    }
-
-    public override int GetHashCode() {
-        return base.GetHashCode() * Referent.GetHashCode();
     }
 }
 
@@ -285,7 +251,7 @@ public class Expression : Argument {
 
     // replaces all occurances of the variables within s with the
     // associated expression in s.
-    public virtual Expression Substitute(Dictionary<Variable, Expression> s) {
+    public Expression Substitute(Dictionary<Variable, Expression> s) {
         Argument[] substitutedArgs = new Argument[Args.Length];
         for (int i = 0; i < Args.Length; i++) {
             if (Args[i] is Expression) {
@@ -298,9 +264,6 @@ public class Expression : Argument {
         Expression newHead = new Expression(Head);
         if (Head is Variable && s.ContainsKey((Variable) Head)) {
             newHead = s[(Variable) Head];
-            if (newHead is Deictic) {
-                return newHead;
-            }
         }
 
         return new Expression(newHead, substitutedArgs);
@@ -663,6 +626,7 @@ public class Expression : Argument {
     public static readonly Expression APPLE = new Expression(new Constant(PREDICATE, "apple"));
     public static readonly Expression SPICY = new Expression(new Constant(PREDICATE, "spicy"));
     public static readonly Expression SWEET = new Expression(new Constant(PREDICATE, "sweet"));
+    public static readonly Expression TREE = new Expression(new Constant(PREDICATE, "tree"));
 
     // a predicate that applies to any individual
     public static readonly Expression VEROUS = new Expression(new Constant(PREDICATE, "verous"));

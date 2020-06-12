@@ -185,14 +185,6 @@ public class Testing : MonoBehaviour {
 
         // Log(MatchesString(new Expression(FET, XE), new Expression(ITSELF, REET, XE)));
         // Log(MatchesString(new Expression(ITSELF, REET, XE), new Expression(FET, BOB)));
-        // 
-        var tree = GameObject.Find("tree");
-        var thatTree = new Deictic(THAT, tree);
-
-        HashSet<Substitution> matches = XE.GetMatches(thatTree);
-        foreach (var match in matches) {
-            Log(new Expression(RED, XE).Substitute(match));
-        }
 
         // @TODO Test potential bug in mutating expressions
         
@@ -264,7 +256,6 @@ public class Testing : MonoBehaviour {
         MentalState.Initialize(
             new Expression(AT, ALICE, BOB),
             new Expression(NOT, new Expression(RED, ALICE)),
-            new Expression(ABLE, SELF, new Expression(AT, SELF, new Deictic(THAT, GameObject.Find("tree")))),
             new Expression(BLUE, CHARLIE),
             new Expression(GREEN, CHARLIE),
             new Expression(BLUE, BOB),
@@ -272,8 +263,6 @@ public class Testing : MonoBehaviour {
             new Expression(RED, SELF),
             new Expression(Expression.QUANTIFIER_PHRASE_COORDINATOR_2,
                 AT, new Expression(ALL, RED), new Expression(ALL, GREEN)));
-
-        StartCoroutine(LogBases(MentalState, new Expression(ABLE, SELF, new Expression(AT, SELF, new Deictic(THAT, GameObject.Find("tree"))))));
 
         // StartCoroutine(LogBases(MentalState, new Expression(AT, ALICE, BOB)));
 
