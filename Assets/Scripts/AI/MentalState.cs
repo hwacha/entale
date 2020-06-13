@@ -371,11 +371,34 @@ public class MentalState : MonoBehaviour {
             }
         }
 
+        // M.locations has X => M |- able(self, at(self, X))
         if (goal.Head.Equals(ABLE.Head) && goal.GetArgAsExpression(0).Head.Equals(SELF.Head)) {
             var abilityContent = goal.GetArgAsExpression(1);
             if (abilityContent.Head.Equals(AT.Head) && abilityContent.GetArgAsExpression(0).Head.Equals(SELF.Head)) {
                 var location = abilityContent.GetArgAsExpression(1);
                 if (Locations.ContainsKey(location)) {
+                    var premises = new List<Expression>();
+                    premises.Add(goal);
+                    alternativeBases.Add(new Basis(premises, new Substitution()));
+                }
+            }
+        }
+
+        // dist(M.locations(x), M.locations(y)) < 1 => M |- at(x, y)
+        if (goal.Head.Equals(AT.Head)) {
+            float cutoffDistance = 5;
+            var nameA = goal.GetArgAsExpression(0);
+            var nameB = goal.GetArgAsExpression(1);
+
+            if (Locations.ContainsKey(nameA) && Locations.ContainsKey(nameB)) {
+                var locationA = Locations[nameA];
+                var locationB = Locations[nameB];
+
+                var dx = locationA.x - locationB.x;
+                var dy = locationA.y - locationB.y;
+                var dz = locationA.z - locationB.z;
+
+                if (dx * dx + dy * dy + dz * dz <= cutoffDistance) {
                     var premises = new List<Expression>();
                     premises.Add(goal);
                     alternativeBases.Add(new Basis(premises, new Substitution()));

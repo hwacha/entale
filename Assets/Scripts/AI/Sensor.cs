@@ -31,6 +31,15 @@ public class Sensor : MonoBehaviour {
     // Right now, assume it's a vision module.
     public IEnumerator ReceiveStimulus() {
         while (true) {
+
+            // SELF-PERCEPTION
+            // In normal circumstances, you know your own
+            // location w/r/t where you're moving.
+            Agent.MentalState.Locations[SELF] =
+                new Vector3(FullBodyTransform.position.x,
+                    FullBodyTransform.position.y,
+                    FullBodyTransform.position.z);
+
             // we'll put all the objects this sensor can see
             // so we avoid redundancy.
             var visibleObjects = new HashSet<GameObject>();
@@ -54,12 +63,25 @@ public class Sensor : MonoBehaviour {
             // we gather from this raycast hit.
             void OnCollision(RaycastHit theHit) {
                 visibleObjects.Add(theHit.transform.gameObject);
-                var param = new Expression(new Parameter(SemanticType.INDIVIDUAL, Agent.MentalState.GetNextParameterID()));
-                Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
-                    new Expression(PERCEIVE, SELF, new Expression(TREE, param))));
 
                 var position = theHit.transform.gameObject.transform.position;
-                Agent.MentalState.Locations.Add(param, new Vector3(position.x, position.y, position.z));
+
+                Expression param = null;
+
+                // @Note this is linear search. Not great. Change data structure later.
+                foreach (var nameAndLocation in Agent.MentalState.Locations) {
+                    if (position == nameAndLocation.Value) {
+                        param = nameAndLocation.Key;
+                    }
+                }
+
+                if (param == null) {
+                    param = new Expression(new Parameter(SemanticType.INDIVIDUAL, Agent.MentalState.GetNextParameterID()));    
+                    Agent.MentalState.Locations.Add(param, new Vector3(position.x, position.y, position.z));
+                }
+
+                Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
+                    new Expression(PERCEIVE, SELF, new Expression(TREE, param))));
             }
 
             if (collided) {
