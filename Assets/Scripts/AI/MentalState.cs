@@ -882,7 +882,6 @@ public class MentalState : MonoBehaviour {
 
         // now, we add A.
         Add(assertion);
-        Debug.Log("Adding " + assertion);
         yield break;
     }
 
@@ -964,8 +963,6 @@ public class MentalState : MonoBehaviour {
             while (!doneFlag.Item) {
                 yield return null;
             }
-
-            Debug.Log(nextBestGoal);
 
             bool alreadyTrue = true;
 
