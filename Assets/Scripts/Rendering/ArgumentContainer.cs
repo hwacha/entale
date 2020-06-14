@@ -7,8 +7,8 @@ using static RenderingOptions;
 public class ArgumentContainer : MonoBehaviour {
     #region Fields
     protected Argument Argument;
-    protected int Width;
-    protected int Height;
+    public int Width {get; protected set;}
+    public int Height {get; protected set;}
     #endregion
 
     #region Presets

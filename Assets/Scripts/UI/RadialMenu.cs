@@ -16,9 +16,22 @@ public class RadialMenu : MonoBehaviour {
     const double RADIUS = 100;
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
 
-    public Dictionary<SemanticType, HashSet<Constant>> Lexicon = new Dictionary<SemanticType, HashSet<Constant>> {
-        [ASSERTION] = new HashSet<Constant> { OK.Head as Constant, YES.Head as Constant, NO.Head as Constant },
-    };
+    public Dictionary<SemanticType, HashSet<Constant>> Lexicon =
+        new Dictionary<SemanticType, HashSet<Constant>> {
+            [ASSERTION] = new HashSet<Constant> {
+                OK.Head  as Constant,
+                YES.Head as Constant,
+                NO.Head  as Constant
+            },
+            [INDIVIDUAL] = new HashSet<Constant> {
+                SELF.Head as Constant,
+                BOB.Head  as Constant
+            },
+            [PREDICATE] = new HashSet<Constant> {
+                RED.Head  as Constant,
+                BLUE.Head as Constant
+            }
+        };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
 
     int currentSliceIndex = -1;
@@ -126,7 +139,7 @@ public class RadialMenu : MonoBehaviour {
         if (Input.GetMouseButtonDown(0)) {
             int sliceIndex = GetSliceIndex(radialMenuItems.Count, INITIAL_ANGLE_OFFSET, GetMouseAngle());
             var rmi = radialMenuItems[currentSliceIndex];
-            if(semanticMenuOpen) {
+            if (semanticMenuOpen) {
                 CloseSemanticMenu();
                 OpenConstantMenu(rmi.semanticType);
             } else {
