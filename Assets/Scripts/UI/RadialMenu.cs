@@ -18,11 +18,11 @@ public class RadialMenu : MonoBehaviour {
 
     public Dictionary<SemanticType, HashSet<Constant>> Lexicon =
         new Dictionary<SemanticType, HashSet<Constant>> {
-            [ASSERTION] = new HashSet<Constant> {
-                OK.Head  as Constant,
-                YES.Head as Constant,
-                NO.Head  as Constant
-            },
+            // [ASSERTION] = new HashSet<Constant> {
+            //     OK.Head  as Constant,
+            //     YES.Head as Constant,
+            //     NO.Head  as Constant
+            // },
             [INDIVIDUAL] = new HashSet<Constant> {
                 SELF.Head as Constant,
                 BOB.Head  as Constant
@@ -30,6 +30,10 @@ public class RadialMenu : MonoBehaviour {
             [PREDICATE] = new HashSet<Constant> {
                 RED.Head  as Constant,
                 BLUE.Head as Constant
+            },
+            [RELATION_2] = new HashSet<Constant> {
+                IDENTITY.Head as Constant,
+                AT.Head       as Constant
             }
         };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 

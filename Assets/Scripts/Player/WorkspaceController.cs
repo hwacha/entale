@@ -10,6 +10,7 @@ public class WorkspaceController : MonoBehaviour
     MouseLook MouseLook;
     RadialMenu RadialMenu;
     GameObject HighlightPoint;
+    public GameObject Pointer;
     #endregion
 
     #region Fields
@@ -17,7 +18,11 @@ public class WorkspaceController : MonoBehaviour
     bool IsRadialMenuActive = false;
     static int slotsX = 8;
     static int slotsY = 8;
-    bool[,] slots = new bool[slotsY, slotsX];
+    GameObject[,] slots = new GameObject[slotsY, slotsX];
+    int cursorX = 0;
+    int cursorY = 0;
+
+    float lastStep = 0.0f;
     #endregion
 
     public void SpawnWord(Constant word) {
@@ -35,7 +40,7 @@ public class WorkspaceController : MonoBehaviour
         int height = wordContainerScript.Height;
 
         wordContainer.transform.localScale =
-            new Vector3(0.125f * width, 0.125f * height, 1);
+            new Vector3(0.125f * 0.875f * width, 0.125f * 0.875f * height, 1);
 
         // find the next available slot that
         // can accommodate the expression
@@ -55,19 +60,27 @@ public class WorkspaceController : MonoBehaviour
                             empty = false;
                             break;
                         }
-                        if (slots[i + h, j + w]) {
+                        if (slots[i + h, j + w] != null) {
                             empty = false;
                         }
                     }
                 }
                 if (empty) {
                     wordContainer.transform.localPosition =
-                        new Vector3(-0.5f + width / 16.0f + 0.125f * j,
-                            (0.5f - height / 16.0f) - 0.125f * i, -0.01f);
+                        new Vector3(0.95f * (-0.5f + width / 16.0f + 0.125f * j),
+                            0.95f * ((0.5f - height / 16.0f) - 0.125f * i), -0.01f);
+
+                    if (!Pointer.active) {
+                        Pointer.active = true;
+                        Pointer.transform.localPosition =
+                            new Vector3(wordContainer.transform.localPosition.x,
+                                wordContainer.transform.localPosition.y + (3.0f * height / 32.0f),
+                                -0.01f);
+                    }
 
                     for (int h = 0; h < height; h++) {
                         for (int w = 0; w < width; w++) {
-                            slots[i + h, j + w] = true;
+                            slots[i + h, j + w] = wordContainer;
                         }
                     }
                     return;
@@ -83,7 +96,7 @@ public class WorkspaceController : MonoBehaviour
     {
         for (int i = 0; i < slotsY; i++) {
             for (int j = 0; j < slotsX; j++) {
-                slots[i, j] = false;
+                slots[i, j] = null;
             }
         }
 
@@ -96,6 +109,7 @@ public class WorkspaceController : MonoBehaviour
 
         RadialMenu.setWordSelectCallback(SpawnWord);
         RadialMenu.enabled = false;
+        Pointer.active = false;
     }
 
     // Update is called once per frame
@@ -115,11 +129,87 @@ public class WorkspaceController : MonoBehaviour
                 // lock the player's movement
                 PlayerMovement.enabled = false;
                 MouseLook.enabled = false;
-                HighlightPoint.SetActive(false);
+                // HighlightPoint.SetActive(false);
 
                 // set the workspace to active
                 IsWorkspaceActive = true;
                 Workspace.SetActive(true);
+            }
+        }
+
+        // move the cursor to the expression to the right
+        // of the current expression
+        if (Input.GetAxis("Horizontal") > 0) {
+            GameObject currentlySelected = slots[cursorY, cursorX];
+            for (int i = cursorX; i < slotsX; i++) {
+                GameObject o = slots[cursorY, i];
+                if (o == null || o == currentlySelected) {
+                    continue;
+                }
+
+                cursorX = i;
+                Pointer.transform.localPosition =
+                    new Vector3(o.transform.localPosition.x,
+                        o.transform.localPosition.y + (3.0f * o.GetComponent<ArgumentContainer>().Height / 32.0f),
+                        -0.01f);
+                break;
+            }
+        }
+
+        // move the cursor to the expression to the left
+        // of the current expression
+        if (Input.GetAxis("Horizontal") < 0) {
+            GameObject currentlySelected = slots[cursorY, cursorX];
+            for (int i = cursorX; i >= 0; i--) {
+                GameObject o = slots[cursorY, i];
+                if (o == null || o == currentlySelected) {
+                    continue;
+                }
+
+                cursorX = i;
+                Pointer.transform.localPosition =
+                    new Vector3(o.transform.localPosition.x,
+                        o.transform.localPosition.y + (3.0f * o.GetComponent<ArgumentContainer>().Height / 32.0f),
+                        -0.01f);
+                break;
+            }
+        }
+
+        // move the cursor to the expression downard
+        // from the current expression
+        if (Input.GetAxis("Vertical") < 0) {
+            GameObject currentlySelected = slots[cursorY, cursorX];
+            for (int i = cursorY; i < slotsY; i++) {
+                GameObject o = slots[i, cursorX];
+                if (o == null || o == currentlySelected) {
+                    continue;
+                }
+
+                cursorY = i;
+                Pointer.transform.localPosition =
+                    new Vector3(o.transform.localPosition.x,
+                        o.transform.localPosition.y + (3.0f * o.GetComponent<ArgumentContainer>().Height / 32.0f),
+                        -0.01f);
+                break;
+            }
+        }
+
+        // move the cursor to the expression upward
+        // from the current expression
+        if (Input.GetAxis("Vertical") > 0) {
+            GameObject currentlySelected = slots[cursorY, cursorX];
+            for (int i = cursorY; i >= 0; i--) {
+                GameObject o = slots[i, cursorX];
+                if (o == null || o == currentlySelected) {
+                    continue;
+                }
+
+                cursorY = i;
+                Pointer.transform.localPosition =
+                    new Vector3(o.transform.localPosition.x,
+                        o.transform.localPosition.y + (3.0f * o.GetComponent<ArgumentContainer>().Height / 32.0f),
+                        -0.01f);
+                break;
             }
         }
 
@@ -133,7 +223,7 @@ public class WorkspaceController : MonoBehaviour
                 Workspace.SetActive(false);
                 PlayerMovement.enabled = true;
                 MouseLook.enabled = true;
-                HighlightPoint.SetActive(true);
+                // HighlightPoint.SetActive(true);
             }
         }
     }
