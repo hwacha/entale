@@ -6,7 +6,7 @@ using static RenderingOptions;
 
 public class ArgumentContainer : MonoBehaviour {
     #region Fields
-    protected Argument Argument;
+    public Argument Argument {get; protected set;}
     public int Width {get; protected set;}
     public int Height {get; protected set;}
     #endregion

@@ -19,8 +19,6 @@ public abstract class Icons {
     }
 
     public static Sprite getIcon(Constant constant) {
-        var res = Resources.Load<Sprite>("Textures/Symbols/" + constant.ID) as Sprite;
-        Debug.Log(res);
-        return res;
+        return Resources.Load<Sprite>("Textures/Symbols/" + constant.ID) as Sprite;
     }
 }
