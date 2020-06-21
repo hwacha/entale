@@ -3,16 +3,18 @@
     Properties
     {
         _MainTex ("Color (RGB) Alpha (A)", 2D) = "white"
+        _ZTest ("_ZTest", Int) = 1
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
+        Tags { "Queue"="Transparent+1" "RenderType"="Transparent" }
         LOD 100
 
         Pass
         {
             Cull Off
             ZWrite Off
+            // ZTest Always
             Blend SrcAlpha OneMinusSrcAlpha
 
             CGPROGRAM

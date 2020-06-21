@@ -429,6 +429,13 @@ public class WorkspaceController : MonoBehaviour
             }
         }
 
+        if (Input.GetButtonDown("Use") && IsWorkspaceActive && !IsRadialMenuActive) {
+            if (SelectedExpression != null) {
+                SelectedExpression.transform.SetParent(Workspace.transform.parent);
+                SelectedExpression.transform.localPosition = new Vector3(0, 0, 0.5f);
+            }
+        }
+
         if (Input.GetButtonDown("Cancel") && IsWorkspaceActive) {
             if (IsRadialMenuActive) {
                 RadialMenu.ExitMenu();
