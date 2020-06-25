@@ -672,6 +672,7 @@ public class Expression : Argument {
     public static readonly Expression WOULD = new Expression(new Constant(TRUTH_CONFORMITY_FUNCTION, "would"));
 
     // individual-truth relations
+    public static readonly Expression SAY = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "say"));
     public static readonly Expression BELIEVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "believe"));
     public static readonly Expression ABLE    = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "able"));
     public static readonly Expression PERCEIVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceive"));

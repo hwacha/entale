@@ -31,6 +31,7 @@ public class WorkspaceController : MonoBehaviour
 {
     #region References
     GameObject Workspace;
+    public GameObject Camera;
     PlayerMovement PlayerMovement;
     MouseLook MouseLook;
     RadialMenu RadialMenu;
@@ -53,6 +54,7 @@ public class WorkspaceController : MonoBehaviour
     float lastStepVertical = 0.25f;
 
     GameObject SelectedExpression = null;
+    GameObject EquippedExpression = null;
 
     #endregion
 
@@ -429,10 +431,57 @@ public class WorkspaceController : MonoBehaviour
             }
         }
 
-        if (Input.GetButtonDown("Use") && IsWorkspaceActive && !IsRadialMenuActive) {
-            if (SelectedExpression != null) {
-                SelectedExpression.transform.SetParent(Workspace.transform.parent);
-                SelectedExpression.transform.localPosition = new Vector3(0, 0, 0.5f);
+        if (Input.GetButtonDown("Use")) {
+            if (IsWorkspaceActive) {
+                if (SelectedExpression != null && !IsRadialMenuActive) {
+                    // set expression to center of screen
+                    SelectedExpression.transform.SetParent(Workspace.transform.parent);
+                    SelectedExpression.transform.localPosition = new Vector3(0, 0, 0.5f);
+
+                    // @TODO move the pointer to another expression, if one exists
+                    // (this should probably be its own method)
+
+                    // disable the workspace
+                    IsWorkspaceActive = false;
+                    Workspace.SetActive(false);
+                    PlayerMovement.enabled = true;
+                    MouseLook.enabled = true;
+
+                    // set equipped expression
+                    EquippedExpression = SelectedExpression;
+                    SelectedExpression = null;
+                }
+            } else {
+                if (EquippedExpression != null) {
+                    // Raycast
+                    RaycastHit hit;
+                    bool collided = Physics.Raycast(
+                        Camera.transform.position,
+                        Camera.transform.TransformDirection(Vector3.forward),
+                        out hit,
+                        100,
+                        0 | ~0);
+
+                    if (collided) {
+                        var o = hit.transform.gameObject;
+
+                        Debug.Log(o);
+                        // @Note the object should be displayed
+                        // and received by other NPC's sensors,
+                        // not sent directly. But this is less
+                        // error-prone to start out with.
+                        var m = o.GetComponent<MentalState>();
+                        Debug.Log(m);
+
+                        if (m != null) {
+                            m.StartCoroutine(m.Assert(new Expression(Expression.SAY, Expression.CHARLIE,
+                                EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression)));
+
+                            Destroy(EquippedExpression);
+                            EquippedExpression = null;
+                        }
+                    }
+                }
             }
         }
 
@@ -441,23 +490,20 @@ public class WorkspaceController : MonoBehaviour
                 RadialMenu.ExitMenu();
                 RadialMenu.enabled = false;
                 IsRadialMenuActive = false;
+            } else if (SelectedExpression != null) {
+                Pointer.transform.localPosition =
+                    new Vector3(SelectedExpression.transform.localPosition.x,
+                        SelectedExpression.transform.localPosition.y +
+                        (3.0f * SelectedExpression.GetComponent<ArgumentContainer>().Height / 32.0f),
+                        -0.01f);
+                SelectedExpression = null;
             } else {
-                if (SelectedExpression != null) {
-                    Pointer.transform.localPosition =
-                        new Vector3(SelectedExpression.transform.localPosition.x,
-                            SelectedExpression.transform.localPosition.y +
-                            (3.0f * SelectedExpression.GetComponent<ArgumentContainer>().Height / 32.0f),
-                            -0.01f);
-                    SelectedExpression = null;
-                } else {
-                    IsWorkspaceActive = false;
-                    Workspace.SetActive(false);
-                    PlayerMovement.enabled = true;
-                    MouseLook.enabled = true;                    
-                }
-
-                // HighlightPoint.SetActive(true);
+                IsWorkspaceActive = false;
+                Workspace.SetActive(false);
+                PlayerMovement.enabled = true;
+                MouseLook.enabled = true;
             }
+            // HighlightPoint.SetActive(true);
         }
     }
 }
