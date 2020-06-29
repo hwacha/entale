@@ -712,6 +712,9 @@ public class Expression : Argument {
     public static readonly Expression NO  = new Expression(new Constant(ASSERTION, "no"));
     public static readonly Expression OK  = new Expression(new Constant(ASSERTION, "ok"));
 
+    // conformity constants
+    public static readonly Expression CONFIRM = new Expression(new Constant(CONFORMITY_VALUE, "confirm"));
+
     // heads for deictic expressions
     public static readonly Constant THAT = new Constant(INDIVIDUAL, "that");
 }

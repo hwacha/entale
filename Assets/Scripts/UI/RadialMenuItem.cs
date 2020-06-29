@@ -10,13 +10,13 @@ using static Icons;
 public class RadialMenuItem : MonoBehaviour
 {
     Outline outline;
-    Image icon;
+    Image Icon;
     public SemanticType semanticType { get; set; }
     public Constant constant { get; set; }
 
     void Awake() {
         outline = GetComponent<Outline>();
-        icon = GetComponent<Image>();
+        Icon = GetComponent<Image>();
         Unhighlight();
     }
 
@@ -28,11 +28,11 @@ public class RadialMenuItem : MonoBehaviour
         outline.enabled = true;
     }
 
-    public void setIcon(SemanticType semanticTypeIn) {
-        icon.sprite = Icons.getIcon(semanticTypeIn);
+    public void SetTypeIcon() {
+        Icon.sprite = Icons.GetTypeIcon();
     }
 
-    public void setIcon(Constant constantIn) {
-        icon.sprite = Icons.getIcon(constantIn);
+    public void SetIcon(Constant constantIn) {
+        Icon.sprite = Icons.GetIcon(constantIn);
     }
 }

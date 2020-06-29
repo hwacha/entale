@@ -18,14 +18,25 @@ public class RadialMenu : MonoBehaviour {
 
     public Dictionary<SemanticType, HashSet<Constant>> Lexicon =
         new Dictionary<SemanticType, HashSet<Constant>> {
-            // [ASSERTION] = new HashSet<Constant> {
-            //     OK.Head  as Constant,
-            //     YES.Head as Constant,
-            //     NO.Head  as Constant
-            // },
             [INDIVIDUAL] = new HashSet<Constant> {
                 SELF.Head as Constant,
                 BOB.Head  as Constant
+            },
+            [TRUTH_VALUE] = new HashSet<Constant> {
+                VERUM.Head as Constant,
+                FALSUM.Head as Constant,
+                NEUTRAL.Head as Constant
+            },
+            [ASSERTION] = new HashSet<Constant> {
+                OK.Head  as Constant,
+                YES.Head as Constant,
+                NO.Head  as Constant
+            },
+            [CONFORMITY_VALUE] = new HashSet<Constant> {
+                CONFIRM.Head as Constant
+            },
+            [QUESTION] = new HashSet<Constant> {
+
             },
             [PREDICATE] = new HashSet<Constant> {
                 RED.Head  as Constant,
@@ -87,7 +98,8 @@ public class RadialMenu : MonoBehaviour {
                 (float)(Math.Sin(theta) * RADIUS)
             );
             radialMenuItem.semanticType = semanticType;
-            radialMenuItem.setIcon(semanticType);
+            radialMenuItem.SetTypeIcon();
+            radialMenuItem.gameObject.GetComponent<CanvasRenderer>().SetColor(RenderingOptions.ColorsByType[semanticType]);
             radialMenuItems.Add(radialMenuItem);
             theta += sliceTheta;
         }
@@ -114,7 +126,7 @@ public class RadialMenu : MonoBehaviour {
                 (float)(Math.Sin(theta) * RADIUS)
             );
             radialMenuItem.constant = constant;
-            radialMenuItem.setIcon(constant);
+            radialMenuItem.SetIcon(constant);
             radialMenuItems.Add(radialMenuItem);
             theta += sliceTheta;
         }
