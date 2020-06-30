@@ -221,7 +221,7 @@ public class ArgumentContainer : MonoBehaviour {
         prePassCamera.transform.parent = this.gameObject.transform;
         prePassCamera.transform.localPosition =
             Vector3.Scale(prePassCamera.transform.localPosition, new Vector3(0, 0, 0));
-        prePassCamera.transform.position += new Vector3(0, 0, -Argument.Depth * 2);
+        prePassCamera.transform.position += new Vector3(0, 0, -Argument.Depth * 100);
 
         Camera prePassCameraComponent = prePassCamera.GetComponent<Camera>();
         prePassCameraComponent.enabled = true;

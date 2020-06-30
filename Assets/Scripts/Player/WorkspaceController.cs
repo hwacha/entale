@@ -222,33 +222,71 @@ public class WorkspaceController : MonoBehaviour
         if (Input.GetAxis("Horizontal") > 0 && Time.time - lastStepHorizontal > timeBetweenSteps) {
             lastStepHorizontal = Time.time;
 
+            int bestX = -1;
+            int bestY = -1;
+            int bestNorm = int.MaxValue;
+            GameObject bestObject = null;
             if (SelectedExpression == null) {
                 GameObject currentlySelected = slots[cursorY, cursorX];
-                for (int i = cursorX; i < slotsX; i++) {
-                    GameObject o = slots[cursorY, i];
-                    if (o == null || o == currentlySelected) {
-                        continue;
-                    }
+                for (int i = 0; i < slotsY; i++) {
+                    for (int j = cursorX + 1; j < slotsX; j++) {
+                        GameObject o = slots[i, j];
+                        if (o == null || o == currentlySelected) {
+                            continue;
+                        }
 
-                    cursorX = i;
+                        int dx = j - cursorX;
+                        int dy = i - cursorY;
+
+                        int norm = (dx * dx) + (dy * dy);
+
+                        if (norm < bestNorm) {
+                            bestX = j;
+                            bestY = i;
+                            bestNorm = norm;
+                            bestObject = o;
+                        }
+                    }
+                }
+
+                if (bestX != -1 && bestY != -1) {
+                    cursorX = bestX;
+                    cursorY = bestY;
+                
                     Pointer.transform.localPosition =
-                        new Vector3(o.transform.localPosition.x,
-                            o.transform.localPosition.y + (3.0f * o.GetComponent<ArgumentContainer>().Height / 32.0f),
+                        new Vector3(bestObject.transform.localPosition.x,
+                            bestObject.transform.localPosition.y +
+                            (3.0f * bestObject.GetComponent<ArgumentContainer>().Height / 32.0f),
                             -0.01f);
-                    break;
                 }
             } else {
-                for (int i = cursorX + 1; i < slotsX; i++) {
-                    if (openArgumentSlots[cursorY, i] == null ||
-                        !openArgumentSlots[cursorY, i].Type.Equals(SelectedExpression.GetComponent<ArgumentContainer>().Argument.Type)) {
-                        continue;
-                    }
+                for (int i = 0; i < slotsY; i++) {
+                    for (int j = cursorX + 1; j < slotsX; j++) {
+                        if (openArgumentSlots[i, j] == null ||
+                            !openArgumentSlots[i, j].Type.Equals(SelectedExpression.GetComponent<ArgumentContainer>().Argument.Type)) {
+                            continue;
+                        }
 
-                    cursorX = i;
+                        int dx = j - cursorX;
+                        int dy = i - cursorY;
+
+                        int norm = (dx * dx) + (dy * dy);
+
+                        if (norm < bestNorm) {
+                            bestX = j;
+                            bestY = i;
+                            bestNorm = norm;
+                        }
+                    }
+                }
+
+                if (bestX != -1 && bestY != -1) {
+                    cursorX = bestX;
+                    cursorY = bestY;
+
                     Pointer.transform.localPosition =
                         new Vector3(0.95f * (-0.5f + 1 / 16.0f + 0.125f * cursorX),
                             0.95f * ((0.5f + 1 / 16.0f) - 0.125f * cursorY), -0.02f);
-                    break;
                 }
             }
         }
@@ -257,33 +295,72 @@ public class WorkspaceController : MonoBehaviour
         // of the current expression
         if (Input.GetAxis("Horizontal") < 0 && Time.time - lastStepHorizontal > timeBetweenSteps) {
             lastStepHorizontal = Time.time;
+            
+            int bestX = -1;
+            int bestY = -1;
+            int bestNorm = int.MaxValue;
+            GameObject bestObject = null;
             if (SelectedExpression == null) {
                 GameObject currentlySelected = slots[cursorY, cursorX];
-                for (int i = cursorX; i >= 0; i--) {
-                    GameObject o = slots[cursorY, i];
-                    if (o == null || o == currentlySelected) {
-                        continue;
-                    }
+                for (int i = 0; i < slotsY; i++) {
+                    for (int j = 0; j < cursorX; j++) {
+                        GameObject o = slots[i, j];
+                        if (o == null || o == currentlySelected) {
+                            continue;
+                        }
 
-                    cursorX = i;
+                        int dx = j - cursorX;
+                        int dy = i - cursorY;
+
+                        int norm = (dx * dx) + (dy * dy);
+
+                        if (norm < bestNorm) {
+                            bestX = j;
+                            bestY = i;
+                            bestNorm = norm;
+                            bestObject = o;
+                        }
+                    }
+                }
+
+                if (bestX != -1 && bestY != -1) {
+                    cursorX = bestX;
+                    cursorY = bestY;
+                
                     Pointer.transform.localPosition =
-                        new Vector3(o.transform.localPosition.x,
-                            o.transform.localPosition.y + (3.0f * o.GetComponent<ArgumentContainer>().Height / 32.0f),
+                        new Vector3(bestObject.transform.localPosition.x,
+                            bestObject.transform.localPosition.y +
+                            (3.0f * bestObject.GetComponent<ArgumentContainer>().Height / 32.0f),
                             -0.01f);
-                    break;
-                }                
+                }
             } else {
-                for (int i = cursorX - 1; i >= 0; i--) {
-                    if (openArgumentSlots[cursorY, i] == null ||
-                        !openArgumentSlots[cursorY, i].Type.Equals(SelectedExpression.GetComponent<ArgumentContainer>().Argument.Type)) {
-                        continue;
-                    }
+                for (int i = 0; i < slotsY; i++) {
+                    for (int j = 0; j < cursorX; j++) {
+                        if (openArgumentSlots[i, j] == null ||
+                            !openArgumentSlots[i, j].Type.Equals(SelectedExpression.GetComponent<ArgumentContainer>().Argument.Type)) {
+                            continue;
+                        }
 
-                    cursorX = i;
+                        int dx = j - cursorX;
+                        int dy = i - cursorY;
+
+                        int norm = (dx * dx) + (dy * dy);
+
+                        if (norm < bestNorm) {
+                            bestX = j;
+                            bestY = i;
+                            bestNorm = norm;
+                        }
+                    }
+                }
+
+                if (bestX != -1 && bestY != -1) {
+                    cursorX = bestX;
+                    cursorY = bestY;
+
                     Pointer.transform.localPosition =
                         new Vector3(0.95f * (-0.5f + 1 / 16.0f + 0.125f * cursorX),
                             0.95f * ((0.5f + 1 / 16.0f) - 0.125f * cursorY), -0.02f);
-                    break;
                 }
             }
         }
@@ -292,33 +369,72 @@ public class WorkspaceController : MonoBehaviour
         // from the current expression
         if (Input.GetAxis("Vertical") < 0 && Time.time - lastStepVertical > timeBetweenSteps) {
             lastStepVertical = Time.time;
+
+            int bestX = -1;
+            int bestY = -1;
+            int bestNorm = int.MaxValue;
+            GameObject bestObject = null;
             if (SelectedExpression == null) {
                 GameObject currentlySelected = slots[cursorY, cursorX];
-                for (int i = cursorY; i < slotsY; i++) {
-                    GameObject o = slots[i, cursorX];
-                    if (o == null || o == currentlySelected) {
-                        continue;
-                    }
+                for (int i = cursorY + 1; i < slotsY; i++) {
+                    for (int j = 0; j < slotsX; j++) {
+                        GameObject o = slots[i, j];
+                        if (o == null || o == currentlySelected) {
+                            continue;
+                        }
 
-                    cursorY = i;
+                        int dx = j - cursorX;
+                        int dy = i - cursorY;
+
+                        int norm = (dx * dx) + (dy * dy);
+
+                        if (norm < bestNorm) {
+                            bestX = j;
+                            bestY = i;
+                            bestNorm = norm;
+                            bestObject = o;
+                        }
+                    }
+                }
+
+                if (bestX != -1 && bestY != -1) {
+                    cursorX = bestX;
+                    cursorY = bestY;
+                
                     Pointer.transform.localPosition =
-                        new Vector3(o.transform.localPosition.x,
-                            o.transform.localPosition.y + (3.0f * o.GetComponent<ArgumentContainer>().Height / 32.0f),
+                        new Vector3(bestObject.transform.localPosition.x,
+                            bestObject.transform.localPosition.y +
+                            (3.0f * bestObject.GetComponent<ArgumentContainer>().Height / 32.0f),
                             -0.01f);
-                    break;
-                }                
+                }
             } else {
                 for (int i = cursorY + 1; i < slotsY; i++) {
-                    if (openArgumentSlots[i, cursorX] == null ||
-                        !openArgumentSlots[i, cursorX].Type.Equals(SelectedExpression.GetComponent<ArgumentContainer>().Argument.Type)) {
-                        continue;
-                    }
+                    for (int j = 0; j < slotsX; j++) {
+                        if (openArgumentSlots[i, j] == null ||
+                            !openArgumentSlots[i, j].Type.Equals(SelectedExpression.GetComponent<ArgumentContainer>().Argument.Type)) {
+                            continue;
+                        }
 
-                    cursorY = i;
+                        int dx = j - cursorX;
+                        int dy = i - cursorY;
+
+                        int norm = (dx * dx) + (dy * dy);
+
+                        if (norm < bestNorm) {
+                            bestX = j;
+                            bestY = i;
+                            bestNorm = norm;
+                        }
+                    }
+                }
+
+                if (bestX != -1 && bestY != -1) {
+                    cursorX = bestX;
+                    cursorY = bestY;
+
                     Pointer.transform.localPosition =
                         new Vector3(0.95f * (-0.5f + 1 / 16.0f + 0.125f * cursorX),
                             0.95f * ((0.5f + 1 / 16.0f) - 0.125f * cursorY), -0.02f);
-                    break;
                 }
             }
         }
@@ -327,33 +443,72 @@ public class WorkspaceController : MonoBehaviour
         // from the current expression
         if (Input.GetAxis("Vertical") > 0 && Time.time - lastStepVertical > timeBetweenSteps) {
             lastStepVertical = Time.time;
+
+            int bestX = -1;
+            int bestY = -1;
+            int bestNorm = int.MaxValue;
+            GameObject bestObject = null;
             if (SelectedExpression == null) {
                 GameObject currentlySelected = slots[cursorY, cursorX];
-                for (int i = cursorY; i >= 0; i--) {
-                    GameObject o = slots[i, cursorX];
-                    if (o == null || o == currentlySelected) {
-                        continue;
-                    }
+                for (int i = 0; i < cursorY; i++) {
+                    for (int j = 0; j < slotsX; j++) {
+                        GameObject o = slots[i, j];
+                        if (o == null || o == currentlySelected) {
+                            continue;
+                        }
 
-                    cursorY = i;
+                        int dx = j - cursorX;
+                        int dy = i - cursorY;
+
+                        int norm = (dx * dx) + (dy * dy);
+
+                        if (norm < bestNorm) {
+                            bestX = j;
+                            bestY = i;
+                            bestNorm = norm;
+                            bestObject = o;
+                        }
+                    }
+                }
+
+                if (bestX != -1 && bestY != -1) {
+                    cursorX = bestX;
+                    cursorY = bestY;
+                
                     Pointer.transform.localPosition =
-                        new Vector3(o.transform.localPosition.x,
-                            o.transform.localPosition.y + (3.0f * o.GetComponent<ArgumentContainer>().Height / 32.0f),
+                        new Vector3(bestObject.transform.localPosition.x,
+                            bestObject.transform.localPosition.y +
+                            (3.0f * bestObject.GetComponent<ArgumentContainer>().Height / 32.0f),
                             -0.01f);
-                    break;
                 }
             } else {
-                for (int i = cursorY - 1; i >= 0; i--) {
-                    if (openArgumentSlots[i, cursorX] == null ||
-                        !openArgumentSlots[i, cursorX].Type.Equals(SelectedExpression.GetComponent<ArgumentContainer>().Argument.Type)) {
-                        continue;
-                    }
+                for (int i = 0; i < cursorY; i++) {
+                    for (int j = 0; j < slotsX; j++) {
+                        if (openArgumentSlots[i, j] == null ||
+                            !openArgumentSlots[i, j].Type.Equals(SelectedExpression.GetComponent<ArgumentContainer>().Argument.Type)) {
+                            continue;
+                        }
 
-                    cursorY = i;
+                        int dx = j - cursorX;
+                        int dy = i - cursorY;
+
+                        int norm = (dx * dx) + (dy * dy);
+
+                        if (norm < bestNorm) {
+                            bestX = j;
+                            bestY = i;
+                            bestNorm = norm;
+                        }
+                    }
+                }
+
+                if (bestX != -1 && bestY != -1) {
+                    cursorX = bestX;
+                    cursorY = bestY;
+
                     Pointer.transform.localPosition =
                         new Vector3(0.95f * (-0.5f + 1 / 16.0f + 0.125f * cursorX),
                             0.95f * ((0.5f + 1 / 16.0f) - 0.125f * cursorY), -0.02f);
-                    break;
                 }
             }
         }
