@@ -708,9 +708,8 @@ public class Expression : Argument {
     public static readonly Expression ASSERT = new Expression(new Constant(TRUTH_ASSERTION_FUNCTION, "assert"));
 
     // assertion constants
-    public static readonly Expression YES = new Expression(new Constant(ASSERTION, "yes"));
-    public static readonly Expression NO  = new Expression(new Constant(ASSERTION, "no"));
-    public static readonly Expression OK  = new Expression(new Constant(ASSERTION, "ok"));
+    public static readonly Expression YES = new Expression(new Constant(ASSERTION, "assert"));
+    public static readonly Expression NO  = new Expression(new Constant(ASSERTION, "deny"));
 
     // conformity constants
     public static readonly Expression CONFIRM = new Expression(new Constant(CONFORMITY_VALUE, "confirm"));

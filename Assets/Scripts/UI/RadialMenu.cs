@@ -24,7 +24,6 @@ public class RadialMenu : MonoBehaviour {
                 NEUTRAL.Head as Constant
             },
             [ASSERTION] = new HashSet<Constant> {
-                OK.Head  as Constant,
                 YES.Head as Constant,
                 NO.Head  as Constant
             },

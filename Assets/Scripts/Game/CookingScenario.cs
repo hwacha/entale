@@ -76,7 +76,7 @@ public class CookingScenario : MonoBehaviour
             if (inputWord != null) {
                 switch (stage) {
                     case 1:
-                        if (inputWord.Equals(OK.Head)) {
+                        if (inputWord.Equals(YES.Head)) {
                         } else {
                             break;
                         }
@@ -111,7 +111,7 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 4:
-                        if (inputWord.Equals(OK.Head)) {
+                        if (inputWord.Equals(YES.Head)) {
                         } else {
                             break;
                         }
@@ -120,7 +120,7 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 5:
-                        if (inputWord.Equals(OK.Head)) {
+                        if (inputWord.Equals(YES.Head)) {
                         } else {
                             break;
                         }
@@ -129,7 +129,7 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 6:
-                        if (inputWord.Equals(OK.Head)) {
+                        if (inputWord.Equals(YES.Head)) {
                         } else {
                             break;
                         }
@@ -162,7 +162,7 @@ public class CookingScenario : MonoBehaviour
                         stage_shown = false;
                         break;
                     case 9:
-                        if (inputWord.Equals(OK.Head)) {
+                        if (inputWord.Equals(YES.Head)) {
                         } else {
                             break;
                         }
@@ -186,7 +186,7 @@ public class CookingScenario : MonoBehaviour
                     npc.GetComponent<Transform>()
                 );
                 radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
                 };
                 stage_shown = true;
                 break;
@@ -225,7 +225,7 @@ public class CookingScenario : MonoBehaviour
                     npc.GetComponent<Transform>()
                 );
                 radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
                 };
                 stage_shown = true;
                 break;
@@ -238,7 +238,7 @@ public class CookingScenario : MonoBehaviour
                     npc.GetComponent<Transform>()
                 );
                 radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
                 };
                 stage_shown = true;
                 break;
@@ -251,7 +251,7 @@ public class CookingScenario : MonoBehaviour
                     npc.GetComponent<Transform>()
                 );
                 radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
                 };
                 stage_shown = true;
                 break;
@@ -293,7 +293,7 @@ public class CookingScenario : MonoBehaviour
                         npc.GetComponent<Transform>()
                     );
                     radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                        [ASSERTION] = new HashSet<Constant>{OK.Head as Constant}
+                        [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
                     };
                 }
                 stage_shown = true;
