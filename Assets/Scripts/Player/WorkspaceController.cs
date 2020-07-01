@@ -618,18 +618,16 @@ public class WorkspaceController : MonoBehaviour
                         0 | ~0);
 
                     if (collided) {
-                        var o = hit.transform.gameObject;
-
-                        Debug.Log(o);
+                        var targetedObject = hit.transform.gameObject;
                         // @Note the object should be displayed
                         // and received by other NPC's sensors,
                         // not sent directly. But this is less
                         // error-prone to start out with.
-                        var m = o.GetComponent<MentalState>();
-                        Debug.Log(m);
+                        var targetedMentalState = targetedObject.GetComponent<MentalState>();
 
-                        if (m != null) {
-                            m.StartCoroutine(m.Assert(new Expression(Expression.SAY, Expression.CHARLIE,
+                        if (targetedMentalState != null) {
+                            targetedMentalState.StartCoroutine(targetedMentalState.Assert(
+                                new Expression(Expression.SAY, Expression.CHARLIE,
                                 EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression)));
 
                             Destroy(EquippedExpression);

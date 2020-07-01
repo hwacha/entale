@@ -681,6 +681,9 @@ public class Expression : Argument {
     public static readonly Expression PERCEPTUALLY_CLOSED =
         new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
 
+    // determiners
+    public static readonly Expression SELECTOR = new Expression(new Constant(DETERMINER, "selector"));
+
     // quantifiers
     public static readonly Expression SOME = new Expression(new Constant(QUANTIFIER, "some"));
     public static readonly Expression ALL  = new Expression(new Constant(QUANTIFIER, "all"));
@@ -715,5 +718,5 @@ public class Expression : Argument {
     public static readonly Expression CONFIRM = new Expression(new Constant(CONFORMITY_VALUE, "confirm"));
 
     // heads for deictic expressions
-    public static readonly Constant THAT = new Constant(INDIVIDUAL, "that");
+    public static readonly Expression THIS = new Expression(new Constant(INDIVIDUAL, "this"));
 }

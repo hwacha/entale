@@ -13,7 +13,7 @@ public class RadialMenu : MonoBehaviour {
     public Camera playerCamera;
     MouseLook playerMouseLook;
     const double INITIAL_ANGLE_OFFSET = Math.PI / 2f;
-    const double RADIUS = 100;
+    const double RADIUS = 150;
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
 
     public Dictionary<SemanticType, HashSet<Constant>> Lexicon =
@@ -30,9 +30,20 @@ public class RadialMenu : MonoBehaviour {
             [CONFORMITY_VALUE] = new HashSet<Constant> {
                 CONFIRM.Head as Constant
             },
+            [TRUTH_ASSERTION_FUNCTION] = new HashSet<Constant> {
+                ASSERT.Head as Constant
+            },
+            [TRUTH_QUESTION_FUNCTION] = new HashSet<Constant> {
+                ASK.Head as Constant
+            },
+            [TRUTH_CONFORMITY_FUNCTION] = new HashSet<Constant> {
+                WILL.Head as Constant,
+                WOULD.Head as Constant
+            },
             [INDIVIDUAL] = new HashSet<Constant> {
                 SELF.Head as Constant,
-                BOB.Head  as Constant
+                BOB.Head  as Constant,
+                THIS.Head as Constant
             },
             [PREDICATE] = new HashSet<Constant> {
                 RED.Head  as Constant,
@@ -41,6 +52,9 @@ public class RadialMenu : MonoBehaviour {
             [RELATION_2] = new HashSet<Constant> {
                 IDENTITY.Head as Constant,
                 AT.Head       as Constant
+            },
+            [DETERMINER] = new HashSet<Constant> {
+                SELECTOR.Head as Constant
             },
             [TRUTH_FUNCTION] = new HashSet<Constant> {
                 TRULY.Head as Constant,
