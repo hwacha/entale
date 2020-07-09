@@ -16,6 +16,7 @@ public class Sensor : MonoBehaviour {
 
     #region Fields
         public Transform FullBodyTransform;
+        public bool SensorActive = false;
     #endregion
 
     // @Note for separate sense modalities,
@@ -62,33 +63,35 @@ public class Sensor : MonoBehaviour {
             // Here, we can assert whatever information
             // we gather from this raycast hit.
             void OnCollision(RaycastHit theHit) {
-                visibleObjects.Add(theHit.transform.gameObject);
+                if (SensorActive) {
+                    visibleObjects.Add(theHit.transform.gameObject);
 
-                var position = theHit.transform.gameObject.transform.position;
+                    var position = theHit.transform.gameObject.transform.position;
 
-                Expression param = null;
+                    Expression param = null;
 
-                // @Note this is linear search. Not great. Change data structure later.
-                foreach (var nameAndLocation in Agent.MentalState.Locations) {
-                    if (position == nameAndLocation.Value) {
-                        param = nameAndLocation.Key;
+                    // @Note this is linear search. Not great. Change data structure later.
+                    foreach (var nameAndLocation in Agent.MentalState.Locations) {
+                        if (position == nameAndLocation.Value) {
+                            param = nameAndLocation.Key;
+                        }
                     }
-                }
 
-                if (param == null) {
-                    param = new Expression(new Parameter(SemanticType.INDIVIDUAL, Agent.MentalState.GetNextParameterID()));    
-                    Agent.MentalState.Locations.Add(param, new Vector3(position.x, position.y, position.z));
-                }
+                    if (param == null) {
+                        param = new Expression(new Parameter(SemanticType.INDIVIDUAL, Agent.MentalState.GetNextParameterID()));    
+                        Agent.MentalState.Locations.Add(param, new Vector3(position.x, position.y, position.z));
+                    }
 
-                Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
-                    new Expression(PERCEIVE, SELF, new Expression(TREE, param))));
+                    Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
+                        new Expression(PERCEIVE, SELF, new Expression(TREE, param))));
+                }
             }
 
             if (collided) {
                 OnCollision(hit);
             }
 
-            Debug.DrawRay(transform.position, forwardDirection * 100, collided ? Color.blue : Color.white);
+            // Debug.DrawRay(transform.position, forwardDirection * 100, collided ? Color.blue : Color.white);
 
             for (int i = 1; i < NUM_RINGS + 1; i++) {
                 // @Note here, we randomize the raycast within
@@ -113,7 +116,7 @@ public class Sensor : MonoBehaviour {
                         out hit,
                         layerMask);
 
-                    Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, collided ? Color.blue : Color.white);
+                    // Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, collided ? Color.blue : Color.white);
 
                     if (collided && !visibleObjects.Contains(hit.transform.gameObject)) {
                         OnCollision(hit);

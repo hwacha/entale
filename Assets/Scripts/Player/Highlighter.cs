@@ -27,7 +27,7 @@ public class Highlighter : MonoBehaviour {
 
     void Update() {
         // Space bar toggles hightlighting mode.
-        if (Input.GetButtonDown("Jump")) {
+        if (Input.GetButtonDown("Submit")) {
             currHighlightIndex = (currHighlightIndex + 1) % (highlightIndexCount + 1);
             if (currHighlightIndex == highlightIndexCount) {
                 highlightModePanel.color = Color.white;

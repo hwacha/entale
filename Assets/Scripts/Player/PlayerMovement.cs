@@ -5,13 +5,29 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour {
     public CharacterController controller;
 
-    public float speed = 12f;
+    public float jumpSpeed = 20;
+    public float speed = 8;
+    public float g = -50;
+
+    private float dy = 0;
 
     void Update() {
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
+        float dx = Input.GetAxis("Horizontal");
+        float dz = Input.GetAxis("Vertical");
 
-        Vector3 move = Vector3.Normalize(transform.right * x + transform.forward * z);
-        controller.Move(move * speed * Time.deltaTime);
+        if (controller.isGrounded) {
+            if (Input.GetButton("Jump")) {
+                dy = jumpSpeed;
+            } else {
+                dy = 0;
+            }
+        } else {
+            dy += g * Time.deltaTime;
+        }
+
+        Vector3 move = Vector3.Normalize(transform.right * dx + transform.forward * dz) * speed;
+        move.y = dy;
+
+        controller.Move(move * Time.deltaTime);
     }
 }

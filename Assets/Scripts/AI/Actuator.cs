@@ -19,13 +19,11 @@ public class Actuator : MonoBehaviour {
         ArgumentContainer eContainerScript = eContainer.GetComponent<ArgumentContainer>();
 
         eContainerScript.GenerateVisual();
-        eContainer.transform.rotation = Agent.gameObject.transform.rotation;
-        eContainer.transform.Rotate(0, 180, 0);
-        eContainer.transform.position =
-            Agent.gameObject.transform.position +
-            2f * Vector3.up +
-            0.75f * Vector3.forward;
-        eContainer.transform.SetParent(Agent.gameObject.transform);
+
+        var display = Agent.gameObject.transform.Find("Display");
+        eContainer.transform.position = display.position;
+        eContainer.transform.rotation = display.rotation;
+        eContainer.transform.SetParent(display);
 
         yield return new WaitForSeconds(time);
         Destroy(eContainer);

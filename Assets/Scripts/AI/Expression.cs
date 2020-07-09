@@ -598,6 +598,7 @@ public class Expression : Argument {
     public static readonly Expression ALICE   = new Expression(new Constant(INDIVIDUAL, "alice"));
     public static readonly Expression BOB     = new Expression(new Constant(INDIVIDUAL, "bob"));
     public static readonly Expression CHARLIE = new Expression(new Constant(INDIVIDUAL, "charlie"));
+    public static readonly Expression EVAN = new Expression(new Constant(INDIVIDUAL, "evan"));
     public static readonly Expression SOUP = new Expression(new Constant(INDIVIDUAL, "soup"));
     public static readonly Expression SWEETBERRY = new Expression(new Constant(INDIVIDUAL, "sweetberry"));
     public static readonly Expression SPICYBERRY = new Expression(new Constant(INDIVIDUAL, "spicyberry"));

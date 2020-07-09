@@ -10,7 +10,10 @@ public class Bob : Agent
     protected override void Start()
     {
         MentalState.Initialize(
-            new Expression(BETTER, new Expression(SOME, TREE, new Expression(AT, SELF)), NEUTRAL)
+            new Expression(IDENTITY, SELF, BOB),
+            new Expression(RED, SELF),
+            new Expression(BLUE, EVAN)
+            //new Expression(BETTER, new Expression(SOME, TREE, new Expression(AT, SELF)), NEUTRAL)
             );
 
         base.Start();
