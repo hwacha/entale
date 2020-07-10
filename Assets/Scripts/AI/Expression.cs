@@ -628,6 +628,8 @@ public class Expression : Argument {
     public static readonly Expression SPICY = new Expression(new Constant(PREDICATE, "spicy"));
     public static readonly Expression SWEET = new Expression(new Constant(PREDICATE, "sweet"));
     public static readonly Expression TREE = new Expression(new Constant(PREDICATE, "tree"));
+    public static readonly Expression TOMATO = new Expression(new Constant(PREDICATE, "tomato"));
+    public static readonly Expression BANANA = new Expression(new Constant(PREDICATE, "banana"));
 
     // a predicate that applies to any individual
     public static readonly Expression VEROUS = new Expression(new Constant(PREDICATE, "verous"));

@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 5244210030562154040}
   - component: {fileID: 8303696902887779378}
   m_Layer: 0
-  m_Name: RadialMenuItem
+  m_Name: radial_menu_item
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -89,6 +89,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
+  m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []

@@ -14,6 +14,11 @@ public class Evan : Agent
             new Expression(BLUE, SELF),
             new Expression(RED, BOB));
 
+        var banana = GameObject.Find("Banana");
+        var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
+
+        MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER, new Expression(AT, SELF, bananaParam), NEUTRAL)));
+
         base.Start();
     }
 }

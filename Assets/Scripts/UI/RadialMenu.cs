@@ -47,7 +47,9 @@ public class RadialMenu : MonoBehaviour {
             },
             [PREDICATE] = new HashSet<Constant> {
                 RED.Head  as Constant,
-                BLUE.Head as Constant
+                BLUE.Head as Constant,
+                TOMATO.Head as Constant,
+                BANANA.Head as Constant
             },
             [RELATION_2] = new HashSet<Constant> {
                 IDENTITY.Head as Constant,

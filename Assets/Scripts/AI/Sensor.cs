@@ -68,22 +68,8 @@ public class Sensor : MonoBehaviour {
 
                     var position = theHit.transform.gameObject.transform.position;
 
-                    Expression param = null;
-
-                    // @Note this is linear search. Not great. Change data structure later.
-                    foreach (var nameAndLocation in Agent.MentalState.Locations) {
-                        if (position == nameAndLocation.Value) {
-                            param = nameAndLocation.Key;
-                        }
-                    }
-
-                    if (param == null) {
-                        param = new Expression(new Parameter(SemanticType.INDIVIDUAL, Agent.MentalState.GetNextParameterID()));    
-                        Agent.MentalState.Locations.Add(param, new Vector3(position.x, position.y, position.z));
-                    }
-
-                    Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
-                        new Expression(PERCEIVE, SELF, new Expression(TREE, param))));
+                    // TODO find a way to make the characteristic depend on the game object
+                    Agent.MentalState.ConstructPercept(TREE, position);
                 }
             }
 

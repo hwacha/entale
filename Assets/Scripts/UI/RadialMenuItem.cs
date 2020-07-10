@@ -9,13 +9,13 @@ using static Icons;
 
 public class RadialMenuItem : MonoBehaviour
 {
-    Outline outline;
+    UnityEngine.UI.Outline outline;
     Image Icon;
     public SemanticType semanticType { get; set; }
     public Constant constant { get; set; }
 
     void Awake() {
-        outline = GetComponent<Outline>();
+        outline = GetComponent<UnityEngine.UI.Outline>();
         Icon = GetComponent<Image>();
         Unhighlight();
     }

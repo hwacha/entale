@@ -15,7 +15,10 @@ public class Actuator : MonoBehaviour {
     }
 
     protected IEnumerator Say(Expression e, float time) {
-        GameObject eContainer = ArgumentContainer.From(e);
+
+        Expression eWithoutParameters = Agent.MentalState.ReplaceParameters(e);
+
+        GameObject eContainer = ArgumentContainer.From(eWithoutParameters);
         ArgumentContainer eContainerScript = eContainer.GetComponent<ArgumentContainer>();
 
         eContainerScript.GenerateVisual();

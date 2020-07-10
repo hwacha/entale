@@ -11,10 +11,9 @@ using static InferenceRule;
 using UnityEngine;
 
 using Substitution = System.Collections.Generic.Dictionary<Variable, Expression>;
-using Basis =
-    System.Collections.Generic.KeyValuePair
-        <System.Collections.Generic.List<Expression>,
-        System.Collections.Generic.Dictionary<Variable, Expression>>;
+using Basis = System.Collections.Generic.KeyValuePair<System.Collections.Generic.List<Expression>,
+    System.Collections.Generic.Dictionary<Variable, Expression>>;
+
 
 // The prover and the planner each use the same inference mechanism,
 // so this enum specifies some parameters to it.
@@ -73,7 +72,7 @@ public class MentalState : MonoBehaviour {
     // private HashSet<Expression> BeliefBase = new HashSet<Expression>();
     private Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>> BeliefBase;
 
-    // @Note we may want to replace this with another 'private quantity' scheme like
+    // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
     // explicitly in the language.
     // 
@@ -776,6 +775,80 @@ public class MentalState : MonoBehaviour {
         answer.Item = bases.Count > 0;
         queryDone.Item = true;
         yield break;
+    }
+
+    // the characteristic should be a predicate
+    // NOTE: (or formula with one free variable, TODO)
+    // that captures its mode of presentation
+    // 
+    // returns true if the object represented already
+    // is found within the model, false otherwise.
+    // 
+    // either way, a percept with
+    // the given characteristic is asserted.
+    public Expression ConstructPercept(Expression characteristic, Vector3 location) {
+        Debug.Assert(characteristic.Type.Equals(PREDICATE));
+
+        Expression param = null;
+
+        // @Note this is linear search. Not great. Change data structure later.
+        foreach (var nameAndLocation in Locations) {
+            if (location == nameAndLocation.Value) {
+                param = nameAndLocation.Key;
+            }
+        }
+
+        if (param == null) {
+            param = new Expression(new Parameter(SemanticType.INDIVIDUAL, GetNextParameterID()));
+            Locations.Add(param, new Vector3(location.x, location.y, location.z));
+        }
+
+        // @NOTE once tense is implemented, this shouldn't be an assertion, and
+        // should just be added directly to the belief base.
+        StartCoroutine(Assert(new Expression(PERCEIVE, SELF, new Expression(characteristic, param))));
+
+        return param;
+    }
+
+    // TODO: finish this
+
+    // removes all parameters from the expression e
+    // and replaces them with demonstrative expressions, determiners, etc.
+    public Expression ReplaceParameters(Expression e) {
+        HashSet<Expression> parameters = new HashSet<Expression>();
+
+        // for now, we assume every
+        // parameter has type e
+        if (e.Head is Parameter) {
+            Debug.Assert(e.Head.Type.Equals(INDIVIDUAL));
+
+            var simplePredications = BeliefBase[PREDICATE];
+
+            // here, we try to find the simplest and soonest determiner expression.
+            foreach (var predicateAndSentences in simplePredications) {
+                var targetSentence = new Expression(new Expression(predicateAndSentences.Key), e);
+                foreach (var sentence in predicateAndSentences.Value) {
+                    if (targetSentence.Equals(sentence)) {
+                        return new Expression(SELECTOR, new Expression(predicateAndSentences.Key));
+                    }
+                }
+            }
+
+            // if we fail, there's always the empty predicate. Or, 'that'
+            return THIS;
+        }
+
+        var newArgs = new Expression[e.NumArgs];
+
+        for (int i = 0; i < e.NumArgs; i++) {
+            if (e.GetArg(i) is Empty) {
+                continue;
+            }
+
+            newArgs[i] = ReplaceParameters((Expression) e.GetArg(i));
+        }
+
+        return new Expression(new Expression(e.Head), newArgs);
     }
 
     // Asserts a sentence to this mental state.
