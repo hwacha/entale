@@ -420,8 +420,7 @@ public class MentalState : MonoBehaviour {
         int numRoutines = 0;
 
         // a function for handling inference rules
-        IEnumerator ApplyInferenceRule(InferenceRule rule)
-        {
+        IEnumerator ApplyInferenceRule(InferenceRule rule) {
             numRoutines++;
 
             Expression[] premises = new Expression[rule.Premises.Length];
@@ -656,7 +655,7 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(CLOSED_QUESTION_ASSUMPTION));
         StartCoroutine(ApplyInferenceRule(PERCEPTUALLY_CLOSED_ASSUMPTION));
 
-        // @BUG this rule cause planning not to work.
+        // @BUG this rule causes planning not to work.
         // StartCoroutine(ApplyInferenceRule(SYMMETRY_OF_LOCATION));
 
         StartCoroutine(ApplyInferenceRule(SOMETIMES_INTRODUCTION));
@@ -680,7 +679,7 @@ public class MentalState : MonoBehaviour {
             // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
             // StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
             // StartCoroutine(ApplyInferenceRule(MODUS_TOLLENS));
-            StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
+            // StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
             
             // StartCoroutine(ApplyInferenceRule(CONVERSE_ELIMINATION));
             // StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_ELIMINATION));
@@ -814,28 +813,39 @@ public class MentalState : MonoBehaviour {
 
     // removes all parameters from the expression e
     // and replaces them with demonstrative expressions, determiners, etc.
-    public Expression ReplaceParameters(Expression e) {
-        HashSet<Expression> parameters = new HashSet<Expression>();
-
+    public IEnumerator ReplaceParameters(Expression e, Container<Expression> result) {
         // for now, we assume every
         // parameter has type e
         if (e.Head is Parameter) {
             Debug.Assert(e.Head.Type.Equals(INDIVIDUAL));
 
-            var simplePredications = BeliefBase[PREDICATE];
+            var fc = new Expression(PERCEIVE, SELF, new Expression(FET, e));
 
-            // here, we try to find the simplest and soonest determiner expression.
-            foreach (var predicateAndSentences in simplePredications) {
-                var targetSentence = new Expression(new Expression(predicateAndSentences.Key), e);
-                foreach (var sentence in predicateAndSentences.Value) {
-                    if (targetSentence.Equals(sentence)) {
-                        return new Expression(SELECTOR, new Expression(predicateAndSentences.Key));
-                    }
+            var fcBases = new HashSet<Basis>();
+            var done = new Container<bool>(false);
+
+            StartCoroutine(GetBases(Proof, fc, fcBases, done));
+
+            while (!done.Item) {
+                yield return null;
+            }
+
+            Expression bestPredicate = null;
+            foreach (var fcBasis in fcBases) {
+                var predicate = fcBasis.Value[FET.Head as Variable];
+                if (bestPredicate == null || predicate.Depth < bestPredicate.Depth) {
+                    bestPredicate = predicate;
                 }
             }
 
-            // if we fail, there's always the empty predicate. Or, 'that'
-            return THIS;
+            // if we fail, there's always 'this'
+            if (bestPredicate == null) {
+                result.Item = THIS;
+                yield break;
+            }
+
+            result.Item = new Expression(SELECTOR, bestPredicate);
+            yield break;
         }
 
         var newArgs = new Expression[e.NumArgs];
@@ -845,10 +855,19 @@ public class MentalState : MonoBehaviour {
                 continue;
             }
 
-            newArgs[i] = ReplaceParameters((Expression) e.GetArg(i));
+            Container<Expression> res = new Container<Expression>(null);
+
+            StartCoroutine(ReplaceParameters(e.GetArgAsExpression(i), res));
+
+            while (res.Item == null) {
+                yield return null;
+            }
+
+            newArgs[i] = res.Item;
         }
 
-        return new Expression(new Expression(e.Head), newArgs);
+        result.Item = new Expression(new Expression(e.Head), newArgs);
+        yield break;
     }
 
     // Asserts a sentence to this mental state.

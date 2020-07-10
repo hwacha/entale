@@ -253,16 +253,19 @@ public class Testing : MonoBehaviour {
         // );
 
         // StartCoroutine(TestAssertion());
-        MentalState.Initialize(
-            new Expression(AT, ALICE, BOB),
-            new Expression(NOT, new Expression(RED, ALICE)),
-            new Expression(BLUE, CHARLIE),
-            new Expression(GREEN, CHARLIE),
-            new Expression(BLUE, BOB),
-            new Expression(AT, BOB, CHARLIE),
-            new Expression(RED, SELF),
-            new Expression(Expression.QUANTIFIER_PHRASE_COORDINATOR_2,
-                AT, new Expression(ALL, RED), new Expression(ALL, GREEN)));
+        // MentalState.Initialize(
+        //     new Expression(AT, ALICE, BOB),
+        //     new Expression(NOT, new Expression(RED, ALICE)),
+        //     new Expression(BLUE, CHARLIE),
+        //     new Expression(GREEN, CHARLIE),
+        //     new Expression(BLUE, BOB),
+        //     new Expression(AT, BOB, CHARLIE),
+        //     new Expression(RED, SELF),
+        //     new Expression(Expression.QUANTIFIER_PHRASE_COORDINATOR_2,
+        //         AT, new Expression(ALL, RED), new Expression(ALL, GREEN)));
+        
+        MentalState.Initialize(new Expression(PERCEIVE, SELF, new Expression(RED, SELF)));
+        StartCoroutine(LogBases(MentalState, new Expression(FET, SELF)));
 
         // StartCoroutine(LogBases(MentalState, new Expression(AT, ALICE, BOB)));
 

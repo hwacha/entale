@@ -349,9 +349,9 @@ public class Expression : Argument {
         //     return AddAssignment((Variable) that.Head, this, substitutions);
         // }
 
-        // both head symbols are constants. We need to recur on arguments and
+        // both head symbols are constants or parameters. We need to recur on arguments and
         // collect results of unifying them.
-        if (this.Head is Constant && that.Head is Constant) {
+        if (!(this.Head is Variable) && !(that.Head is Variable)) {
             if (!this.Head.Equals(that.Head)) {
                 return new HashSet<Dictionary<Variable, Expression>>();
             }

@@ -16,9 +16,14 @@ public class Actuator : MonoBehaviour {
 
     protected IEnumerator Say(Expression e, float time) {
 
-        Expression eWithoutParameters = Agent.MentalState.ReplaceParameters(e);
+        var eWithoutParameters = new Container<Expression>(null);
+        Agent.MentalState.StartCoroutine(Agent.MentalState.ReplaceParameters(e, eWithoutParameters));
 
-        GameObject eContainer = ArgumentContainer.From(eWithoutParameters);
+        while (eWithoutParameters.Item == null) {
+            yield return null;
+        }
+
+        GameObject eContainer = ArgumentContainer.From(eWithoutParameters.Item);
         ArgumentContainer eContainerScript = eContainer.GetComponent<ArgumentContainer>();
 
         eContainerScript.GenerateVisual();
@@ -26,6 +31,7 @@ public class Actuator : MonoBehaviour {
         var display = Agent.gameObject.transform.Find("Display");
         eContainer.transform.position = display.position;
         eContainer.transform.rotation = display.rotation;
+        eContainer.transform.localScale *= 0.5f;
         eContainer.transform.SetParent(display);
 
         yield return new WaitForSeconds(time);
