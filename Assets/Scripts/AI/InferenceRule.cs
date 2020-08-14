@@ -256,6 +256,12 @@ public class InferenceRule
             new Expression[]{},
             new Expression[]{new Expression(AT, XE, ZE)});
 
+    public static readonly InferenceRule SPEECH_ABILITY =
+        new InferenceRule(
+            new Expression[]{},
+            new Expression[]{new Expression(ABLE, SELF, new Expression(SAY, SELF, ST))},
+            new Expression[]{new Expression(ABLE, SELF, new Expression(SAY, SELF, ST))});
+
     public static readonly InferenceRule CLOSED_QUESTION_ASSUMPTION =
         new InferenceRule(
             new Expression[]{new Expression(CLOSED, ST)},

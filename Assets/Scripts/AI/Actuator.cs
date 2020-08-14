@@ -56,7 +56,7 @@ public class Actuator : MonoBehaviour {
                     throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
                 }
 
-                StartCoroutine(Say(action, 1));
+                // StartCoroutine(Say(action, 1));
 
                 var content = action.GetArgAsExpression(0);
 
@@ -81,6 +81,11 @@ public class Actuator : MonoBehaviour {
                         }
                         NavMeshAgent.ResetPath();
                     }
+                }
+
+                else if (content.Head.Equals(SAY.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
+                    var message = content.GetArgAsExpression(1);
+                    StartCoroutine(Say(message, 3));
                 }
 
                 var iTried = new Expression(TRIED, SELF, content);

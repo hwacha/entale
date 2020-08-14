@@ -661,6 +661,8 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(SOMETIMES_INTRODUCTION));
         StartCoroutine(ApplyInferenceRule(Contrapose(PERCEPTUAL_BELIEF)));
 
+        StartCoroutine(ApplyInferenceRule(SPEECH_ABILITY));
+
         if (FrameTimer.FrameDuration >= TIME_BUDGET) {
             yield return null;
         }
