@@ -18,31 +18,31 @@ public class RadialMenu : MonoBehaviour {
 
     public Dictionary<SemanticType, HashSet<Constant>> Lexicon =
         new Dictionary<SemanticType, HashSet<Constant>> {
-            [TRUTH_VALUE] = new HashSet<Constant> {
-                VERUM.Head as Constant,
-                FALSUM.Head as Constant,
-                NEUTRAL.Head as Constant
-            },
-            [ASSERTION] = new HashSet<Constant> {
-                YES.Head as Constant,
-                NO.Head  as Constant
-            },
-            [CONFORMITY_VALUE] = new HashSet<Constant> {
-                CONFIRM.Head as Constant
-            },
-            [TRUTH_ASSERTION_FUNCTION] = new HashSet<Constant> {
-                ASSERT.Head as Constant
-            },
-            [TRUTH_QUESTION_FUNCTION] = new HashSet<Constant> {
-                ASK.Head as Constant
-            },
-            [TRUTH_CONFORMITY_FUNCTION] = new HashSet<Constant> {
-                WILL.Head as Constant,
-                WOULD.Head as Constant
-            },
+            // [TRUTH_VALUE] = new HashSet<Constant> {
+            //     VERUM.Head as Constant,
+            //     FALSUM.Head as Constant,
+            //     NEUTRAL.Head as Constant
+            // },
+            // [ASSERTION] = new HashSet<Constant> {
+            //     YES.Head as Constant,
+            //     NO.Head  as Constant
+            // },
+            // [CONFORMITY_VALUE] = new HashSet<Constant> {
+            //     CONFIRM.Head as Constant
+            // },
+            // [TRUTH_ASSERTION_FUNCTION] = new HashSet<Constant> {
+            //     ASSERT.Head as Constant
+            // },
+            // [TRUTH_QUESTION_FUNCTION] = new HashSet<Constant> {
+            //     ASK.Head as Constant
+            // },
+            // [TRUTH_CONFORMITY_FUNCTION] = new HashSet<Constant> {
+            //     WILL.Head as Constant,
+            //     WOULD.Head as Constant
+            // },
             [INDIVIDUAL] = new HashSet<Constant> {
                 SELF.Head as Constant,
-                BOB.Head  as Constant,
+                // BOB.Head  as Constant,
                 THIS.Head as Constant
             },
             [PREDICATE] = new HashSet<Constant> {
@@ -58,24 +58,24 @@ public class RadialMenu : MonoBehaviour {
             [DETERMINER] = new HashSet<Constant> {
                 SELECTOR.Head as Constant
             },
-            [TRUTH_FUNCTION] = new HashSet<Constant> {
-                TRULY.Head as Constant,
-                NOT.Head as Constant
-            },
-            [TRUTH_FUNCTION_2] = new HashSet<Constant> {
-                AND.Head as Constant,
-                OR.Head  as Constant,
-                IF.Head  as Constant,
-                BETTER.Head as Constant,
-                AS_GOOD_AS.Head  as Constant
-            },
-            [INDIVIDUAL_TRUTH_RELATION] = new HashSet<Constant> {
-                BELIEVE.Head as Constant,
-            },
-            [QUANTIFIER] = new HashSet<Constant> {
-                SOME.Head as Constant,
-                ALL.Head as Constant
-            }
+            // [TRUTH_FUNCTION] = new HashSet<Constant> {
+            //     TRULY.Head as Constant,
+            //     NOT.Head as Constant
+            // },
+            // [TRUTH_FUNCTION_2] = new HashSet<Constant> {
+            //     AND.Head as Constant,
+            //     OR.Head  as Constant,
+            //     IF.Head  as Constant,
+            //     BETTER.Head as Constant,
+            //     AS_GOOD_AS.Head  as Constant
+            // },
+            // [INDIVIDUAL_TRUTH_RELATION] = new HashSet<Constant> {
+            //     BELIEVE.Head as Constant,
+            // },
+            // [QUANTIFIER] = new HashSet<Constant> {
+            //     SOME.Head as Constant,
+            //     ALL.Head as Constant
+            // }
         };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
 
