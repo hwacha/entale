@@ -69,8 +69,6 @@ public class MentalState : MonoBehaviour {
 
     protected uint ParameterID;
 
-    protected ulong Timestamp;
-
     // private HashSet<Expression> BeliefBase = new HashSet<Expression>();
     private Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>> BeliefBase;
 
