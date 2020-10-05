@@ -80,7 +80,7 @@ public class MentalState : MonoBehaviour {
     // 
     // @Note: this should be a readonly collection to all outside this
     // class, but I don't know how the access modifiers work on that.
-    // I'll just make it public or now.
+    // I'll just make it public for now.
     // 
     public Dictionary<Expression, Vector3> Locations;
     int MaxDepth = 0;
