@@ -50,52 +50,6 @@ public class Parameter : Atom {
     public Parameter(SemanticType type, uint id) : base(type, "$" + id.ToString()) {}
 }
 
-// UNCOMMENT THIS if you decide to use internally represented vectors in sentences
-// instead of using numeric values in mental state.
-public class Vector : Atom {
-    private static String ToString(SemanticType type, float[] components) {
-        StringBuilder s = new StringBuilder();
-        s.Append("<");
-        for (int i = 0; i < components.Length; i++) {
-            s.Append(components[i] + ",");
-        }
-        s.Append("> #" + type);
-
-        return s.ToString();
-    }
-
-    protected float[] Components;
-    public Vector(SemanticType type, float[] components) : base(type, ToString(type, components)) {
-        Components = components;
-    }
-
-    public override bool Equals(Object o) {
-        if (!(o is Vector)) {
-            return false;
-        }
-
-        Vector that = o as Vector;
-
-        if (!this.Type.Equals(that.Type)) {
-            return false;
-        }
-
-        if (this.Components.Length != that.Components.Length) {
-            return false;
-        }
-
-        for (int i = 0; i < this.Components.Length; i++) {
-            if (this.Components[i] != that.Components[i]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    // TODO make custom ToString() and GetHashCode() methods
-}
-
 // a wrapper for what can occur in the
 // argument position in an expression.
 public abstract class Argument {
@@ -729,6 +683,9 @@ public class Expression : Argument {
     public static readonly Expression TRIED = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "tried"));
     public static readonly Expression PERCEPTUALLY_CLOSED =
         new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
+
+    // @Note we might want to make this a 2-place truth function
+    public static readonly Expression WHEN = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "when"));
 
     // determiners
     public static readonly Expression SELECTOR = new Expression(new Constant(DETERMINER, "selector"));

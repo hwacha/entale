@@ -102,7 +102,7 @@ public class Sensor : MonoBehaviour {
                         out hit,
                         layerMask);
 
-                    // Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, collided ? Color.blue : Color.white);
+                    Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, collided ? Color.blue : Color.white);
 
                     if (collided && !visibleObjects.Contains(hit.transform.gameObject)) {
                         OnCollision(hit);

@@ -70,7 +70,8 @@ public class MentalState : MonoBehaviour {
     protected uint ParameterID;
 
     // private HashSet<Expression> BeliefBase = new HashSet<Expression>();
-    private Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>> BeliefBase;
+    private Dictionary<SemanticType, Dictionary<Atom,
+        Dictionary<Expression, SortedSet<uint>>>> BeliefBase;
 
     // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
@@ -81,9 +82,14 @@ public class MentalState : MonoBehaviour {
     // @Note: this should be a readonly collection to all outside this
     // class, but I don't know how the access modifiers work on that.
     // I'll just make it public for now.
-    // 
+    //
     public Dictionary<Expression, Vector3> Locations;
+    protected uint Timestamp = 1;
     int MaxDepth = 0;
+
+    void Update() {
+        Timestamp++;
+    }
 
     // @Note this doesn't check to see if
     // the initial belief set is inconsistent.
@@ -95,66 +101,107 @@ public class MentalState : MonoBehaviour {
         if (BeliefBase != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
-        BeliefBase = new Dictionary<SemanticType, Dictionary<Atom, HashSet<Expression>>>();
+        BeliefBase = new Dictionary<SemanticType, Dictionary<Atom,
+            Dictionary<Expression, SortedSet<uint>>>>();
+
         for (int i = 0; i < initialBeliefs.Length; i++) {
-            if (!Add(initialBeliefs[i])) {
+            if (!Add(initialBeliefs[i], 0)) {
                 throw new ArgumentException("MentalState(): expected sentences for belief base.");
             }
         }
     }
 
-    private bool Contains(Expression sentence) {
+    // this returns true if this model sampled
+    // sentence at the specified timestamp.
+    private bool Contains(Expression sentence, uint timestamp) {
         return BeliefBase.ContainsKey(sentence.Head.Type) &&
             BeliefBase[sentence.Head.Type].ContainsKey(sentence.Head) &&
-            BeliefBase[sentence.Head.Type][sentence.Head].Contains(sentence);
+            BeliefBase[sentence.Head.Type][sentence.Head].ContainsKey(sentence) &&
+            BeliefBase[sentence.Head.Type][sentence.Head][sentence].Contains(timestamp);
     }
 
-    // @Note this presupposes the belief is not a formula
-    // (it doesn't contain any variables)
-    private bool Add(Expression belief) {
-        if (belief.Type.Equals(TRUTH_VALUE)) {
-            if (!BeliefBase.ContainsKey(belief.Head.Type)) {
-                BeliefBase[belief.Head.Type] = new Dictionary<Atom, HashSet<Expression>>();
-            }
-            if (!BeliefBase[belief.Head.Type].ContainsKey(belief.Head)) {
-                BeliefBase[belief.Head.Type][belief.Head] = new HashSet<Expression>();
-            }
-            BeliefBase[belief.Head.Type][belief.Head].Add(belief);
-            if (belief.Depth > MaxDepth) {
-                MaxDepth = belief.Depth;
-            }
-            return true;
+    // returns false if this belief is already in the belief base
+    // at the given timestamp
+    private bool Add(Expression belief, uint timestamp) {
+        Debug.Assert(belief.Type.Equals(TRUTH_VALUE));
+        Debug.Assert(belief.GetVariables().Count == 0);
+
+        if (!BeliefBase.ContainsKey(belief.Head.Type)) {
+            BeliefBase[belief.Head.Type] =
+                new Dictionary<Atom, Dictionary<Expression, SortedSet<uint>>>();
         }
-        return false;
+        if (!BeliefBase[belief.Head.Type].ContainsKey(belief.Head)) {
+            BeliefBase[belief.Head.Type][belief.Head] =
+                new Dictionary<Expression, SortedSet<uint>>();
+        }
+
+        if (!BeliefBase[belief.Head.Type][belief.Head].ContainsKey(belief)) {
+            BeliefBase[belief.Head.Type][belief.Head][belief] =
+                new SortedSet<uint>();
+        }
+        if (BeliefBase[belief.Head.Type][belief.Head][belief].Contains(timestamp)) {
+            return false;
+        }
+
+        BeliefBase[belief.Head.Type][belief.Head][belief].Add(timestamp);
+
+        if (belief.Depth > MaxDepth) {
+            MaxDepth = belief.Depth;
+        }
+        return true;
     }
 
-    private bool Remove(Expression sentence) {
-        if (Contains(sentence)) {
-            BeliefBase[sentence.Head.Type][sentence.Head as Constant].Remove(sentence);
+    private bool Remove(Expression sentence, uint timestamp) {
+        if (Contains(sentence, timestamp)) {
+            var times = BeliefBase[sentence.Head.Type][sentence.Head as Constant][sentence];
+            
+            var removeSuccess = times.Remove(timestamp);
+
+            if (!removeSuccess) {
+                return false;
+            }
+
+            // @Note finish this code to remove a key from the belief base
+            // if it's value is empty. Right now it doesn't seem to break
+            // anything if it's left in.
+            // 
+            // if (times.Count == 0) {
+            //     BeliefBase[sentence.Head.Type][sentence.Head as Constant].Remove(sentence);
+            // }
+            
             return true;
         }
         return false;
     }
 
     // returns satisfiers in the belief base for this formula
-    private HashSet<Basis> Satisfiers(Expression formula) {
+    // at a given timestamp
+    private HashSet<Basis> Satisfiers(Expression formula, uint timestamp) {
         // first, we get the domain to search through.
         // this is going to correspond to all sentences
         // that are structural candidates for matching
         // the formula, given the structure of the formula's
         // variables and semantic types.
-        HashSet<Expression> domain = new HashSet<Expression>();
+        var domain = new HashSet<Expression>();
         if (formula.Head is Constant) {
             if (BeliefBase.ContainsKey(formula.Head.Type) &&
                 BeliefBase[formula.Head.Type].ContainsKey(formula.Head)) {
-                domain.UnionWith(BeliefBase[formula.Head.Type][formula.Head]);
+                foreach (var sentenceAndTimes in BeliefBase[formula.Head.Type][formula.Head]) {
+                    if (sentenceAndTimes.Value.Contains(timestamp)) {
+                        domain.Add(sentenceAndTimes.Key);
+                    }
+                }
             }
         }
 
         foreach (var typeMap in BeliefBase) {
             if (formula.Head.Type.IsPartialApplicationOf(typeMap.Key)) {
                 foreach (var beliefsByPrefix in typeMap.Value.Values) {
-                    domain.UnionWith(beliefsByPrefix);
+                    foreach (var sentenceAndTimes in beliefsByPrefix) {
+                        if (sentenceAndTimes.Value.Contains(timestamp)) {
+                            domain.Add(sentenceAndTimes.Key);
+                        }
+                    }
                 }
             }
         }
@@ -351,7 +398,7 @@ public class MentalState : MonoBehaviour {
         }
 
         // M's belief base has A => M |- A
-        if (Contains(goal)) {
+        if (Contains(goal, Timestamp)) {
             var premises = new List<Expression>();
             premises.Add(goal);
             alternativeBases.Add(new Basis(premises, new Substitution()));
@@ -363,7 +410,7 @@ public class MentalState : MonoBehaviour {
         } else {
             // in case the goal is a formula,
             // try to see if there are any satisfying instances in the belief base.
-            var satisfiers = Satisfiers(goal);
+            var satisfiers = Satisfiers(goal, Timestamp);
 
             if (satisfiers.Count != 0) {
                 alternativeBases.UnionWith(satisfiers);
@@ -806,7 +853,12 @@ public class MentalState : MonoBehaviour {
 
         // @NOTE once tense is implemented, this shouldn't be an assertion, and
         // should just be added directly to the belief base.
-        StartCoroutine(Assert(new Expression(PERCEIVE, SELF, new Expression(characteristic, param))));
+        //StartCoroutine(Assert(new Expression(PERCEIVE, SELF, new Expression(characteristic, param))));
+
+        Expression percept =
+            new Expression(PERCEIVE, SELF, new Expression(characteristic, param));
+        
+        Add(percept, Timestamp);
 
         return param;
     }
@@ -971,11 +1023,11 @@ public class MentalState : MonoBehaviour {
         // A is more plausible than
         // at least one premise in each proof.
         foreach (var weakPremise in weakestPremises) {
-            Remove(weakPremise);
+            Remove(weakPremise, Timestamp);
         }
 
         // now, we add A.
-        Add(assertion);
+        Add(assertion, Timestamp);
         yield break;
     }
 
@@ -994,12 +1046,16 @@ public class MentalState : MonoBehaviour {
         }
 
         // first, we get our domain of elements for which preferences are defined.
-        HashSet<Expression> preferencesInBeliefBase = BeliefBase[TRUTH_FUNCTION_2][BETTER.Head];
+        var preferencesInBeliefBase = BeliefBase[TRUTH_FUNCTION_2][BETTER.Head];
         var preferables = new HashSet<Expression>();
 
-        foreach (var preference in preferencesInBeliefBase) {
-            preferables.Add((Expression) preference.GetArg(0));
-            preferables.Add((Expression) preference.GetArg(1));
+        // @Note: we assume preferences are timestamped 0
+        // and are eternal. This should change, eventually.
+        foreach (var preferenceAndTimes in preferencesInBeliefBase) {
+            if (preferenceAndTimes.Value.Contains(0U)) {
+                preferables.Add((Expression) preferenceAndTimes.Key.GetArg(0));
+                preferables.Add((Expression) preferenceAndTimes.Key.GetArg(1));
+            }
         }
 
         // @Note: we'd probably want to consider AS_GOOD_AS in the future. For now,

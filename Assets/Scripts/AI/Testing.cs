@@ -264,8 +264,12 @@ public class Testing : MonoBehaviour {
         //     new Expression(Expression.QUANTIFIER_PHRASE_COORDINATOR_2,
         //         AT, new Expression(ALL, RED), new Expression(ALL, GREEN)));
         
-        MentalState.Initialize(new Expression(PERCEIVE, SELF, new Expression(RED, SELF)));
-        StartCoroutine(LogBases(MentalState, new Expression(FET, SELF)));
+        // MentalState.Initialize(new Expression(WHEN,
+        //     new Expression(new Vector(INDIVIDUAL, new float[]{(float) 0})),
+        //     new Expression(PERCEIVE, SELF, new Expression(RED, SELF))));
+        // StartCoroutine(LogBases(MentalState, new Expression(WHEN,
+        //     XE,
+        //     new Expression(PERCEIVE, SELF, new Expression(RED, SELF)))));
 
         // StartCoroutine(LogBases(MentalState, new Expression(AT, ALICE, BOB)));
 
