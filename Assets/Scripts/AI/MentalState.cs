@@ -14,6 +14,13 @@ using Substitution = System.Collections.Generic.Dictionary<Variable, Expression>
 using Basis = System.Collections.Generic.KeyValuePair<System.Collections.Generic.List<Expression>,
     System.Collections.Generic.Dictionary<Variable, Expression>>;
 
+// variant ways of quering the belief base
+// given a timestamp
+public enum TensedQueryType {
+    Exact, // directly query the exact timestamp
+    Inertial, // checks the most recent timestamp between P and ~P
+    Eventive // @TODO figure it out
+}
 
 // The prover and the planner each use the same inference mechanism,
 // so this enum specifies some parameters to it.
@@ -113,11 +120,49 @@ public class MentalState : MonoBehaviour {
 
     // this returns true if this model sampled
     // sentence at the specified timestamp.
-    private bool Contains(Expression sentence, uint timestamp) {
-        return BeliefBase.ContainsKey(sentence.Head.Type) &&
+    private (bool, uint) BaseQuery(TensedQueryType tensedQueryType, Expression sentence, uint timestamp) {
+        Debug.Assert(sentence.Type.Equals(TRUTH_VALUE));
+
+        if (BeliefBase.ContainsKey(sentence.Head.Type) &&
             BeliefBase[sentence.Head.Type].ContainsKey(sentence.Head) &&
-            BeliefBase[sentence.Head.Type][sentence.Head].ContainsKey(sentence) &&
-            BeliefBase[sentence.Head.Type][sentence.Head][sentence].Contains(timestamp);
+            BeliefBase[sentence.Head.Type][sentence.Head].ContainsKey(sentence)) {
+
+            if (tensedQueryType == TensedQueryType.Exact) {
+                if (BeliefBase[sentence.Head.Type][sentence.Head][sentence].Contains(timestamp)) {
+                    return (true, timestamp);
+                }
+            }
+
+            // here, we check that the most recent positive sample of S
+            // is not counterveiled by a more recent negative sample.
+            if (tensedQueryType == TensedQueryType.Inertial) {
+                // This gets a range of positive samples from 0 to given timestamp (inclusive)
+                var positiveSampleRange = BeliefBase[sentence.Head.Type][sentence.Head][sentence].GetViewBetween(0, timestamp);
+
+                if (positiveSampleRange.Count == 0) {
+                    return (false, 0);
+                }
+
+                uint latestPositiveSample = positiveSampleRange.Max;
+
+                Expression negatedSentence = sentence.Head.Equals(NOT.Head) ? sentence.GetArgAsExpression(0) : new Expression(NOT, sentence);
+                var negativeSampleRange = BeliefBase[negatedSentence.Head.Type][negatedSentence.Head][negatedSentence].GetViewBetween(latestPositiveSample, timestamp);
+
+                if (negativeSampleRange.Count == 0) {
+                    return (true, latestPositiveSample);
+                }
+
+                uint latestNegativeSample = negativeSampleRange.Max;
+
+                if (latestPositiveSample > latestNegativeSample) {
+                    return (true, latestPositiveSample);
+                } else {
+                    return (false, latestNegativeSample);
+                }
+            }
+        }
+
+        return (false, 0);
     }
 
     // returns false if this belief is already in the belief base
@@ -152,7 +197,7 @@ public class MentalState : MonoBehaviour {
     }
 
     private bool Remove(Expression sentence, uint timestamp) {
-        if (Contains(sentence, timestamp)) {
+        if (BaseQuery(TensedQueryType.Exact, sentence, timestamp).Item1) {
             var times = BeliefBase[sentence.Head.Type][sentence.Head as Constant][sentence];
             
             var removeSuccess = times.Remove(timestamp);
@@ -398,7 +443,8 @@ public class MentalState : MonoBehaviour {
         }
 
         // M's belief base has A => M |- A
-        if (Contains(goal, Timestamp)) {
+        var (success, sample) = BaseQuery(TensedQueryType.Inertial, goal, Timestamp);
+        if (success) {
             var premises = new List<Expression>();
             premises.Add(goal);
             alternativeBases.Add(new Basis(premises, new Substitution()));
