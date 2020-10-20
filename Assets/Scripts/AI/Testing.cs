@@ -243,7 +243,7 @@ public class Testing : MonoBehaviour {
         Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 0));
         Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 1));
         Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(BLUE, SELF), 0));
-        Log(MentalState.BaseQuery(TensedQueryType.Intertial, new Expression(RED, SELF), 0));
+        Log(MentalState.BaseQuery(TensedQueryType.Inertial, new Expression(RED, SELF), 0));
 
         // MentalState.ProofMode = Proof;
         // MentalState.Initialize(
