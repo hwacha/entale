@@ -120,7 +120,7 @@ public class MentalState : MonoBehaviour {
 
     // this returns true if this model sampled
     // sentence at the specified timestamp.
-    private (bool, uint) BaseQuery(TensedQueryType tensedQueryType, Expression sentence, uint timestamp) {
+    public (bool, uint) BaseQuery(TensedQueryType tensedQueryType, Expression sentence, uint timestamp) {
         Debug.Assert(sentence.Type.Equals(TRUTH_VALUE));
 
         if (BeliefBase.ContainsKey(sentence.Head.Type) &&

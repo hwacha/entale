@@ -237,6 +237,13 @@ public class Testing : MonoBehaviour {
         //     whatIseeIsAlwaysTrue,
         //     new Expression(BETTER, new Expression(BLUE, SELF), NEUTRAL),
         //     new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
+        
+        // Testing base query
+        MentalState.Initialize(new Expression(RED, SELF), new Expression(NOT, new Expression(BLUE, SELF)));
+        Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 0));
+        Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 1));
+        Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(BLUE, SELF), 0));
+        Log(MentalState.BaseQuery(TensedQueryType.Intertial, new Expression(RED, SELF), 0));
 
         // MentalState.ProofMode = Proof;
         // MentalState.Initialize(
