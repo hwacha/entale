@@ -269,6 +269,7 @@ public class MentalState : MonoBehaviour {
         // unifying substitution, to the basis set.
         HashSet<Basis> satisfiers = new HashSet<Basis>();
         foreach (Expression belief in domain) {
+            // Debug.Log("domain includes " + belief);
             HashSet<Substitution> unifiers = formula.GetMatches(belief);
             foreach (Substitution unifier in unifiers) {
                 List<Expression> premiseContainer = new List<Expression>();
@@ -276,6 +277,9 @@ public class MentalState : MonoBehaviour {
                 satisfiers.Add(new Basis(premiseContainer, unifier));
             }
         }
+
+        // Debug.Log("satisfiers for " + formula + " at t=" + timestamp);
+        // Debug.Log(Testing.BasesString(satisfiers));
 
         return satisfiers;
     }
@@ -381,6 +385,8 @@ public class MentalState : MonoBehaviour {
             yield return null;
         }
 
+        // Debug.Log("trying to prove " + goal);
+
         // goal should be type t.
         if (!goal.Type.Equals(TRUTH_VALUE)) {
             throw new ArgumentException("Bases: goal/conclusion must be a sentence (type t)");
@@ -484,7 +490,6 @@ public class MentalState : MonoBehaviour {
             if (abilityContent.Head.Equals(AT.Head) && abilityContent.GetArgAsExpression(0).Head.Equals(SELF.Head)) {
                 var location = abilityContent.GetArgAsExpression(1);
                 if (Locations.ContainsKey(location)) {
-                    Debug.Log("SUCCESS");
                     var premises = new List<Expression>();
                     premises.Add(goal);
                     alternativeBases.Add(new Basis(premises, new Substitution()));
@@ -493,10 +498,20 @@ public class MentalState : MonoBehaviour {
         }
 
         // dist(M.locations(x), M.locations(y)) < 1 => M |- at(x, y)
-        if (goal.Head.Equals(AT.Head)) {
+        if (goal.Head.Equals(AT.Head) || 
+           (goal.Head.Equals(NOT.Head) && goal.GetArgAsExpression(0).Head.Equals(AT.Head))) {
             float cutoffDistance = 5;
-            var nameA = goal.GetArgAsExpression(0);
-            var nameB = goal.GetArgAsExpression(1);
+
+            Expression nameA;
+            Expression nameB;
+
+            if (goal.Head.Equals(AT.Head)) {
+                nameA = goal.GetArgAsExpression(0);
+                nameB = goal.GetArgAsExpression(1);
+            } else {
+                nameA = goal.GetArgAsExpression(0).GetArgAsExpression(0);
+                nameB = goal.GetArgAsExpression(0).GetArgAsExpression(1);
+            }
 
             if (Locations.ContainsKey(nameA) && Locations.ContainsKey(nameB)) {
                 var locationA = Locations[nameA];
@@ -507,9 +522,17 @@ public class MentalState : MonoBehaviour {
                 var dz = locationA.z - locationB.z;
 
                 if (dx * dx + dy * dy + dz * dz <= cutoffDistance) {
-                    var premises = new List<Expression>();
-                    premises.Add(goal);
-                    alternativeBases.Add(new Basis(premises, new Substitution()));
+                    if (goal.Head.Equals(AT.Head)) {
+                        var premises = new List<Expression>();
+                        premises.Add(goal);
+                        alternativeBases.Add(new Basis(premises, new Substitution()));
+                    }
+                } else {
+                    if (goal.Head.Equals(NOT.Head)) {
+                        var premises = new List<Expression>();
+                        premises.Add(goal);
+                        alternativeBases.Add(new Basis(premises, new Substitution()));
+                    }
                 }
             }
         }
@@ -713,10 +736,10 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(CONJUNCTION_INTRODUCTION));
 
         StartCoroutine(ApplyInferenceRule(EXISTENTIAL_INTRODUCTION));
-        // StartCoroutine(ApplyInferenceRule(UNIVERSAL_ELIMINATION));
+        StartCoroutine(ApplyInferenceRule(UNIVERSAL_ELIMINATION));
 
-        StartCoroutine(ApplyInferenceRule(SELECTOR_ELIMINATION));
-        StartCoroutine(ApplyInferenceRule(SELECTOR_ELIMINATION_MODAL));
+        StartCoroutine(ApplyInferenceRule(SELECTOR_INTRODUCTION));
+        StartCoroutine(ApplyInferenceRule(SELECTOR_INTRODUCTION_MODAL));
         
         if (FrameTimer.FrameDuration >= TIME_BUDGET) {
             yield return null;
@@ -786,19 +809,19 @@ public class MentalState : MonoBehaviour {
         //  of the premise to explode. It's fine to prove conclusions
         //  that are very large (i.e. with DNE).
         if (goal.Depth <= MaxDepth) {
-            // StartCoroutine(ApplyInferenceRule(PERCEPTUAL_BELIEF));
-            // StartCoroutine(ApplyInferenceRule(ALWAYS_ELIMINATION));
-            // StartCoroutine(ApplyInferenceRule(MODUS_PONENS));
-            // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_LEFT)));
-            // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
-            // StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
+            StartCoroutine(ApplyInferenceRule(PERCEPTUAL_BELIEF));
+            StartCoroutine(ApplyInferenceRule(ALWAYS_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(MODUS_PONENS));
+            StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_LEFT)));
+            StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
+            StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
             // StartCoroutine(ApplyInferenceRule(MODUS_TOLLENS));
-            // StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
+            StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
             
-            // StartCoroutine(ApplyInferenceRule(CONVERSE_ELIMINATION));
-            // StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_ELIMINATION));
-            // StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_ELIMINATION));
-            // StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(CONVERSE_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_ELIMINATION));
+            StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_ELIMINATION));
 
             // PLANNING
             // ====
@@ -1117,7 +1140,7 @@ public class MentalState : MonoBehaviour {
         // @Note: we assume preferences are timestamped 0
         // and are eternal. This should change, eventually.
         foreach (var preferenceAndTimes in preferencesInBeliefBase) {
-            if (preferenceAndTimes.Value.Count > 0) {
+            if (preferenceAndTimes.Value.Contains(0) || preferenceAndTimes.Value.Contains(1)) {
                 preferables.Add((Expression) preferenceAndTimes.Key.GetArg(0));
                 preferables.Add((Expression) preferenceAndTimes.Key.GetArg(1));
             }

@@ -57,20 +57,47 @@ public class Actuator : MonoBehaviour {
 
         if (utterance.Type.Equals(QUESTION)) {
             if (utterance.Head.Equals(ASK.Head)) {
-                var done = new Container<bool>(false);
-                var answer = new Container<bool>(false);
-                Agent.MentalState.StartCoroutine(
-                    Agent.MentalState.Query(utterance.GetArgAsExpression(0), answer, done));
+                var answerPositive = new Container<bool>(false);
+                var donePositive = new Container<bool>(false);
+                Agent.MentalState.StartCoroutine(Agent.MentalState.Query(
+                    utterance.GetArgAsExpression(0),
+                    answerPositive,
+                    donePositive));
 
-                while (!done.Item) {
+                var answerNegative = new Container<bool>(false);
+                var doneNegative = new Container<bool>(false);
+                
+                Agent.MentalState.StartCoroutine(
+                    Agent.MentalState.Query(
+                        new Expression(NOT, utterance.GetArgAsExpression(0)),
+                        answerNegative,
+                        doneNegative));
+
+                while (!donePositive.Item || !doneNegative.Item) {
+                    if (answerPositive.Item) {
+                        StartCoroutine(Say(YES, 5));
+                        yield break;
+                    }
+
+                    if (answerNegative.Item) {
+                        StartCoroutine(Say(NO, 5));
+                        yield break;
+                    }
+
                     yield return new WaitForSeconds(0.5f);
                 }
 
-                if (answer.Item) {
+                if (answerPositive.Item) {
                     StartCoroutine(Say(YES, 5));
-                } else {
-                    StartCoroutine(Say(NO, 5));
+                    yield break;
                 }
+
+                if (answerNegative.Item) {
+                    StartCoroutine(Say(NO, 5));
+                    yield break;
+                }
+
+                StartCoroutine(Say(MAYBE, 5));
             }
 
             yield break;
