@@ -609,13 +609,14 @@ public class WorkspaceController : MonoBehaviour
             } else {
                 if (EquippedExpression != null) {
                     // Raycast
-                    RaycastHit hit;
+                    RaycastHit hit;                    
                     bool collided = Physics.Raycast(
                         Camera.transform.position,
+                        // Camera.transform.forward,
                         Camera.transform.TransformDirection(Vector3.forward),
                         out hit,
-                        100,
-                        0 | ~0);
+                        10,
+                        1 << 10);
 
                     if (collided) {
                         var targetedObject = hit.transform.gameObject;
@@ -624,11 +625,18 @@ public class WorkspaceController : MonoBehaviour
                         // not sent directly. But this is less
                         // error-prone to start out with.
                         var targetedMentalState = targetedObject.GetComponent<MentalState>();
+                        var targetedActuator = targetedObject.GetComponent<Actuator>();
 
-                        if (targetedMentalState != null) {
-                            targetedMentalState.StartCoroutine(targetedMentalState.Assert(
-                                new Expression(Expression.SAY, Expression.CHARLIE,
-                                EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression)));
+                        if (targetedMentalState != null && targetedActuator != null) {
+                            // TODO uncomment this when you have the ability
+                            // to make a polymorphic functional expression.
+
+                            // targetedMentalState.StartCoroutine(targetedMentalState.Assert(
+                            //     new Expression(Expression.SAY, Expression.CHARLIE,
+                            //     EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression)));
+                            
+                            targetedActuator.StartCoroutine(
+                                targetedActuator.RespondTo(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression));
 
                             Destroy(EquippedExpression);
                             EquippedExpression = null;

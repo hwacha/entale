@@ -13,15 +13,14 @@ public class Bob : Agent
             new Expression(IDENTITY, SELF, BOB),
             new Expression(RED, SELF),
             new Expression(BLUE, EVAN)
-            //new Expression(BETTER, new Expression(SOME, TREE, new Expression(AT, SELF)), NEUTRAL)
-            );
+        );
 
         // SPECIAL CASING THE TEST ROOM
         var tomato = GameObject.Find("Tomato");
         var tomatoParam = MentalState.ConstructPercept(TOMATO, tomato.transform.position);
 
-        // var banana = GameObject.Find("Banana");
-        // var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
+        var banana = GameObject.Find("Banana");
+        var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
 
         // the player knows that there's a tomato on the table, but doesn't know the word for tomato.
         // The player doesn't know anything about how the language works, but will probably make
@@ -36,16 +35,18 @@ public class Bob : Agent
         // The trick is to use the pronoun in enough contexts where those hypotheses is ruled out.
         // 
 
-        MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER,
-            new Expression(AT, SELF, tomatoParam),
-            new Expression(SAY, SELF, new Expression(TOMATO, tomatoParam)))));
+        // MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER,
+        //     new Expression(AT, SELF, tomatoParam),
+        //     new Expression(SAY, SELF, new Expression(TOMATO, tomatoParam)))));
 
-        MentalState.StartCoroutine(MentalState.Assert(
-            new Expression(BETTER,
-                new Expression(SAY, SELF, new Expression(TOMATO, tomatoParam)),
-                NEUTRAL)));
+        // MentalState.StartCoroutine(MentalState.Assert(
+        //     new Expression(BETTER,
+        //         new Expression(SAY, SELF, new Expression(TOMATO, tomatoParam)),
+        //         NEUTRAL)));
         // MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER, new Expression(AT, SELF, bananaParam), new Expression(AT, SELF, tomatoParam))));
-
+        MentalState.StartCoroutine(MentalState.Assert(
+            new Expression(BETTER, new Expression(AT, SELF,
+                new Expression(SELECTOR, TOMATO)), NEUTRAL)));
         base.Start();
     }
 }

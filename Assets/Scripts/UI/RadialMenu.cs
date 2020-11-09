@@ -18,6 +18,7 @@ public class RadialMenu : MonoBehaviour {
 
     public Dictionary<SemanticType, HashSet<Constant>> Lexicon =
         new Dictionary<SemanticType, HashSet<Constant>> {
+<<<<<<< HEAD
             // [TRUTH_VALUE] = new HashSet<Constant> {
             //     VERUM.Head as Constant,
             //     FALSUM.Head as Constant,
@@ -40,6 +41,32 @@ public class RadialMenu : MonoBehaviour {
             //     WILL.Head as Constant,
             //     WOULD.Head as Constant
             // },
+=======
+            [TRUTH_VALUE] = new HashSet<Constant> {
+                VERUM.Head as Constant,
+                FALSUM.Head as Constant,
+                NEUTRAL.Head as Constant
+            },
+            [ASSERTION] = new HashSet<Constant> {
+                YES.Head as Constant,
+                NO.Head  as Constant
+            },
+            [CONFORMITY_VALUE] = new HashSet<Constant> {
+                ACCEPT.Head as Constant,
+                REFUSE.Head as Constant
+            },
+            [TRUTH_ASSERTION_FUNCTION] = new HashSet<Constant> {
+                ASSERT.Head as Constant,
+                DENY.Head as Constant
+            },
+            [TRUTH_QUESTION_FUNCTION] = new HashSet<Constant> {
+                ASK.Head as Constant
+            },
+            [TRUTH_CONFORMITY_FUNCTION] = new HashSet<Constant> {
+                WILL.Head as Constant,
+                WOULD.Head as Constant
+            },
+>>>>>>> add-tense
             [INDIVIDUAL] = new HashSet<Constant> {
                 SELF.Head as Constant,
                 // BOB.Head  as Constant,

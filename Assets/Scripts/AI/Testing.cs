@@ -185,6 +185,9 @@ public class Testing : MonoBehaviour {
 
         // Log(MatchesString(new Expression(FET, XE), new Expression(ITSELF, REET, XE)));
         // Log(MatchesString(new Expression(ITSELF, REET, XE), new Expression(FET, BOB)));
+        // 
+        Log(MatchesString(new Expression(FTF, new Expression(FET, new Expression(SELECTOR, GET))),
+            new Expression(ABLE, SELF, new Expression(AT, SELF, new Expression(SELECTOR, TOMATO)))));
 
         // @TODO Test potential bug in mutating expressions
         
@@ -237,6 +240,13 @@ public class Testing : MonoBehaviour {
         //     whatIseeIsAlwaysTrue,
         //     new Expression(BETTER, new Expression(BLUE, SELF), NEUTRAL),
         //     new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
+        
+        // Testing base query
+        MentalState.Initialize(new Expression(RED, SELF), new Expression(NOT, new Expression(BLUE, SELF)));
+        Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 0));
+        Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 1));
+        Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(BLUE, SELF), 0));
+        Log(MentalState.BaseQuery(TensedQueryType.Inertial, new Expression(RED, SELF), 0));
 
         // MentalState.ProofMode = Proof;
         // MentalState.Initialize(
@@ -264,8 +274,12 @@ public class Testing : MonoBehaviour {
         //     new Expression(Expression.QUANTIFIER_PHRASE_COORDINATOR_2,
         //         AT, new Expression(ALL, RED), new Expression(ALL, GREEN)));
         
-        MentalState.Initialize(new Expression(PERCEIVE, SELF, new Expression(RED, SELF)));
-        StartCoroutine(LogBases(MentalState, new Expression(FET, SELF)));
+        // MentalState.Initialize(new Expression(WHEN,
+        //     new Expression(new Vector(INDIVIDUAL, new float[]{(float) 0})),
+        //     new Expression(PERCEIVE, SELF, new Expression(RED, SELF))));
+        // StartCoroutine(LogBases(MentalState, new Expression(WHEN,
+        //     XE,
+        //     new Expression(PERCEIVE, SELF, new Expression(RED, SELF)))));
 
         // StartCoroutine(LogBases(MentalState, new Expression(AT, ALICE, BOB)));
 
