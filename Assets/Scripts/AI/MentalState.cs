@@ -95,7 +95,7 @@ public class MentalState : MonoBehaviour {
     int MaxDepth = 0;
 
     void Update() {
-        Timestamp++;
+        //Timestamp++;
     }
 
     // @Note this doesn't check to see if
@@ -137,18 +137,30 @@ public class MentalState : MonoBehaviour {
             // is not counterveiled by a more recent negative sample.
             if (tensedQueryType == TensedQueryType.Inertial) {
                 // This gets a range of positive samples from 0 to given timestamp (inclusive)
+                
                 var positiveSampleRange = BeliefBase[sentence.Head.Type][sentence.Head][sentence].GetViewBetween(0, timestamp);
 
                 if (positiveSampleRange.Count == 0) {
+                    // @Note do we want to return the most recent negative sample here instead?
                     return (false, 0);
                 }
 
                 uint latestPositiveSample = positiveSampleRange.Max;
 
                 Expression negatedSentence = sentence.Head.Equals(NOT.Head) ? sentence.GetArgAsExpression(0) : new Expression(NOT, sentence);
-                var negativeSampleRange = BeliefBase[negatedSentence.Head.Type][negatedSentence.Head][negatedSentence].GetViewBetween(latestPositiveSample, timestamp);
+                
+                SortedSet<uint> negativeSampleRange = null;
+                if (BeliefBase.ContainsKey(negatedSentence.Head.Type) &&
+                    BeliefBase[negatedSentence.Head.Type].ContainsKey(negatedSentence.Head) &&
+                    BeliefBase[negatedSentence.Head.Type][negatedSentence.Head].ContainsKey(negatedSentence)) {
+                    
+                    negativeSampleRange =
+                        BeliefBase[negatedSentence.Head.Type][negatedSentence.Head][negatedSentence]
+                        .GetViewBetween(latestPositiveSample, timestamp);
+                }
 
-                if (negativeSampleRange.Count == 0) {
+
+                if (negativeSampleRange == null || negativeSampleRange.Count == 0) {
                     return (true, latestPositiveSample);
                 }
 
@@ -443,6 +455,9 @@ public class MentalState : MonoBehaviour {
         }
 
         // M's belief base has A => M |- A
+        // 
+        // right now, we do an intertial query: if
+        // M |- A at i and M |- ~A at j and j < i, then M |- A
         var (success, sample) = BaseQuery(TensedQueryType.Inertial, goal, Timestamp);
         if (success) {
             var premises = new List<Expression>();
@@ -469,6 +484,7 @@ public class MentalState : MonoBehaviour {
             if (abilityContent.Head.Equals(AT.Head) && abilityContent.GetArgAsExpression(0).Head.Equals(SELF.Head)) {
                 var location = abilityContent.GetArgAsExpression(1);
                 if (Locations.ContainsKey(location)) {
+                    Debug.Log("SUCCESS");
                     var premises = new List<Expression>();
                     premises.Add(goal);
                     alternativeBases.Add(new Basis(premises, new Substitution()));
@@ -697,7 +713,10 @@ public class MentalState : MonoBehaviour {
         StartCoroutine(ApplyInferenceRule(CONJUNCTION_INTRODUCTION));
 
         StartCoroutine(ApplyInferenceRule(EXISTENTIAL_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(UNIVERSAL_ELIMINATION));
+        // StartCoroutine(ApplyInferenceRule(UNIVERSAL_ELIMINATION));
+
+        StartCoroutine(ApplyInferenceRule(SELECTOR_ELIMINATION));
+        StartCoroutine(ApplyInferenceRule(SELECTOR_ELIMINATION_MODAL));
         
         if (FrameTimer.FrameDuration >= TIME_BUDGET) {
             yield return null;
@@ -767,9 +786,9 @@ public class MentalState : MonoBehaviour {
         //  of the premise to explode. It's fine to prove conclusions
         //  that are very large (i.e. with DNE).
         if (goal.Depth <= MaxDepth) {
-            StartCoroutine(ApplyInferenceRule(PERCEPTUAL_BELIEF));
+            // StartCoroutine(ApplyInferenceRule(PERCEPTUAL_BELIEF));
             // StartCoroutine(ApplyInferenceRule(ALWAYS_ELIMINATION));
-            StartCoroutine(ApplyInferenceRule(MODUS_PONENS));
+            // StartCoroutine(ApplyInferenceRule(MODUS_PONENS));
             // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_LEFT)));
             // StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
             // StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
@@ -1098,7 +1117,7 @@ public class MentalState : MonoBehaviour {
         // @Note: we assume preferences are timestamped 0
         // and are eternal. This should change, eventually.
         foreach (var preferenceAndTimes in preferencesInBeliefBase) {
-            if (preferenceAndTimes.Value.Contains(0U)) {
+            if (preferenceAndTimes.Value.Count > 0) {
                 preferables.Add((Expression) preferenceAndTimes.Key.GetArg(0));
                 preferables.Add((Expression) preferenceAndTimes.Key.GetArg(1));
             }

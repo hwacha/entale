@@ -28,10 +28,12 @@ public class RadialMenu : MonoBehaviour {
                 NO.Head  as Constant
             },
             [CONFORMITY_VALUE] = new HashSet<Constant> {
-                CONFIRM.Head as Constant
+                ACCEPT.Head as Constant,
+                REFUSE.Head as Constant
             },
             [TRUTH_ASSERTION_FUNCTION] = new HashSet<Constant> {
-                ASSERT.Head as Constant
+                ASSERT.Head as Constant,
+                DENY.Head as Constant
             },
             [TRUTH_QUESTION_FUNCTION] = new HashSet<Constant> {
                 ASK.Head as Constant

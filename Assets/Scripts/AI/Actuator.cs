@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.AI;
 
 using static Expression;
+using static SemanticType;
 
 public class Actuator : MonoBehaviour {
     public Agent Agent;
@@ -37,6 +38,67 @@ public class Actuator : MonoBehaviour {
         yield return new WaitForSeconds(time);
         Destroy(eContainer);
         yield break;
+    }
+
+    // @Note this should be removed when the planner is better.
+    public IEnumerator RespondTo(Expression utterance) {
+        if (utterance.Type.Equals(ASSERTION)) {
+            if (utterance.Head.Equals(ASSERT.Head)) {
+                Agent.MentalState.StartCoroutine(
+                Agent.MentalState.Assert(utterance.GetArgAsExpression(0)));
+            }
+            if (utterance.Head.Equals(DENY.Head)) {
+                Agent.MentalState.StartCoroutine(
+                Agent.MentalState.Assert(
+                    new Expression(NOT, utterance.GetArgAsExpression(0))));
+            }
+            yield break;
+        }
+
+        if (utterance.Type.Equals(QUESTION)) {
+            if (utterance.Head.Equals(ASK.Head)) {
+                var done = new Container<bool>(false);
+                var answer = new Container<bool>(false);
+                Agent.MentalState.StartCoroutine(
+                    Agent.MentalState.Query(utterance.GetArgAsExpression(0), answer, done));
+
+                while (!done.Item) {
+                    yield return new WaitForSeconds(0.5f);
+                }
+
+                if (answer.Item) {
+                    StartCoroutine(Say(YES, 5));
+                } else {
+                    StartCoroutine(Say(NO, 5));
+                }
+            }
+
+            yield break;
+        }
+
+        if (utterance.Type.Equals(CONFORMITY_VALUE)) {
+            if (utterance.Head.Equals(WOULD.Head)) {
+                var done = new Container<bool>(false);
+                var answer = new Container<bool>(false);
+                Agent.MentalState.StartCoroutine(
+                    Agent.MentalState.Query(new Expression(ABLE, SELF,
+                        utterance.GetArgAsExpression(0)), answer, done));
+
+                while (!done.Item) {
+                    yield return new WaitForSeconds(0.5f);
+                }
+
+                if (answer.Item) {
+                    StartCoroutine(Say(ACCEPT, 5));
+                    Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
+                        new Expression(BETTER, utterance.GetArgAsExpression(0), NEUTRAL)));
+                } else {
+                    StartCoroutine(Say(REFUSE, 5));
+                }
+            }
+            
+            yield break;
+        }
     }
 
 

@@ -715,13 +715,15 @@ public class Expression : Argument {
     // question and assert functions
     public static readonly Expression ASK = new Expression(new Constant(TRUTH_QUESTION_FUNCTION, "ask"));
     public static readonly Expression ASSERT = new Expression(new Constant(TRUTH_ASSERTION_FUNCTION, "assert"));
+    public static readonly Expression DENY = new Expression(new Constant(TRUTH_ASSERTION_FUNCTION, "deny"));
 
     // assertion constants
     public static readonly Expression YES = new Expression(new Constant(ASSERTION, "assert"));
     public static readonly Expression NO  = new Expression(new Constant(ASSERTION, "deny"));
 
     // conformity constants
-    public static readonly Expression CONFIRM = new Expression(new Constant(CONFORMITY_VALUE, "confirm"));
+    public static readonly Expression ACCEPT = new Expression(new Constant(CONFORMITY_VALUE, "accept"));
+    public static readonly Expression REFUSE = new Expression(new Constant(CONFORMITY_VALUE, "refuse"));
 
     // heads for deictic expressions
     public static readonly Expression THIS = new Expression(new Constant(INDIVIDUAL, "this"));

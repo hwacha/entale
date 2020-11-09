@@ -185,6 +185,9 @@ public class Testing : MonoBehaviour {
 
         // Log(MatchesString(new Expression(FET, XE), new Expression(ITSELF, REET, XE)));
         // Log(MatchesString(new Expression(ITSELF, REET, XE), new Expression(FET, BOB)));
+        // 
+        Log(MatchesString(new Expression(FTF, new Expression(FET, new Expression(SELECTOR, GET))),
+            new Expression(ABLE, SELF, new Expression(AT, SELF, new Expression(SELECTOR, TOMATO)))));
 
         // @TODO Test potential bug in mutating expressions
         
