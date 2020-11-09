@@ -128,13 +128,13 @@ public class InferenceRule
             new Expression[]{},
             new Expression[]{new Expression(NOT, ST)});
 
-    public static readonly InferenceRule SELECTOR_ELIMINATION =
+    public static readonly InferenceRule SELECTOR_INTRODUCTION =
         new InferenceRule(
             new Expression[]{new Expression(GET, XE), new Expression(FET, XE)},
             new Expression[]{},
             new Expression[]{new Expression(FET, new Expression(SELECTOR, GET))});
 
-    public static readonly InferenceRule SELECTOR_ELIMINATION_MODAL =
+    public static readonly InferenceRule SELECTOR_INTRODUCTION_MODAL =
         new InferenceRule(
             new Expression[]{new Expression(GET, XE), new Expression(FTF, new Expression(FET, XE))},
             new Expression[]{},

@@ -720,6 +720,7 @@ public class Expression : Argument {
     // assertion constants
     public static readonly Expression YES = new Expression(new Constant(ASSERTION, "assert"));
     public static readonly Expression NO  = new Expression(new Constant(ASSERTION, "deny"));
+    public static readonly Expression MAYBE = new Expression(new Constant(ASSERTION, "maybe"));
 
     // conformity constants
     public static readonly Expression ACCEPT = new Expression(new Constant(CONFORMITY_VALUE, "accept"));

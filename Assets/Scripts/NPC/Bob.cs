@@ -44,9 +44,13 @@ public class Bob : Agent
         //         new Expression(SAY, SELF, new Expression(TOMATO, tomatoParam)),
         //         NEUTRAL)));
         // MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER, new Expression(AT, SELF, bananaParam), new Expression(AT, SELF, tomatoParam))));
-        MentalState.StartCoroutine(MentalState.Assert(
-            new Expression(BETTER, new Expression(AT, SELF,
-                new Expression(SELECTOR, TOMATO)), NEUTRAL)));
+        // MentalState.StartCoroutine(MentalState.Assert(
+        //     new Expression(BETTER, new Expression(AT, SELF,
+        //         new Expression(SELECTOR, TOMATO)), NEUTRAL)));
+
+        // GameObject.Find("Test").GetComponent<Testing>().StartCoroutine(Testing.LogBases(MentalState,
+        //     new Expression(ABLE, SELF, new Expression(AT, SELF,
+        //         new Expression(SELECTOR, TOMATO)))));
         base.Start();
     }
 }
