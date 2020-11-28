@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using static SemanticType;
@@ -91,7 +92,7 @@ public class MentalState : MonoBehaviour {
     // I'll just make it public for now.
     //
     public Dictionary<Expression, Vector3> Locations;
-    protected uint Timestamp = 1;
+    protected uint Timestamp = 0;
     int MaxDepth = 0;
 
     void Update() {
@@ -219,7 +220,7 @@ public class MentalState : MonoBehaviour {
             }
 
             // @Note finish this code to remove a key from the belief base
-            // if it's value is empty. Right now it doesn't seem to break
+            // if its value is empty. Right now it doesn't seem to break
             // anything if it's left in.
             // 
             // if (times.Count == 0) {
@@ -316,6 +317,370 @@ public class MentalState : MonoBehaviour {
         return param;
     }
 
+    private class ProofNode {
+        #region parameters
+        protected int ID;
+        public Expression Formula {protected set; get;}
+        public int OutgoingID;
+        public bool IsDependent {protected set; get;}
+        public bool IsAssumption {protected set; get;}
+        #endregion
+
+        // @C#: is there a way to make a collection
+        // readonly for public, but allow modifications
+        // within a class?
+        #region variables
+        public bool Visited;
+        public HashSet<Basis> OldMeetBases;
+        public HashSet<Basis> OldJoinBases;
+        public HashSet<Basis> NewMeetBases;
+        public HashSet<Basis> NewJoinBases;
+        #endregion
+
+        public ProofNode(int id, Expression formula, int outgoingID, bool isDependent, bool isAssumption) {
+            ID = id;
+            Formula = formula;
+            OutgoingID = outgoingID;
+            IsDependent = isDependent;
+            IsAssumption = isAssumption;
+
+            Visited = false;
+
+            OldMeetBases = new HashSet<Basis>();
+            // this means this node is receiving
+            // bases to something out of the
+            // scope of an inference rule.
+            // So, we don't have to worry about
+            // variable assignments.
+            // 
+            // For these nodes, we give an empty
+            // substitution.
+            // 
+            // For nodes which must receive an
+            // assignment before they're queried,
+            // we want the for loop for assignments
+            // not to trigger an queries.
+            if (!isDependent) {
+                OldMeetBases.Add(new Basis(new List<Expression>(), new Substitution()));
+            }
+            
+            OldJoinBases = new HashSet<Basis>();
+
+            NewMeetBases = new HashSet<Basis>();
+            NewJoinBases = new HashSet<Basis>();
+        }
+
+        public ProofNode(int id, Expression formula, int outgoingID, bool waitForAssignment) :
+            this(id, formula, outgoingID, waitForAssignment, false) {}
+
+        public void ReceiveBases(HashSet<Basis> bases, int incomingID) {
+            // if the queue id of the incoming ID is lower
+            // than this node's queue ID, this must mean it
+            // is being passed on in an inference rule.
+            // So, we should add it to our meet bases.
+            if (incomingID < ID) {
+                if (Visited) {
+                    NewMeetBases.UnionWith(bases);
+                } else {
+                    OldMeetBases.UnionWith(bases);
+                }
+            } else {
+                var newBases = new HashSet<Basis>();
+                foreach (var basis in bases) {
+                    // here, we discard any unused variable assignments.
+                    var trimmedSubstitution = new Substitution();
+                    foreach (var assignment in basis.Value) {
+                        if (Formula.HasOccurenceOf(assignment.Key)) {
+                            trimmedSubstitution[assignment.Key] = assignment.Value;
+                        }
+                    }
+
+                    newBases.Add(new Basis(basis.Key, trimmedSubstitution));
+                }
+                NewJoinBases.UnionWith(newBases);
+            }
+        }
+    }
+
+    public IEnumerator StreamBasesBreadthFirst(Expression goal,
+        HashSet<Basis> alternativeBases, Container<bool> done) {
+        // this will be the queue for a breadth-first search.
+        var queue = new List<ProofNode>();
+        // this index keeps track of a 'call stack' for
+        // when a proof basis is found inferentially, the
+        // results of which need to be merged through
+        // meet or join operations down to a base call.
+        int mergeIndex = 0;
+
+        // this, we keep track of in order to go back to the
+        // first value at a given depth. That way, our rules
+        // add nodes to be visited in a breadth-first order.
+        int depthLowerBound = 0;
+        int depthUpperBound = 1;
+
+        // first, we set up a node for the goal.
+        var goalNode = new ProofNode(0, goal,  0, false);
+        queue.Add(goalNode);
+
+        while (true) {
+            // then, we go through each node in our execution queue.
+            // More nodes will be added as inference rules are matched.
+            for (int queueIndex = depthLowerBound; queueIndex < depthUpperBound; queueIndex++) {
+                ProofNode cur = queue[queueIndex];
+                cur.Visited = true;
+
+                Debug.Log(queueIndex + ": " + cur.Formula);
+
+                // here, we pass assignments on from earlier
+                // checked premises in an inference rule
+                // (if there are any). If a sentence should
+                // be proven outside the context of an inference rule,
+                // then an empty assignment will be given ahead of time.
+                foreach (Basis b in cur.OldMeetBases) {
+                    var currentFormula = cur.Formula.Substitute(b.Value);
+                    var searchBases = new HashSet<Basis>();
+                    
+                    // we do a base query for the formula.
+                    var (success, time) = BaseQuery(TensedQueryType.Inertial, cur.Formula, Timestamp);
+                    if (success) {
+                        var premise = new List<Expression>();
+                        premise.Add(cur.Formula);
+                        var basis = new Basis(premise, new Substitution());
+                        searchBases.Add(basis);
+                    } else {
+                        // TODO: inline Satisfiers()
+                        // so that it can be chunked.
+                        searchBases.UnionWith(Satisfiers(cur.Formula, Timestamp));
+                    }
+
+                    if (searchBases.Count > 0) {
+                        cur.ReceiveBases(searchBases, queueIndex);
+                        mergeIndex = queueIndex;
+
+                        if (mergeIndex == 0) {
+                            alternativeBases.UnionWith(searchBases);
+                            yield return null;
+                        }
+
+                        // here, we execute any basis
+                        // merging that needs to happen.
+                        while (mergeIndex != 0) {
+                            ProofNode currentMergeNode = queue[mergeIndex];
+
+                            // we want to wait until it's this node's turn.
+                            // the ripple merges should start only after
+                            // a search has been attempted.
+                            if (!currentMergeNode.Visited) {
+                                mergeIndex = 0;
+                                break;
+                            }
+
+                            // old meets matched with old joins, ALREADY DONE.
+                            // old meets matched with new joins,
+                            // new meets matched with old joins,
+                            // new meets matched with new joins, NOT POSSIBLE.
+                            
+                            // if there aren't any new, then the previous meet
+                            // wasn't successful: no proofs.
+                            if (currentMergeNode.NewMeetBases.Count == 0 &&
+                                currentMergeNode.NewJoinBases.Count == 0) {
+                                mergeIndex = 0;
+                                break;
+                            }
+
+                            HashSet<Basis> meetBases, joinBases;
+
+                            // if we have new meet bases, we pass the assignments on
+                            // and spawn new execution nodes.
+                            if (currentMergeNode.NewMeetBases.Count > 0) {
+
+                                meetBases = currentMergeNode.NewMeetBases;
+                                
+                                // TODO: fix once there's a better test case.
+                                int nodeIndex = queue.Count;
+
+                                foreach (var meetBasis in meetBases) {
+                                    var assignedNode =
+                                        new ProofNode(nodeIndex,
+                                            currentMergeNode.Formula.Substitute(meetBasis.Value),
+                                            mergeIndex, false, currentMergeNode.IsAssumption);
+                                    queue.Add(assignedNode);
+                                    nodeIndex++;
+                                }
+
+                                mergeIndex = 0;
+                                currentMergeNode.OldMeetBases.UnionWith(meetBases);
+                                currentMergeNode.NewMeetBases.Clear();
+                                break;
+                            } else {
+                                // if we have new join bases, we link up the meet and join
+                                // bases and pass them on the outgoing node, and ripple through.
+                                meetBases = currentMergeNode.OldMeetBases;
+                                joinBases = currentMergeNode.NewJoinBases;
+                            
+                                var productBases = new HashSet<Basis>();
+                                foreach (var meetBasis in meetBases) {
+                                    foreach (var joinBasis in joinBases) {
+                                        List<Expression> productPremises = new List<Expression>();
+                                        productPremises.AddRange(meetBasis.Key);
+                                        productPremises.AddRange(joinBasis.Key);
+                                        var productSubstitution = Compose(meetBasis.Value, joinBasis.Value);
+
+                                        productBases.Add(new Basis(productPremises, productSubstitution));
+                                    }
+                                }
+
+                                // the outgoing node receives the new bases.
+                                queue[currentMergeNode.OutgoingID].ReceiveBases(productBases, mergeIndex);
+                                mergeIndex = currentMergeNode.OutgoingID;
+                                currentMergeNode.OldJoinBases.UnionWith(joinBases);
+                                currentMergeNode.NewJoinBases.Clear();
+                            }
+                        }
+                        // since we special case the root node,
+                        // we check the new join bases and clear it out.
+                        alternativeBases.UnionWith(queue[0].NewJoinBases);
+                        queue[0].NewJoinBases.Clear();
+                        yield return null;
+                    }
+                }
+            }
+
+            for (int queueIndex = depthLowerBound; queueIndex < depthUpperBound; queueIndex++) {
+                if (queue[queueIndex].IsDependent) {
+                    continue;
+                }
+
+                var currentFormula = queue[queueIndex].Formula;
+                // we check against inference rules.
+            
+                // for now, let's just do a sanity check.
+            
+                // M |- A, M |- B => M |- A & B
+                if (currentFormula.Head.Equals(AND.Head)) {
+                    var conjunctA = currentFormula.GetArgAsExpression(0);
+                    var conjunctB = currentFormula.GetArgAsExpression(1);
+
+                    int lastIndex = queue.Count;
+
+                    queue.Add(new ProofNode(lastIndex, conjunctA, lastIndex + 1, false, false));
+                    queue.Add(new ProofNode(lastIndex + 1, conjunctB, queueIndex, true, false));
+                }
+
+                // M |- A => M |- A v B, M |- B => M |- A v B
+                if (currentFormula.Head.Equals(OR.Head)) {
+                    var disjunctA = currentFormula.GetArgAsExpression(0);
+                    var disjunctB = currentFormula.GetArgAsExpression(1);
+
+                    int lastIndex = queue.Count;
+
+                    queue.Add(new ProofNode(lastIndex, disjunctA, queueIndex, false, false));
+                    queue.Add(new ProofNode(lastIndex + 1, disjunctB, queueIndex, false, false));
+                }
+
+                // M |- F(X); M |- G(X); M |- some(F, G)
+                if (currentFormula.Head.Equals(SOME.Head)) {
+                    var domain = currentFormula.GetArgAsExpression(0);
+                    var focus = currentFormula.GetArgAsExpression(1);
+
+                    int lastIndex = queue.Count;
+
+                    var usedVariables = currentFormula.GetVariables();
+
+                    var v = new Expression(GetUnusedVariable(INDIVIDUAL, usedVariables));
+
+                    queue.Add(new ProofNode(lastIndex, new Expression(domain, v), lastIndex + 1, false, false));
+                    queue.Add(new ProofNode(lastIndex + 1, new Expression(focus, v), queueIndex, true, false));
+                }
+
+                // M |- every(f, g); M |- f(x) => g(x)
+
+                void SpawnNodes(InferenceRule rule) {
+                    Expression[] premises = new Expression[rule.Premises.Length];
+                    Expression[] assumptions = new Expression[rule.Assumptions.Length];
+                    Expression[] conclusions = new Expression[rule.Conclusions.Length];
+                    
+                    // change out variables in the rule to not collide
+                    // with the variables in currentFormula.
+                    var usedVariables = currentFormula.GetVariables();
+                    var newVariableSubstitution = new Substitution();
+                    var newUsedVariables = new HashSet<Variable>();
+                    newUsedVariables.UnionWith(usedVariables);
+                    foreach (var usedVariable in usedVariables) {
+                        Variable newVariable = GetUnusedVariable(usedVariable.Type, newUsedVariables);
+                        newVariableSubstitution.Add(usedVariable, new Expression(newVariable));
+                    }
+
+                    for (int i = 0; i < rule.Premises.Length; i++) {
+                        premises[i] = rule.Premises[i].Substitute(newVariableSubstitution);
+                    }
+
+                    for (int i = 0; i < rule.Assumptions.Length; i++) {
+                        assumptions[i] = rule.Assumptions[i].Substitute(newVariableSubstitution);
+                    }
+
+                    for (int i = 0; i < rule.Conclusions.Length; i++) {
+                        conclusions[i] = rule.Conclusions[i].Substitute(newVariableSubstitution);
+                    }
+
+                    bool isFirstPremise = true;
+
+                    for (int i = 0; i < conclusions.Length; i++) {
+                        var unifiers = conclusions[i].GetMatches(currentFormula);
+
+                        // for each unifier, we get a different set of bases.
+                        foreach (var unifier in unifiers) {
+                            for (int j = 0; j < premises.Length; j++) {
+                                queue.Add(new ProofNode(queue.Count,
+                                    premises[j].Substitute(unifier),
+                                    queue.Count + 1, !isFirstPremise, false));
+                                isFirstPremise = false;
+                            }
+
+                            // we try to disprove each of the other conclusions
+                            for (int j = 0; j < conclusions.Length; j++) {
+                                if (j == i) {
+                                    continue;
+                                }
+                                queue.Add(new ProofNode(queue.Count,
+                                    new Expression(NOT, conclusions[j].Substitute(unifier)),
+                                    queue.Count + 1, !isFirstPremise, false));
+                                isFirstPremise = false;
+                            }
+
+                            // TODO
+                            // // @Note: the behavior of assumptions in this
+                            // // method isn't yet specially implemented.
+                            // // It probably will not give the right results.
+                            // for (int j = 0; j < assumptions.Length; j++) {
+                            //     queue.Add(new ProofNode(queue.Count,
+                            //         premises[j].Substitute(unifier),
+                            //         queue.Count + 1, !isFirstPremise, true));
+                            //     isFirstPremise = false;
+                            // }
+                            // TODO
+
+                            queue[queue.Count - 1].OutgoingID = queueIndex;
+                        }
+                    }
+                }
+
+                SpawnNodes(DOUBLE_NEGATION_INTRODUCTION);
+            }
+
+            // no new nodes were added, so quit!
+            if (depthUpperBound == queue.Count) {
+                break;
+            }
+
+            depthLowerBound = depthUpperBound;
+            depthUpperBound = queue.Count;
+        }
+
+        done.Item = true;
+        yield break;
+    }
+
     // if this mental state, S, can prove the goal
     // directly or via inference, then Basis(goal)
     // returns the set of bases of goal, relative to S:
@@ -372,7 +737,7 @@ public class MentalState : MonoBehaviour {
     // completeExpressions: expressions that have been tried and found.
     // alternativeBases: the resulting set of bases that each prove the goal.
     // done: a flag that indicates when search has been completed.
-    // 
+    //
     public IEnumerator GetBases(
         ProofType proofType,
         Expression goal,
