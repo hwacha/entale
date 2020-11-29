@@ -264,7 +264,7 @@ public class Testing : MonoBehaviour {
         
         // Testing base query
         MentalState.Initialize(
-            new Expression(APPLE, SELF),
+            new Expression(ABLE, SELF, new Expression(APPLE, SELF)),
             new Expression(RED, SELF), new Expression(NOT, new Expression(BLUE, SELF)));
         // Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 0));
         // Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 1));
@@ -272,6 +272,7 @@ public class Testing : MonoBehaviour {
         // Log(MentalState.BaseQuery(TensedQueryType.Inertial, new Expression(RED, SELF), 0));
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
+        StartCoroutine(LogBasesStream(MentalState, Plan, new Expression(APPLE, SELF)));
         
         // StartCoroutine(LogBasesStream(MentalState,
             // new Expression(AND, new Expression(RED, XE),
@@ -284,12 +285,20 @@ public class Testing : MonoBehaviour {
             // new Expression(NOT, new Expression(NOT, new Expression(RED, SELF)))));
 
 
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(NOT, new Expression(NOT,
-            new Expression(OR,
-                new Expression(OR, new Expression(RED, XE),
-                    new Expression(NOT, new Expression(BLUE, XE))),
-                new Expression(SOME, APPLE, RED))))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(NOT, new Expression(NOT,
+        //     new Expression(AND,
+        //         new Expression(OR, new Expression(RED, XE),
+        //             new Expression(NOT, new Expression(BLUE, XE))),
+        //         new Expression(SOME, APPLE, RED))))));
+        
+        // int expressionDepth = 100;
+
+        // Expression big = new Expression(RED, SELF);
+        // for (int i = 0; i < expressionDepth; i++) {
+        //     big = new Expression(TRULY, big);
+        // }
+        // StartCoroutine(LogBasesStream(MentalState, big));
 
         // MentalState.ProofMode = Proof;
         // MentalState.Initialize(
@@ -472,22 +481,26 @@ public class Testing : MonoBehaviour {
         yield break;
     }
 
-    public static IEnumerator LogBasesStream(MentalState m, Expression e) {
+    public static IEnumerator LogBasesStream(MentalState m, ProofType pt, Expression e) {
         var result = new HashSet<Basis>();
         var done = new Container<bool>(false);
 
-        m.StartCoroutine(m.StreamBasesBreadthFirst(e, result, done));
+        m.StartCoroutine(m.StreamBasesBreadthFirst(pt, e, result, done));
 
+        bool one = false;
         while (!done.Item) {
             if (result.Count > 0) {
                 Log("'" + e + "'" + " is proved by: " + BasesString(result));
+                one = true;
                 result.Clear();
             }
             yield return null;
         }
 
-        Log("'" + e + "'" + " is proved by: " + BasesString(result));
-        result.Clear();
+        if (one == false) {
+            Log("'" + e + "'" + " is not proven.");
+        }
+        // Log("'" + e + "'" + " is proved by: " + BasesString(result));
         yield break;
     }
 
