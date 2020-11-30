@@ -66,9 +66,9 @@ public enum DecisionPolicy {
 // inconsistencies can be resolved.
 // 
 public class MentalState : MonoBehaviour {
-    // the time, in seconds, that the mental
+    // the time, in milliseconds, that the mental
     // state is allowed to run search in one frame
-    protected static float TIME_BUDGET = 0.016f;
+    protected static long TIME_BUDGET = 8;
 
     public BeliefRevisionPolicy BeliefRevisionPolicy = Conservative;
     public DecisionPolicy DecisionPolicy = Default;
@@ -327,7 +327,7 @@ public class MentalState : MonoBehaviour {
         public Func<Basis, Basis, Basis> OnMerge;
         #endregion
 
-        // @C#: is there a way to make a collection
+        // @lang: is there a way to make a collection
         // readonly for public, but allow modifications
         // within a class?
         #region variables
@@ -336,14 +336,19 @@ public class MentalState : MonoBehaviour {
         public HashSet<Basis> OldJoinBases;
         public HashSet<Basis> NewMeetBases;
         public HashSet<Basis> NewJoinBases;
+
+        public HashSet<Expression> OldDefeaters;
+        public Expression NewDefeater;
         #endregion
 
-        public ProofNode(int id, Expression formula, int outgoingID, bool isDependent,
-            Func<Basis, Basis, Basis> onMerge) {
+        public ProofNode(int id, Expression formula, int outgoingID,
+            bool isDependent = false, bool isAssumption = false,
+            Func<Basis, Basis, Basis> onMerge = null) {
             ID = id;
             Formula = formula;
             OutgoingID = outgoingID;
             IsDependent = isDependent;
+            IsAssumption = isAssumption;
             OnMerge = onMerge;
 
             Visited = false;
@@ -362,7 +367,7 @@ public class MentalState : MonoBehaviour {
             // assignment before they're queried,
             // we want the for loop for assignments
             // not to trigger an queries.
-            if (!isDependent) {
+            if (!IsDependent) {
                 OldMeetBases.Add(new Basis(new List<Expression>(), new Substitution()));
             }
             
@@ -370,10 +375,10 @@ public class MentalState : MonoBehaviour {
 
             NewMeetBases = new HashSet<Basis>();
             NewJoinBases = new HashSet<Basis>();
-        }
 
-        public ProofNode(int id, Expression formula, int outgoingID, bool isDependent) :
-            this(id, formula, outgoingID, isDependent, null) {}
+            OldDefeaters = new HashSet<Expression>();
+            NewDefeater = null;
+        }
 
         public void ReceiveBases(HashSet<Basis> bases, int incomingID) {
             // if the queue id of the incoming ID is lower
@@ -435,7 +440,7 @@ public class MentalState : MonoBehaviour {
                 ProofNode cur = queue[queueIndex];
                 cur.Visited = true;
 
-                Debug.Log(queueIndex + ": " + cur.Formula + " -> " + cur.OutgoingID);
+                // Debug.Log(queueIndex + ": " + cur.Formula + " -> " + cur.OutgoingID);
 
                 var assignedFormulas = new HashSet<Expression>();
 
@@ -459,18 +464,29 @@ public class MentalState : MonoBehaviour {
                     }
 
                     var searchBases = new HashSet<Basis>();
-                    
-                    // we do a base query for the formula.
-                    var (success, time) = BaseQuery(TensedQueryType.Inertial, cur.Formula, Timestamp);
-                    if (success) {
+
+                     if (cur.IsAssumption) {
+                        // we simply add the assumption to the basis.
                         var premise = new List<Expression>();
                         premise.Add(cur.Formula);
                         var basis = new Basis(premise, new Substitution());
                         searchBases.Add(basis);
-                    } else if (cur.Formula.GetVariables().Count > 0) {
-                        // TODO: inline Satisfiers()
-                        // so that it can be chunked.
-                        searchBases.UnionWith(Satisfiers(cur.Formula, Timestamp));
+
+                        // we spawn a node to prove this formula's negation.
+                        queue.Add(new ProofNode(queue.Count, new Expression(NOT, currentFormula), queueIndex));
+                    } else {
+                        // we do a base query for the formula.
+                        var (success, time) = BaseQuery(TensedQueryType.Inertial, currentFormula, Timestamp);
+                        if (success) {
+                            var premise = new List<Expression>();
+                            premise.Add(cur.Formula);
+                            var basis = new Basis(premise, new Substitution());
+                            searchBases.Add(basis);
+                        } else if (cur.Formula.GetVariables().Count > 0) {
+                            // TODO: inline Satisfiers()
+                            // so that it can be chunked.
+                            searchBases.UnionWith(Satisfiers(cur.Formula, Timestamp));
+                        }
                     }
 
                     if (searchBases.Count > 0) {
@@ -499,6 +515,40 @@ public class MentalState : MonoBehaviour {
                                 // a search has been attempted.
                                 if (!currentMergeNode.Visited) {
                                     break;
+                                }
+
+                                if (currentMergeNode.IsAssumption && queueIndex != mergeIndex) {
+                                    // in this case, we've received a disproof
+                                    // of the assumption. We want to pass this on
+                                    // to outgoing nodes.
+                                    queue[currentMergeNode.OutgoingID].NewDefeater = currentMergeNode.Formula;
+                                    mergeIndex = currentMergeNode.OutgoingID;
+                                    continue;
+                                }
+
+                                // here, we want to remove any proofs that rely
+                                // on the defeated assumption.
+                                if (currentMergeNode.NewDefeater != null) {
+                                    var newOldMeetBases = new HashSet<Basis>();
+                                    foreach (var oldMeetBasis in currentMergeNode.OldMeetBases) {
+                                        if (!oldMeetBasis.Key.Contains(currentMergeNode.NewDefeater)) {
+                                            newOldMeetBases.Add(oldMeetBasis);
+                                        }
+                                    }
+                                    var newOldJoinBases = new HashSet<Basis>();
+                                    foreach (var oldJoinBasis in currentMergeNode.OldJoinBases) {
+                                        if (!oldJoinBasis.Key.Contains(currentMergeNode.NewDefeater)) {
+                                            newOldJoinBases.Add(oldJoinBasis);
+                                        }
+                                    }
+                                    currentMergeNode.OldMeetBases = newOldMeetBases;
+                                    currentMergeNode.OldJoinBases = newOldJoinBases;
+
+                                    currentMergeNode.OldDefeaters.Add(currentMergeNode.NewDefeater);
+                                    currentMergeNode.NewDefeater = null;
+
+                                    mergeIndex = currentMergeNode.OutgoingID;
+                                    continue;
                                 }
 
                                 // old meets matched with old joins, ALREADY DONE.
@@ -531,7 +581,8 @@ public class MentalState : MonoBehaviour {
                                         // otherwise, we spawn an independent node with this assignment.
                                         var assignedNode =
                                             new ProofNode(queue.Count, assignedFormula,
-                                                mergeIndex, false);
+                                                mergeIndex, isDependent: false,
+                                                isAssumption: currentMergeNode.IsAssumption);
 
                                         queue.Add(assignedNode);
                                     }
@@ -549,6 +600,20 @@ public class MentalState : MonoBehaviour {
                                         foreach (var joinBasis in joinBases) {
                                             if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                                                 yield return null;
+                                            }
+
+                                            bool defeated = false;
+                                            foreach (var defeater in currentMergeNode.OldDefeaters) {
+                                                if (meetBasis.Key.Contains(defeater) ||
+                                                    joinBasis.Key.Contains(defeater)) {
+                                                    defeated = true;
+                                                    break;
+                                                }
+                                            }
+
+                                            if (defeated) {
+                                                Debug.Log("defeated");
+                                                continue;
                                             }
 
                                             if (currentMergeNode.OnMerge == null) {
@@ -573,11 +638,41 @@ public class MentalState : MonoBehaviour {
                                     currentMergeNode.NewJoinBases.Clear();
                                 }
                             }
+
                             // since we special case the root node,
                             // we check the new join bases and clear it out.
+                            if (queue[0].NewDefeater != null) {
+                                Debug.Log(queue[0].NewDefeater);
+                                queue[0].OldDefeaters.Add(queue[0].NewDefeater);
+                                queue[0].NewDefeater = null;
+                            }
+
                             alternativeBases.UnionWith(queue[0].NewJoinBases);
                             queue[0].NewJoinBases.Clear();
-                            yield return null;
+
+                            var newAlternativeBases = new HashSet<Basis>();
+                            foreach (var finalBasis in alternativeBases) {
+                                bool defeated = false;
+                                foreach (var defeater in queue[0].OldDefeaters) {
+                                    if (finalBasis.Key.Contains(defeater)) {
+                                        defeated = true;
+                                        break;
+                                    }   
+                                }
+                                if (!defeated) {
+                                    newAlternativeBases.Add(finalBasis);    
+                                }
+                            }
+                            alternativeBases.Clear();
+                            alternativeBases.UnionWith(newAlternativeBases);
+
+                            // TODO the case of defeated defeaters is not handled.
+                            // The Basis needs to change from a list of premises
+                            // to some kind of tree, that can handle having a
+                            // heirarchy of defeaters.
+                            // 
+                            // If the tree's depth is odd, then the basis stands as
+                            // a proof of S. If it's even, it's been defeated.
                         }
                     }
                 }
@@ -678,12 +773,19 @@ public class MentalState : MonoBehaviour {
                     queue.Add(new ProofNode(queue.Count, currentFormula.GetArgAsExpression(0), queueIndex, false));
                 }
 
-                // double negation +
+                // negation +s
                 if (currentFormula.Head.Equals(NOT.Head)) {
                     var subClause = currentFormula.GetArgAsExpression(0);
+
+                    // double negation +
                     if (subClause.Head.Equals(NOT.Head)) {
                         var subSubClause = subClause.GetArgAsExpression(0);
                         queue.Add(new ProofNode(queue.Count, subSubClause, queueIndex, false));
+                    }
+
+                    // nonidentity +
+                    if (subClause.Head.Equals(IDENTITY.Head) && !queue[queueIndex].IsAssumption) {
+                        queue.Add(new ProofNode(queue.Count, currentFormula, queueIndex, isAssumption: true));
                     }
                 }
 
@@ -710,18 +812,13 @@ public class MentalState : MonoBehaviour {
                     queue.Add(new ProofNode(queue.Count, fx, queueIndex, true));
                 }
 
-                // TODO assumptions.
-                // will need to move forward with an
-                // assumption, and then ripple defeat
-                // if ~assumption is proven.
-
                 if (currentFormula.Depth < MaxDepth) {
                     if (proofType == Plan) {
                         queue.Add(new ProofNode(
                             queue.Count,
                             new Expression(ABLE, SELF, currentFormula),
-                            queueIndex, false,
-                            (meetBasis, joinBasis) => {
+                            queueIndex,
+                            onMerge: (meetBasis, joinBasis) => {
                                 var productPremises = new List<Expression>();
                                 productPremises.AddRange(meetBasis.Key);
                                 productPremises.AddRange(joinBasis.Key);
