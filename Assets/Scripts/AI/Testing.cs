@@ -9,7 +9,6 @@ using static Expression;
 using static ProofType;
 
 using Substitution = System.Collections.Generic.Dictionary<Variable, Expression>;
-using Basis = System.Collections.Generic.KeyValuePair<System.Collections.Generic.List<Expression>, System.Collections.Generic.Dictionary<Variable, Expression>>;
 
 public class Testing : MonoBehaviour {
     private FrameTimer FrameTimer;
@@ -262,11 +261,70 @@ public class Testing : MonoBehaviour {
         //     new Expression(BETTER, new Expression(BLUE, SELF), NEUTRAL),
         //     new Expression(BETTER, new Expression(RED, SELF), new Expression(BLUE, SELF)));
         
+        // var r = new Expression(new Constant(TRUTH_VALUE, "r"));
+        // var r1 = new Basis();
+        // r1 = r1.AddPremise(r);
+
+        // var r2 = new Basis();
+        // r2 = r2.AddPremise(r);
+
+        // var r3 = new Basis();
+        // r3 = r3.AddPremise(r);
+
+        // var rs = new Bases();
+        // rs.Add(r1);
+        // rs.Add(r2);
+        // rs.Add(r3);
+
+        // Log(rs);
+        
+        // var basis = new Basis();
+        // Expression a = new Expression(new Constant(TRUTH_VALUE, "a"));
+        // Expression d = new Expression(new Constant(TRUTH_VALUE, "d"));
+        // Expression dd = new Expression(new Constant(TRUTH_VALUE, "dd"));
+        
+        // var dBases = new Bases();
+        // var ddBases = new Bases();
+
+        // var dBasis = new Basis();
+        // var ddBasis = new Basis();
+
+        // ddBasis = ddBasis.AddPremise(new Expression(NOT, dd));
+        // ddBases.Add(ddBasis);
+
+        // dBasis = dBasis.AddAssumption(dd);
+
+        // dBases.Add(dBasis);
+
+        // Log(dBases);
+
+        // basis = basis.AddPremise(a);
+        // basis = basis.AddAssumption(d);
+
+        
+
+        // var bases = new Bases();
+        // bases.Add(basis);
+
+        // Log(bases);
+        // bases.AddDefeater(d, dBases);
+
+        // bases.AddDefeater(dd, ddBases);
+
+        // Log(bases);
+        
         // Testing base query
         MentalState.Initialize(
+            new Expression(PERCEIVE, SELF, new Expression(BANANA, SELF)),
+            new Expression(PERCEIVE, SELF,
+                new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF)))),
+            new Expression(NOT, new Expression(VERIDICAL, SELF,
+                new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))))),
             new Expression(IDENTITY, SELF, BOB),
             new Expression(ABLE, SELF, new Expression(APPLE, SELF)),
-            new Expression(RED, SELF), new Expression(NOT, new Expression(BLUE, SELF)));
+            new Expression(RED, SELF),
+            new Expression(GREEN, SELF),
+            new Expression(NOT, new Expression(BLUE, SELF)));
         // Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 0));
         // Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 1));
         // Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(BLUE, SELF), 0));
@@ -277,33 +335,33 @@ public class Testing : MonoBehaviour {
         
         // StartCoroutine(LogBasesStream(MentalState, Proof, new Expression(NOT, new Expression(IDENTITY, SELF, EVAN))));
         // StartCoroutine(LogBasesStream(MentalState, Proof, new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
+
+        // StartCoroutine(LogBasesStream(MentalState, Plan,
+        //     new Expression(AND, new Expression(APPLE, SELF), new Expression(RED, SELF))));
+
+        StartCoroutine(LogBasesStream(MentalState, Proof, new Expression(BANANA, SELF)));
+
+        // StartCoroutine(LogBasesStream(MentalState, Plan,
+            // new Expression(SOME, APPLE, RED)));
         
-        // StartCoroutine(LogBasesStream(MentalState,
-            // new Expression(AND, new Expression(RED, XE),
-            // new Expression(NOT, new Expression(BLUE, XE)))));
+        // Log(new Expression(IDENTITY, SELF, BOB).GetHashCode());
+        // Log(new Expression(IDENTITY, BOB, SELF).GetHashCode());
 
-        // StartCoroutine(LogBasesStream(MentalState,
-            // new Expression(OR, new Expression(RED, XE), new Expression(BLUE, XE))));
-
-        // StartCoroutine(LogBasesStream(MentalState,
-            // new Expression(NOT, new Expression(NOT, new Expression(RED, SELF)))));
-
-
-        // StartCoroutine(LogBasesStream(MentalState,
+        // StartCoroutine(LogBasesStream(MentalState, Plan,
         //     new Expression(NOT, new Expression(NOT,
         //     new Expression(AND,
         //         new Expression(OR, new Expression(RED, XE),
         //             new Expression(NOT, new Expression(BLUE, XE))),
         //         new Expression(SOME, APPLE, RED))))));
         
-        int expressionDepth = 3;
+        // int expressionDepth = 2;
 
-        Expression big = new Expression(RED, SELF);
-        for (int i = 0; i < expressionDepth; i++) {
-            big = new Expression(OR, big, big);
-            big = new Expression(AND, big, big);
-        }
-        StartCoroutine(LogBasesStream(MentalState, Proof, big));
+        // Expression big = new Expression(RED, SELF);
+        // for (int i = 0; i < expressionDepth; i++) {
+        //     big = new Expression(OR, big, big);
+        //     big = new Expression(AND, big, big);
+        // }
+        // StartCoroutine(LogBasesStream(MentalState, Proof, big));
 
         // MentalState.ProofMode = Proof;
         // MentalState.Initialize(
@@ -487,7 +545,7 @@ public class Testing : MonoBehaviour {
     }
 
     public static IEnumerator LogBasesStream(MentalState m, ProofType pt, Expression e) {
-        var result = new HashSet<Basis>();
+        var result = new Bases();
         var done = new Container<bool>(false);
 
         m.StartCoroutine(m.StreamBasesBreadthFirst(pt, e, result, done));
@@ -496,39 +554,23 @@ public class Testing : MonoBehaviour {
         // var waitingString = "waiting for '" + e + "' to be proved...";
         while (!done.Item) {
             // Log(waitingString);
-            if (result.Count > 0) {
-                Log("'" + e + "'" + " is proved by: " + BasesString(result));
+            if (!result.IsEmpty()) {
+                Log("'" + e + "'" + " is proved by: " + result);
             }
             yield return null;
         }
-        Log("'" + e + "'" + " is proved by: " + BasesString(result));
+        Log("'" + e + "'" + " is proved by: " + result);
         yield break;
     }
 
     public static String BasesString(HashSet<Basis> bases) {
         StringBuilder s = new StringBuilder();
-        s.Append("\n{");
+        s.Append("{\n");
         foreach (Basis basis in bases) {
-            List<Expression> premises = basis.Key;
-            s.Append("\n<");
-            if (premises.Count > 0) {
-                s.Append(premises[0]);
-                for (int i = 1; i < premises.Count; i++) {
-                    s.Append(", ");
-                    s.Append(premises[i]);
-                }
-            }
-            s.Append("> with {");
-            Substitution substitution = basis.Value;
-            foreach (KeyValuePair<Variable, Expression> assignments in substitution) {
-                s.Append(assignments.Key);
-                s.Append(" -> ");
-                s.Append(assignments.Value);
-                s.Append(", ");
-            }
-            s.Append("}");
+            s.Append(basis);
+            s.Append('\n');
         }
-        s.Append("\n}");
+        s.Append("}");
         return s.ToString();
     }
 }
