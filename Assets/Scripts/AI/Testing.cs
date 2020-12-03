@@ -316,6 +316,7 @@ public class Testing : MonoBehaviour {
         // Testing base query
         MentalState.Initialize(
             new Expression(PERCEIVE, SELF, new Expression(BANANA, SELF)),
+            // new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))),
             new Expression(PERCEIVE, SELF,
                 new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF)))),
             new Expression(NOT, new Expression(VERIDICAL, SELF,
@@ -323,45 +324,54 @@ public class Testing : MonoBehaviour {
             new Expression(IDENTITY, SELF, BOB),
             new Expression(ABLE, SELF, new Expression(APPLE, SELF)),
             new Expression(RED, SELF),
+            new Expression(RED, BOB),
             new Expression(GREEN, SELF),
             new Expression(NOT, new Expression(BLUE, SELF)));
-        // Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 0));
-        // Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(RED, SELF), 1));
-        // Log(MentalState.BaseQuery(TensedQueryType.Exact, new Expression(BLUE, SELF), 0));
-        // Log(MentalState.BaseQuery(TensedQueryType.Inertial, new Expression(RED, SELF), 0));
 
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
-        // StartCoroutine(LogBasesStream(MentalState, Plan, new Expression(APPLE, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, RED, GREEN)));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, APPLE, RED), Plan));
         
-        // StartCoroutine(LogBasesStream(MentalState, Proof, new Expression(NOT, new Expression(IDENTITY, SELF, EVAN))));
-        // StartCoroutine(LogBasesStream(MentalState, Proof, new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(RED, XE)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, RED, GREEN)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, GREEN, RED)));
+        
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF)));
 
-        // StartCoroutine(LogBasesStream(MentalState, Plan,
-        //     new Expression(AND, new Expression(APPLE, SELF), new Expression(RED, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState,
+            // new Expression(AND, new Expression(BLUE, SELF), new Expression(RED, SELF))));
+            // 
+        // StartCoroutine(LogBasesStream(MentalState,
+            // new Expression(AND, new Expression(RED, SELF), new Expression(BLUE, SELF))));
+        
+        // StartCoroutine(LogBasesStream(MentalState,
+            // new Expression(NOT, new Expression(IDENTITY, SELF, EVAN))));
 
-        StartCoroutine(LogBasesStream(MentalState, Proof, new Expression(BANANA, SELF)));
-
-        // StartCoroutine(LogBasesStream(MentalState, Plan,
-            // new Expression(SOME, APPLE, RED)));
+        // StartCoroutine(LogBasesStream(MentalState,
+            // new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
+        
+        StartCoroutine(LogBasesStream(MentalState, new Expression(BANANA, SELF)));
         
         // Log(new Expression(IDENTITY, SELF, BOB).GetHashCode());
         // Log(new Expression(IDENTITY, BOB, SELF).GetHashCode());
 
-        // StartCoroutine(LogBasesStream(MentalState, Plan,
+        // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(NOT, new Expression(NOT,
         //     new Expression(AND,
         //         new Expression(OR, new Expression(RED, XE),
         //             new Expression(NOT, new Expression(BLUE, XE))),
-        //         new Expression(SOME, APPLE, RED))))));
+        //         new Expression(SOME, APPLE, RED)))), Plan));
         
-        // int expressionDepth = 2;
+        // int expressionDepth = 10;
 
         // Expression big = new Expression(RED, SELF);
+        // Expression big2 = new Expression(GREEN, SELF);
         // for (int i = 0; i < expressionDepth; i++) {
-        //     big = new Expression(OR, big, big);
-        //     big = new Expression(AND, big, big);
+        //     big = new Expression(AND, big, big2);
+        //     big = new Expression(OR, big, big2);
+        //     big = new Expression(TRULY, big);
         // }
-        // StartCoroutine(LogBasesStream(MentalState, Proof, big));
+        // StartCoroutine(LogBasesStream(MentalState, big));
 
         // MentalState.ProofMode = Proof;
         // MentalState.Initialize(
@@ -540,37 +550,25 @@ public class Testing : MonoBehaviour {
         while (!done.Item) {
             yield return null;
         }
-        Log("'" + e + "'" + " is proved by: " + BasesString(result));
-        yield break;
-    }
-
-    public static IEnumerator LogBasesStream(MentalState m, ProofType pt, Expression e) {
-        var result = new Bases();
-        var done = new Container<bool>(false);
-
-        m.StartCoroutine(m.StreamBasesBreadthFirst(pt, e, result, done));
-
-        bool one = false;
-        // var waitingString = "waiting for '" + e + "' to be proved...";
-        while (!done.Item) {
-            // Log(waitingString);
-            if (!result.IsEmpty()) {
-                Log("'" + e + "'" + " is proved by: " + result);
-            }
-            yield return null;
-        }
         Log("'" + e + "'" + " is proved by: " + result);
         yield break;
     }
 
-    public static String BasesString(HashSet<Basis> bases) {
-        StringBuilder s = new StringBuilder();
-        s.Append("{\n");
-        foreach (Basis basis in bases) {
-            s.Append(basis);
-            s.Append('\n');
+    public static IEnumerator LogBasesStream(MentalState m, Expression e, ProofType pt = Proof) {
+        var result = new Bases();
+
+        m.StartCoroutine(m.StreamBasesIteratedDFS(result, e, pt));
+
+        var waitingString = "waiting for '" + e + "' to be proved...";
+        var isProvedByString = "'" + e + "'" + " is proved by: ";
+        while (!result.IsExhaustive) {
+            // Log(waitingString);
+            if (!result.IsEmpty()) {
+                Log(isProvedByString + result);
+            }
+            yield return null;
         }
-        s.Append("}");
-        return s.ToString();
+        Log(isProvedByString + result);
+        yield break;
     }
 }

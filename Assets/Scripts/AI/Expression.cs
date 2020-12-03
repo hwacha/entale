@@ -46,7 +46,7 @@ public class Variable : Atom {
 }
 
 // A parameter. A private symbol the mental state can assign as a name.
-public class Parameter : Atom {
+public class Parameter : Constant {
     public Parameter(SemanticType type, uint id) : base(type, "$" + id.ToString()) {}
 }
 

@@ -38,23 +38,17 @@ public class Basis {
     // this won't spell trouble for the proof,
     // and may be necessary for resolutions.
     public readonly List<Expression> Premises;
-    // the assumptions of this proof, along with
-    // any proofs of the its defeaters. 
-    public readonly Dictionary<Expression, Bases> Assumptions;
     // a common variable assignment for
     // all formulas in this proof.
-    public readonly Substitution Substitution;
+    public Substitution Substitution;
 
     public Basis(List<Expression> premises,
-        Dictionary<Expression, Bases> assumptions,
         Substitution substitution) {
         Premises = premises;
-        Assumptions = assumptions;
         Substitution = substitution;
     }
 
     public Basis() : this(new List<Expression>(),
-        new Dictionary<Expression, Bases>(),
         new Substitution()) {}
 
     // the product basis a x b.
@@ -66,76 +60,15 @@ public class Basis {
             productPremises.Add(bPremise.Substitute(a.Substitution));
         }
 
-        var productAssumptions = new Dictionary<Expression, Bases>();
-        foreach (var assumptionA in a.Assumptions) {
-            productAssumptions.Add(assumptionA.Key, assumptionA.Value);
-        }
-
-        foreach (var assumptionB in b.Assumptions) {
-            if (productAssumptions.ContainsKey(assumptionB.Key)) {
-                productAssumptions[assumptionB.Key] =
-                    Bases.Join(productAssumptions[assumptionB.Key], assumptionB.Value);
-            } else {
-                productAssumptions.Add(assumptionB.Key, assumptionB.Value);
-            }
-        }
-
         var productSubstitution = Compose(a.Substitution, b.Substitution);
 
         Premises = productPremises;
-        Assumptions = productAssumptions;
         Substitution = productSubstitution;
     }
 
-    public bool IsDefeated() {
-        foreach (Bases b in Assumptions.Values) {
-            if (!b.IsDefeated()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // TODO separate assumptions from explicit premises,
-    // and then keep track of the bases for the assumption's negation.
-    public Basis AddAssumption(Expression assumption) {
-        var newAssumption = assumption.Substitute(Substitution);
-        var newAssumptions = new Dictionary<Expression, Bases>();
-        if (!Assumptions.ContainsKey(newAssumption)) {
-            newAssumptions.Add(newAssumption, new Bases());
-        }
-
-        foreach (var oldAssumption in Assumptions) {
-            newAssumptions.Add(oldAssumption.Key, oldAssumption.Value);
-        }
-
-        return new Basis(Premises, newAssumptions, Substitution);
-    }
-
-    // @Note remove this method if you choose to making
-    // willing(self, S) a defeasible assumption in planning.
-    public Basis AddPremise(Expression premise) {
-        var newPremises = new List<Expression>();
-        newPremises.AddRange(Premises);
-        newPremises.Add(premise.Substitute(Substitution));
-        return new Basis(newPremises, Assumptions, Substitution);
-    }
-
-    public void AddDefeater(Expression defeater, Bases refutations) {
-        if (Assumptions.ContainsKey(defeater)) {
-            var oldRefutations = Assumptions[defeater];
-            // TODO: NEED HASHCODE FOR BASES/BASIS.
-            foreach (Basis refutation in refutations) {
-                if (oldRefutations.Contains(refutation)) {
-                    return;
-                }
-            }
-            Assumptions[defeater].Add(refutations);
-        } else {
-            foreach (var bases in Assumptions.Values) {
-                bases.AddDefeater(defeater, refutations);
-            }
-        }
+    // simple
+    public void AddPremise(Expression premise) {
+        Premises.Add(premise);
     }
 
     // composes two substitutions together a * b,
@@ -152,7 +85,6 @@ public class Basis {
             composition[aAssignment.Key] = aAssignment.Value;
         }
 
-
         return composition;
     }
 
@@ -167,27 +99,6 @@ public class Basis {
             }
         }
 
-        if (Premises.Count > 0 && Assumptions.Count > 0) {
-            s.Append(", ");
-        }
-        
-        if (Assumptions.Count > 0) {
-            s.Append('[');    
-        }
-        
-        foreach (var assumption in Assumptions) {
-            
-            s.Append(assumption.Key);
-            var defeaterBases = assumption.Value;
-            if (!defeaterBases.IsEmpty() && !defeaterBases.IsDefeated()) {
-                s.Append('*');
-            }
-            s.Append(", ");
-        }
-        if (Assumptions.Count > 0) {
-            s.Append(']');
-        }
-
         s.Append("> with {");
         foreach (KeyValuePair<Variable, Expression> assignment in Substitution) {
             s.Append(assignment.Key);
@@ -196,10 +107,7 @@ public class Basis {
             s.Append(", ");
         }
         s.Append("}");
-        if (IsDefeated()) {
-            s.Append(" [DEFEATED]");
-        }
-        
+
         return s.ToString();
     }
 
@@ -207,14 +115,6 @@ public class Basis {
         int hash = 5381;
         foreach (var p in Premises) {
             hash = 33 * hash + p.GetHashCode();
-        }
-
-        foreach (var a in Assumptions) {
-            hash = 41 * hash + a.Key.GetHashCode();
-            hash %= 100000000;
-            // foreach (var basis in a.Value) {
-            //     hash = 43 * hash + basis.GetHashCode();
-            // }
         }
 
         foreach (var sub in Substitution) {
@@ -242,16 +142,6 @@ public class Basis {
             }
         }
 
-        if (this.Assumptions.Count != that.Assumptions.Count) {
-            return false;
-        }
-
-        foreach (var assumption in this.Assumptions.Keys) {
-            if (!that.Assumptions.ContainsKey(assumption)) {
-                return false;
-            }
-        }
-
         if (this.Substitution.Count != that.Substitution.Count) {
             return false;
         }
@@ -272,13 +162,25 @@ public class Basis {
 
 public class Bases {
     private HashSet<Basis> BasisCollection;
+    public bool IsComplete {get; private set;}
+    public bool IsExhaustive {get; private set;}
 
     public Bases() {
         BasisCollection = new HashSet<Basis>();
+        IsComplete = false;
+        IsExhaustive = false;
     }
 
     public void Clear() {
         BasisCollection.Clear();
+    }
+
+    public void Complete() {
+        IsComplete = true;
+    }
+
+    public void Exhaust() {
+        IsExhaustive = true;
     }
 
     public bool IsEmpty() {
@@ -289,28 +191,12 @@ public class Bases {
         return BasisCollection.Contains(basis);
     }
 
-    public bool IsDefeated() {
-        foreach (var b in BasisCollection) {
-            if (!b.IsDefeated()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     public void Add(Basis basis) {
         BasisCollection.Add(basis);
     }
 
     public void Add(Bases bases) {
         BasisCollection.UnionWith(bases.BasisCollection);
-    }
-
-    public void AddDefeater(Expression defeater, Bases refutations) {
-        foreach (var basis in BasisCollection) {
-            basis.AddDefeater(defeater, refutations);
-            // Debug.Log("added defeater to " + basis);
-        }
     }
 
     // corresponds to the sum of two proofs:
@@ -347,9 +233,6 @@ public class Bases {
             s.Append('\n');
         }
         s.Append('}');
-        if (IsDefeated()) {
-            s.Append("[DEFEATED]");
-        }
         return s.ToString();
     }
 }
@@ -416,9 +299,8 @@ public class MentalState : MonoBehaviour {
 
     protected uint ParameterID;
 
-    // private HashSet<Expression> BeliefBase = new HashSet<Expression>();
-    private Dictionary<SemanticType, Dictionary<Atom,
-        Dictionary<Expression, SortedSet<uint>>>> BeliefBase;
+    private Dictionary<SemanticType,
+        Dictionary<Atom, HashSet<Expression>>> BeliefBase;
 
     // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
@@ -431,7 +313,7 @@ public class MentalState : MonoBehaviour {
     // I'll just make it public for now.
     //
     public Dictionary<Expression, Vector3> Locations;
-    protected uint Timestamp = 0;
+    // protected uint Timestamp = 0;
     int MaxDepth = 0;
 
     void Update() {
@@ -448,132 +330,78 @@ public class MentalState : MonoBehaviour {
         if (BeliefBase != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
-        BeliefBase = new Dictionary<SemanticType, Dictionary<Atom,
-            Dictionary<Expression, SortedSet<uint>>>>();
+        BeliefBase = new Dictionary<SemanticType,
+            Dictionary<Atom, HashSet<Expression>>>();
 
         for (int i = 0; i < initialBeliefs.Length; i++) {
-            if (!Add(initialBeliefs[i], 0)) {
+            if (!Add(initialBeliefs[i])) {
                 throw new ArgumentException("MentalState(): expected sentences for belief base.");
             }
         }
     }
 
-    // this returns true if this model sampled
-    // sentence at the specified timestamp.
-    public (bool, uint) BaseQuery(TensedQueryType tensedQueryType, Expression sentence, uint timestamp) {
-        Debug.Assert(sentence.Type.Equals(TRUTH_VALUE));
-
-        if (BeliefBase.ContainsKey(sentence.Head.Type) &&
-            BeliefBase[sentence.Head.Type].ContainsKey(sentence.Head) &&
-            BeliefBase[sentence.Head.Type][sentence.Head].ContainsKey(sentence)) {
-
-            if (tensedQueryType == TensedQueryType.Exact) {
-                if (BeliefBase[sentence.Head.Type][sentence.Head][sentence].Contains(timestamp)) {
-                    return (true, timestamp);
-                }
-            }
-
-            // here, we check that the most recent positive sample of S
-            // is not counterveiled by a more recent negative sample.
-            if (tensedQueryType == TensedQueryType.Inertial) {
-                // This gets a range of positive samples from 0 to given timestamp (inclusive)
-                
-                var positiveSampleRange = BeliefBase[sentence.Head.Type][sentence.Head][sentence].GetViewBetween(0, timestamp);
-
-                if (positiveSampleRange.Count == 0) {
-                    // @Note do we want to return the most recent negative sample here instead?
-                    return (false, 0);
-                }
-
-                uint latestPositiveSample = positiveSampleRange.Max;
-
-                Expression negatedSentence = sentence.Head.Equals(NOT.Head) ? sentence.GetArgAsExpression(0) : new Expression(NOT, sentence);
-                
-                SortedSet<uint> negativeSampleRange = null;
-                if (BeliefBase.ContainsKey(negatedSentence.Head.Type) &&
-                    BeliefBase[negatedSentence.Head.Type].ContainsKey(negatedSentence.Head) &&
-                    BeliefBase[negatedSentence.Head.Type][negatedSentence.Head].ContainsKey(negatedSentence)) {
-                    
-                    negativeSampleRange =
-                        BeliefBase[negatedSentence.Head.Type][negatedSentence.Head][negatedSentence]
-                        .GetViewBetween(latestPositiveSample, timestamp);
-                }
-
-
-                if (negativeSampleRange == null || negativeSampleRange.Count == 0) {
-                    return (true, latestPositiveSample);
-                }
-
-                uint latestNegativeSample = negativeSampleRange.Max;
-
-                if (latestPositiveSample > latestNegativeSample) {
-                    return (true, latestPositiveSample);
-                } else {
-                    return (false, latestNegativeSample);
-                }
-            }
+    private bool Contains(Expression sentence) {
+        // @Note right now, we disallow formulas in the
+        // belief base. This is subject to change.
+        if (sentence.GetVariables().Count > 0) {
+            return false;
         }
 
-        return (false, 0);
+        // our belief base is index by the head's type
+        // as well as the head.
+        if (!BeliefBase.ContainsKey(sentence.Head.Type)) {
+            return false;
+        }
+
+        var beliefsByHeadType = BeliefBase[sentence.Head.Type];
+        if (!beliefsByHeadType.ContainsKey(sentence.Head)) {
+            return false;
+        }
+
+        var beliefsByHead = beliefsByHeadType[sentence.Head];
+        return beliefsByHead.Contains(sentence);
     }
 
     // returns false if this belief is already in the belief base
-    // at the given timestamp
-    private bool Add(Expression belief, uint timestamp) {
+    private bool Add(Expression belief) {
         Debug.Assert(belief.Type.Equals(TRUTH_VALUE));
         Debug.Assert(belief.GetVariables().Count == 0);
 
         if (!BeliefBase.ContainsKey(belief.Head.Type)) {
             BeliefBase[belief.Head.Type] =
-                new Dictionary<Atom, Dictionary<Expression, SortedSet<uint>>>();
+                new Dictionary<Atom, HashSet<Expression>>();
         }
         if (!BeliefBase[belief.Head.Type].ContainsKey(belief.Head)) {
             BeliefBase[belief.Head.Type][belief.Head] =
-                new Dictionary<Expression, SortedSet<uint>>();
+                new HashSet<Expression>();
         }
 
-        if (!BeliefBase[belief.Head.Type][belief.Head].ContainsKey(belief)) {
-            BeliefBase[belief.Head.Type][belief.Head][belief] =
-                new SortedSet<uint>();
-        }
-        if (BeliefBase[belief.Head.Type][belief.Head][belief].Contains(timestamp)) {
+        if (BeliefBase[belief.Head.Type][belief.Head].Contains(belief)) {
             return false;
         }
 
-        BeliefBase[belief.Head.Type][belief.Head][belief].Add(timestamp);
+        BeliefBase[belief.Head.Type][belief.Head].Add(belief);
 
         if (belief.Depth > MaxDepth) {
             MaxDepth = belief.Depth;
         }
+
         return true;
     }
 
-    private bool Remove(Expression sentence, uint timestamp) {
-        if (BaseQuery(TensedQueryType.Exact, sentence, timestamp).Item1) {
-            var times = BeliefBase[sentence.Head.Type][sentence.Head as Constant][sentence];
-            
-            var removeSuccess = times.Remove(timestamp);
-
-            if (!removeSuccess) {
-                return false;
-            }
-
-            // @Note finish this code to remove a key from the belief base
-            // if its value is empty. Right now it doesn't seem to break
-            // anything if it's left in.
-            // 
-            // if (times.Count == 0) {
-            //     BeliefBase[sentence.Head.Type][sentence.Head as Constant].Remove(sentence);
-            // }
-            
-            return true;
+    // returns true if the item is successfully removed.
+    private bool Remove(Expression sentence) {
+        if (!Contains(sentence)) {
+            return false;
         }
-        return false;
+
+        BeliefBase[sentence.Head.Type][sentence.Head].Remove(sentence);
+        return true;
     }
 
     // returns satisfiers in the belief base for this formula
     // at a given timestamp
-    private HashSet<Basis> Satisfiers(Expression formula, uint timestamp) {
+    private HashSet<Basis> Satisfiers(Expression formula) {
         // first, we get the domain to search through.
         // this is going to correspond to all sentences
         // that are structural candidates for matching
@@ -583,21 +411,17 @@ public class MentalState : MonoBehaviour {
         if (formula.Head is Constant) {
             if (BeliefBase.ContainsKey(formula.Head.Type) &&
                 BeliefBase[formula.Head.Type].ContainsKey(formula.Head)) {
-                foreach (var sentenceAndTimes in BeliefBase[formula.Head.Type][formula.Head]) {
-                    if (sentenceAndTimes.Value.Contains(timestamp)) {
-                        domain.Add(sentenceAndTimes.Key);
-                    }
+                foreach (var sentence in BeliefBase[formula.Head.Type][formula.Head]) {
+                    domain.Add(sentence);
                 }
             }
         }
 
-        foreach (var typeMap in BeliefBase) {
-            if (formula.Head.Type.IsPartialApplicationOf(typeMap.Key)) {
-                foreach (var beliefsByPrefix in typeMap.Value.Values) {
-                    foreach (var sentenceAndTimes in beliefsByPrefix) {
-                        if (sentenceAndTimes.Value.Contains(timestamp)) {
-                            domain.Add(sentenceAndTimes.Key);
-                        }
+        foreach (var beliefsByHeadType in BeliefBase) {
+            if (formula.Head.Type.IsPartialApplicationOf(beliefsByHeadType.Key)) {
+                foreach (var beliefsByHead in beliefsByHeadType.Value.Values) {
+                    foreach (var sentence in beliefsByHead) {
+                        domain.Add(sentence);
                     }
                 }
             }
@@ -613,17 +437,12 @@ public class MentalState : MonoBehaviour {
             HashSet<Substitution> unifiers = formula.GetMatches(belief);
             foreach (Substitution unifier in unifiers) {
                 satisfiers.Add(new Basis( new List<Expression>(){belief},
-                    new Dictionary<Expression, Bases>(), unifier));
+                    unifier));
             }
         }
 
-        // Debug.Log("satisfiers for " + formula + " at t=" + timestamp);
-        // Debug.Log(Testing.BasesString(satisfiers));
-
         return satisfiers;
     }
-
-
 
     // gets a variable that's unused in the goal
     private static Variable GetUnusedVariable(SemanticType t, HashSet<Variable> usedVariables) {
@@ -640,504 +459,288 @@ public class MentalState : MonoBehaviour {
         ParameterID++;
         return param;
     }
-
+    
     private class ProofNode {
-        #region parameters
-        protected int ID;
-        public Expression Formula {protected set; get;}
-        public int OutgoingID;
-        public bool IsDependent {protected set; get;}
-        public bool IsAssumption {protected set; get;}
-        public Func<Basis, Basis, Basis> OnMerge;
+        #region Parameters
+        public readonly Expression Lemma;
+        public readonly uint Depth;
+        public readonly ProofNode Parent;
+        public readonly ProofNode OlderSibling;
+        public readonly bool IsAssumption;
         #endregion
 
-        // @lang: is there a way to make a collection
-        // readonly for public, but allow modifications
-        // within a class?
-        #region variables
-        public bool Visited;
-        public Bases OldMeetBases;
-        public Bases OldJoinBases;
-        public Bases NewMeetBases;
-        public Bases NewJoinBases;
-        public Expression NewDefeater;
-        public Bases NewRefutations;
+        #region Variables
+        public int NumInexhaustiveChildren;
+        public Bases YoungerSiblingBases;
+        public Bases ChildBases;
         #endregion
 
-        public ProofNode(int id, Expression formula, int outgoingID,
-            bool isDependent = false, bool isAssumption = false,
-            Func<Basis, Basis, Basis> onMerge = null) {
-            ID = id;
-            Formula = formula;
-            OutgoingID = outgoingID;
-            IsDependent = isDependent;
+        public ProofNode(Expression lemma, uint depth, ProofNode parent,
+            ProofNode olderSibling = null,
+            bool hasYoungerSibling = false,
+            bool isAssumption = false) {
+            Lemma = lemma;
+            Depth = depth;
+            Parent = parent;
+            OlderSibling = olderSibling;
             IsAssumption = isAssumption;
-            OnMerge = onMerge;
-
-            Visited = false;
-
-            OldMeetBases = new Bases();
-            // this means this node is receiving
-            // bases to something out of the
-            // scope of an inference rule.
-            // So, we don't have to worry about
-            // variable assignments.
-            // 
-            // For these nodes, we give an empty
-            // substitution.
-            // 
-            // For nodes which must receive an
-            // assignment before they're queried,
-            // we want the for loop for assignments
-            // not to trigger an queries.
-            if (!IsDependent) {
-                OldMeetBases.Add(new Basis());
+            if (Parent != null) {
+                Parent.NumInexhaustiveChildren++;    
             }
-            
-            OldJoinBases = new Bases();
 
-            NewMeetBases = new Bases();
-            NewJoinBases = new Bases();
-
-            NewDefeater = null;
-            NewRefutations = null;
-        }
-
-        public void ReceiveBases(Bases bases, int incomingID, Expression defeater = null) {
-            // Debug.Log(ID + ": " + Formula + " is receiving " + bases + " with defeater: " + defeater);
-            // if the queue id of the incoming ID is lower
-            // than this node's queue ID, this must mean it
-            // is being passed on in an inference rule.
-            // So, we should add it to our meet bases.
-            if (incomingID < ID) {
-                if (Visited) {
-                    if (defeater == null) {
-                        NewMeetBases.Add(bases);
-                    } else {
-                        NewMeetBases.AddDefeater(defeater, bases);
-                    }
-                } else {
-                    if (defeater == null) {
-                        OldMeetBases.Add(bases);
-                    } else {
-                        OldMeetBases.AddDefeater(defeater, bases);
-                    }
-                }
-            } else {
-                var newBases = new Bases();
-                foreach (var basis in bases) {
-                    // here, we discard any unused variable assignments.
-                    var trimmedSubstitution = new Substitution();
-                    foreach (var assignment in basis.Substitution) {
-                        if (Formula.HasOccurenceOf(assignment.Key)) {
-                            trimmedSubstitution[assignment.Key] = assignment.Value;
-                        }
-                    }
-                    newBases.Add(new Basis(basis.Premises, basis.Assumptions, trimmedSubstitution));
-                }
-                if (defeater == null) {
-                    NewJoinBases.Add(newBases);    
-                } else {
-                    NewDefeater = defeater;
-                    NewRefutations = newBases;
-                }
+            NumInexhaustiveChildren = -1;
+            YoungerSiblingBases = new Bases();
+            if (!hasYoungerSibling) {
+                YoungerSiblingBases.Add(new Basis());
             }
+            ChildBases = new Bases();
         }
     }
 
-    public IEnumerator StreamBasesBreadthFirst(
-        ProofType proofType,
-        Expression goal,
-        Bases alternativeBases, Container<bool> done) {
-        // this will be the queue for a breadth-first search.
-        var queue = new List<ProofNode>();
-
-        // this, we keep track of in order to go back to the
-        // first value at a given depth. That way, our rules
-        // add nodes to be visited in a breadth-first order.
-        int depthLowerBound = 0;
-        int depthUpperBound = 1;
-
-        // first, we set up a node for the goal.
-        var goalNode = new ProofNode(0, goal,  0, false);
-        queue.Add(goalNode);
-
-        while (true) {
+    public IEnumerator StreamBasesIteratedDFS(Bases bases, Expression conclusion, ProofType pt = Proof) {
+        // we can only prove sentences.
+        Debug.Assert(conclusion.Type.Equals(TRUTH_VALUE));
+        
+        // we're going to do a depth-first search
+        // with successively higher bounds on the
+        // depth allowed.
+        uint maxDepth = 0;
+        while (!bases.IsExhaustive) {
+            // at the beginning of any iterated step,
+            // we check if we've gone past
+            // our allotted time budget.
             if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                 yield return null;
             }
 
-            // then, we go through each node in our execution queue.
-            // More nodes will be added as inference rules are matched.
-            for (int queueIndex = depthLowerBound; queueIndex < depthUpperBound; queueIndex++) {
+            bases.Clear();
+
+            // we set up our stack for DFS
+            // with the intended
+            var root = new ProofNode(conclusion, 0, null);
+            root.ChildBases = bases;
+            var stack = new Stack<ProofNode>();
+            stack.Push(root);
+
+            // we go through the stack.
+            while (stack.Count != 0) {
                 if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                     yield return null;
                 }
-                ProofNode cur = queue[queueIndex];
-                cur.Visited = true;
 
-                // Debug.Log("Visiting " + queueIndex + ": " + cur.Formula + " -> " + cur.OutgoingID);
+                var current = stack.Pop();
 
-                var assignedFormulas = new HashSet<Expression>();
+                // Debug.Log("visiting " + current.Lemma);
 
-                // here, we pass assignments on from earlier
-                // checked premises in an inference rule
-                // (if there are any). If a sentence should
-                // be proven outside the context of an inference rule,
-                // then an empty assignment will be given ahead of time.
-                foreach (Basis b in cur.OldMeetBases) {
-                    if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                        yield return null;
-                    }
-                    var currentFormula = cur.Formula.Substitute(b.Substitution);
-
-                    if (!cur.IsDependent) {
-                        if (assignedFormulas.Contains(currentFormula)) {
-                            continue;
-                        } else {
-                            assignedFormulas.Add(currentFormula);
+                if (current.YoungerSiblingBases.IsEmpty()) {
+                    current.Parent.NumInexhaustiveChildren--;
+                    var merge = current.Parent;
+                    while (merge != null) {
+                        if (merge.NumInexhaustiveChildren == 0) {
+                            merge.ChildBases.Exhaust();
                         }
-                    }
-
-                    var searchBases = new Bases();
-
-                     if (cur.IsAssumption) {
-                        // we simply add the assumption to the basis.
-                        var basis = new Basis().AddAssumption(cur.Formula);
-                        searchBases.Add(basis);
-
-                        // we spawn a node to prove this formula's negation.
-                        queue.Add(new ProofNode(queue.Count, new Expression(NOT, currentFormula), queueIndex));
-                    } else {
-                        // we do a base query for the formula.
-                        var (success, time) = BaseQuery(TensedQueryType.Inertial, currentFormula, Timestamp);
-                        if (success) {
-                            var premise = new List<Expression>();
-                            premise.Add(cur.Formula);
-                            var basis = new Basis(premise,
-                                new Dictionary<Expression, Bases>(),
-                                new Substitution());
-                            searchBases.Add(basis);
-                        } else if (cur.Formula.GetVariables().Count > 0) {
-                            // TODO: inline Satisfiers()
-                            // so that it can be chunked.
-                            HashSet<Basis> sbs = Satisfiers(cur.Formula, Timestamp);
-                            foreach (var sb in sbs) {
-                                searchBases.Add(sb);
-                            }
+                        if (merge.Parent != null) {
+                            merge.Parent.NumInexhaustiveChildren--;
                         }
+                        merge = merge.Parent;
                     }
-
-                    if (!searchBases.IsEmpty()) {
-                        cur.ReceiveBases(searchBases, queueIndex);
-
-                        if (queueIndex == 0) {
-                            alternativeBases.Add(searchBases);
-                            yield return null;
-                        } else {
-                            // this index keeps track of a 'call stack' for
-                            // when a proof basis is found inferentially, the
-                            // results of which need to be merged through
-                            // meet or join operations down to a base call.
-                            int mergeIndex = queueIndex;
-
-                            // here, we execute any basis
-                            // merging that needs to happen.
-                            while (mergeIndex != 0) {
-                                if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                                    yield return null;
-                                }
-                                ProofNode currentMergeNode = queue[mergeIndex];
-
-                                // Debug.Log("Passing " + mergeIndex + ": " + currentMergeNode.Formula);
-
-                                // we want to wait until it's this node's turn.
-                                // the ripple merges should start only after
-                                // a search has been attempted.
-                                if (!currentMergeNode.Visited) {
-                                    break;
-                                }
-
-                                var defeater = currentMergeNode.NewDefeater;
-                                var refutations = currentMergeNode.NewRefutations;
-
-                                if (defeater == null &&
-                                    currentMergeNode.IsAssumption &&
-                                    mergeIndex != queueIndex) {
-                                    defeater = currentMergeNode.Formula;
-                                    refutations = currentMergeNode.NewJoinBases;
-                                }
-
-                                if (defeater != null) {
-                                    // the outgoing node receives the new bases.
-                                    currentMergeNode.OldJoinBases.AddDefeater(defeater, refutations);
-                                    queue[currentMergeNode.OutgoingID].ReceiveBases(
-                                        refutations, mergeIndex, defeater);
-
-                                    currentMergeNode.NewDefeater = null;
-                                    currentMergeNode.NewRefutations = null;
-                                    currentMergeNode.NewJoinBases.Clear();
-
-                                    mergeIndex = currentMergeNode.OutgoingID;
-                                    continue;
-                                }
-
-                                // old meets matched with old joins, ALREADY DONE.
-                                // old meets matched with new joins,
-                                // new meets matched with old joins,
-                                // new meets matched with new joins, NOT POSSIBLE.
-                                
-                                // if there aren't any new, then the previous meet
-                                // wasn't successful: no proofs.
-                                if (currentMergeNode.NewMeetBases.IsEmpty() &&
-                                    currentMergeNode.NewJoinBases.IsEmpty()) {
-                                    break;
-                                }
-
-                                Bases meetBases, joinBases;
-
-                                // if we have new meet bases, we pass the assignments on
-                                // and spawn new execution nodes.
-                                if (!currentMergeNode.NewMeetBases.IsEmpty()) {
-
-                                    meetBases = currentMergeNode.NewMeetBases;
-
-                                    foreach (var meetBasis in meetBases) {
-                                        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                                            yield return null;
-                                        }
-
-                                        var assignedFormula = currentMergeNode.Formula.Substitute(meetBasis.Substitution);
-
-                                        // otherwise, we spawn an independent node with this assignment.
-                                        var assignedNode =
-                                            new ProofNode(queue.Count, assignedFormula,
-                                                mergeIndex, isDependent: false,
-                                                isAssumption: false);
-
-                                        queue.Add(assignedNode);
-                                    }
-
-                                    currentMergeNode.OldMeetBases.Add(meetBases);
-                                    currentMergeNode.NewMeetBases.Clear();
-                                } else {
-                                    // if we have new join bases, we link up the meet and join
-                                    // bases and pass them on the outgoing node, and ripple through.
-                                    meetBases = currentMergeNode.OldMeetBases;
-                                    joinBases = currentMergeNode.NewJoinBases;
-
-                                    var productBases = new Bases();
-                                    foreach (var meetBasis in meetBases) {
-                                        foreach (var joinBasis in joinBases) {
-                                            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                                                yield return null;
-                                            }
-
-                                            if (currentMergeNode.OnMerge == null) {
-                                                productBases.Add(new Basis(meetBasis, joinBasis));
-                                                
-                                            } else {
-                                                productBases.Add(currentMergeNode.OnMerge(meetBasis, joinBasis));
-                                            }
-                                        }
-                                    }
-
-                                    // the outgoing node receives the new bases.
-                                    queue[currentMergeNode.OutgoingID].ReceiveBases(
-                                        productBases, mergeIndex, defeater);
-
-                                    currentMergeNode.NewDefeater = null;
-                                    currentMergeNode.NewRefutations = null;
-
-                                    // recur on the outgoing node.
-                                    mergeIndex = currentMergeNode.OutgoingID;
-
-                                    currentMergeNode.OldJoinBases.Add(joinBases);
-                                    currentMergeNode.NewJoinBases.Clear();
-                                }
-                            }
-
-                            // since we special case the root node,
-                            // we check the new join bases and clear it out.
-                            var root = queue[0];
-                            root.OldJoinBases.Add(root.NewJoinBases);
-                            if (root.NewDefeater != null) {
-                                root.OldJoinBases.AddDefeater(root.NewDefeater, root.NewRefutations);
-                            }
-                            root.NewJoinBases.Clear();
-                            root.NewDefeater = null;
-                            root.NewRefutations = null;
-
-                            alternativeBases.Clear();
-                            alternativeBases.Add(queue[0].OldJoinBases);
-                        }
-                    }
-                }
-            }
-
-            for (int queueIndex = depthLowerBound; queueIndex < depthUpperBound; queueIndex++) {
-                if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                    yield return null;
-                }
-                if (queue[queueIndex].IsDependent) {
+                    
                     continue;
                 }
-
-                var currentFormula = queue[queueIndex].Formula;
-                // we check against inference rules.
-
-                // // this gives us a collection of proof nodes for
-                // // the given inference rule.
-                // void SpawnNodes(InferenceRule rule) {
-                //     Expression[] premises = new Expression[rule.Premises.Length];
-                //     Expression[] assumptions = new Expression[rule.Assumptions.Length];
-                //     Expression[] conclusions = new Expression[rule.Conclusions.Length];
-                    
-                //     // change out variables in the rule to not collide
-                //     // with the variables in currentFormula.
-                //     var usedVariables = currentFormula.GetVariables();
-                //     var newVariableSubstitution = new Substitution();
-                //     var newUsedVariables = new HashSet<Variable>();
-                //     newUsedVariables.UnionWith(usedVariables);
-                //     foreach (var usedVariable in usedVariables) {
-                //         Variable newVariable = GetUnusedVariable(usedVariable.Type, newUsedVariables);
-                //         newVariableSubstitution.Add(usedVariable, new Expression(newVariable));
-                //     }
-
-                //     for (int i = 0; i < rule.Premises.Length; i++) {
-                //         premises[i] = rule.Premises[i].Substitute(newVariableSubstitution);
-                //     }
-
-                //     for (int i = 0; i < rule.Assumptions.Length; i++) {
-                //         assumptions[i] = rule.Assumptions[i].Substitute(newVariableSubstitution);
-                //     }
-
-                //     for (int i = 0; i < rule.Conclusions.Length; i++) {
-                //         conclusions[i] = rule.Conclusions[i].Substitute(newVariableSubstitution);
-                //     }
-
-                //     bool isFirstPremise = true;
-
-                //     for (int i = 0; i < conclusions.Length; i++) {
-                //         var unifiers = conclusions[i].GetMatches(currentFormula);
-
-                //         // for each unifier, we get a different set of bases.
-                //         foreach (var unifier in unifiers) {
-                //             for (int j = 0; j < premises.Length; j++) {
-                //                 queue.Add(new ProofNode(queue.Count,
-                //                     premises[j].Substitute(unifier),
-                //                     queue.Count + 1, !isFirstPremise, false));
-                //                 isFirstPremise = false;
-                //             }
-
-                //             // we try to disprove each of the other conclusions
-                //             for (int j = 0; j < conclusions.Length; j++) {
-                //                 if (j == i) {
-                //                     continue;
-                //                 }
-                //                 queue.Add(new ProofNode(queue.Count,
-                //                     new Expression(NOT, conclusions[j].Substitute(unifier)),
-                //                     queue.Count + 1, !isFirstPremise, false));
-                //                 isFirstPremise = false;
-                //             }
-
-                //             // TODO
-                //             // // @Note: the behavior of assumptions in this
-                //             // // method isn't yet specially implemented.
-                //             // // It probably will not give the right results.
-                //             // for (int j = 0; j < assumptions.Length; j++) {
-                //             //     queue.Add(new ProofNode(queue.Count,
-                //             //         premises[j].Substitute(unifier),
-                //             //         queue.Count + 1, !isFirstPremise, true));
-                //             //     isFirstPremise = false;
-                //             // }
-                //             // TODO
-
-                //             queue[queue.Count - 1].OutgoingID = queueIndex;
-                //         }
-                //     }
-                // }
-
-                // SpawnNodes(TRULY_INTRODUCTION);
-                // SpawnNodes(DOUBLE_NEGATION_INTRODUCTION);
-                // SpawnNodes(CONJUNCTION_INTRODUCTION);
-                // SpawnNodes(DISJUNCTION_INTRODUCTION_LEFT);
-                // SpawnNodes(DISJUNCTION_INTRODUCTION_RIGHT);
-                // SpawnNodes(EXISTENTIAL_INTRODUCTION);
-
-                // truth +
-                if (currentFormula.Head.Equals(TRULY.Head)) {
-                    queue.Add(new ProofNode(queue.Count, currentFormula.GetArgAsExpression(0), queueIndex, false));
-                }
-
-                // negation +s
-                if (currentFormula.Head.Equals(NOT.Head)) {
-                    var subClause = currentFormula.GetArgAsExpression(0);
-
-                    // double negation +
-                    if (subClause.Head.Equals(NOT.Head)) {
-                        var subSubClause = subClause.GetArgAsExpression(0);
-                        queue.Add(new ProofNode(queue.Count, subSubClause, queueIndex, false));
+                
+                foreach (var youngerSiblingBasis in current.YoungerSiblingBases) {
+                    if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+                            yield return null;
                     }
 
-                    // nonidentity +
-                    if (subClause.Head.Equals(IDENTITY.Head) && !queue[queueIndex].IsAssumption) {
-                        queue.Add(new ProofNode(queue.Count, currentFormula, queueIndex, isAssumption: true));
-                    }
-                }
+                    var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
-                // conjunction +
-                if (currentFormula.Head.Equals(AND.Head)) {
-                    queue.Add(new ProofNode(queue.Count, currentFormula.GetArgAsExpression(0), queue.Count + 1, false));
-                    queue.Add(new ProofNode(queue.Count, currentFormula.GetArgAsExpression(1), queueIndex, true));
-                }
-
-                // disjunction +
-                if (currentFormula.Head.Equals(OR.Head)) {
-                    queue.Add(new ProofNode(queue.Count, currentFormula.GetArgAsExpression(0), queueIndex, false));
-                    queue.Add(new ProofNode(queue.Count, currentFormula.GetArgAsExpression(1), queueIndex, false));
-                }
-
-                // existential +
-                if (currentFormula.Head.Equals(SOME.Head)) {
-                    var x = new Expression(GetUnusedVariable(INDIVIDUAL, currentFormula.GetVariables()));
-
-                    var fx = new Expression(currentFormula.GetArgAsExpression(0), x);
-                    var gx = new Expression(currentFormula.GetArgAsExpression(1), x);
-
-                    queue.Add(new ProofNode(queue.Count, fx, queue.Count + 1, false));
-                    queue.Add(new ProofNode(queue.Count, gx, queueIndex, isDependent: true));
-                }
-
-                if (currentFormula.Depth < MaxDepth) {
-                    // will +
-                    if (proofType == Plan) {
-                        queue.Add(new ProofNode(
-                            queue.Count,
-                            new Expression(ABLE, SELF, currentFormula),
-                            queueIndex,
-                            onMerge: (meetBasis, joinBasis) => {
-                                return new Basis(meetBasis, joinBasis).AddPremise(new Expression(WILL, currentFormula));
-                        }));                        
+                    // this is our base case.
+                    if (Contains(currentLemma)) {
+                        var basis = new Basis();
+                        basis.AddPremise(currentLemma);
+                        current.ChildBases.Add(basis);
+                    } else {
+                        var satisfiers = Satisfiers(currentLemma);
+                        foreach (var satisfier in satisfiers) {
+                            current.ChildBases.Add(satisfier);
+                        }
                     }
 
-                    // percept -
-                    queue.Add(new ProofNode(queue.Count, new Expression(PERCEIVE, SELF, currentFormula), queue.Count + 1));
-                    queue.Add(new ProofNode(queue.Count, new Expression(VERIDICAL, SELF, currentFormula),
-                        queueIndex, true, true));
+                    // we only check against inference rules if
+                    // our search bound hasn't been reached.
+                    if (current.Depth < maxDepth) {
+                        current.NumInexhaustiveChildren = 0;
+                        uint nextDepth = current.Depth + 1;
+                        // inferences here
+
+                        // truly +
+                        if (currentLemma.Head.Equals(TRULY.Head)) {
+                            var subclause = currentLemma.GetArgAsExpression(0);
+                            stack.Push(new ProofNode(subclause, nextDepth, current));
+                        }
+
+                        // double negation +
+                        if (currentLemma.Head.Equals(NOT.Head)) {
+                            var subclause = currentLemma.GetArgAsExpression(0);
+                            if (subclause.Head.Equals(NOT.Head)) {
+                                var subsubclause = subclause.GetArgAsExpression(0);
+                                stack.Push(new ProofNode(subsubclause, nextDepth, current));
+                            }
+
+                            // nonidentity assumption
+                            if (subclause.Head.Equals(IDENTITY.Head)) {
+                                stack.Push(new ProofNode(new Expression(NOT, currentLemma), nextDepth, current, isAssumption: true));
+                            }
+                        }
+
+                        // or +
+                        if (currentLemma.Head.Equals(OR.Head)) {
+                            var disjunctA = currentLemma.GetArgAsExpression(0);
+                            var disjunctB = currentLemma.GetArgAsExpression(1);
+                            stack.Push(new ProofNode(disjunctA, nextDepth, current));
+                            stack.Push(new ProofNode(disjunctB, nextDepth, current));
+                        }
+
+                        // and +
+                        if (currentLemma.Head.Equals(AND.Head)) {
+                            var conjunctA = currentLemma.GetArgAsExpression(0);
+                            var conjunctB = currentLemma.GetArgAsExpression(1);
+
+                            var bNode = new ProofNode(conjunctB, nextDepth, current, hasYoungerSibling: true);
+                            var aNode = new ProofNode(conjunctA, nextDepth, current, bNode);
+
+                            stack.Push(bNode);
+                            stack.Push(aNode);
+                        }
+
+                        // some +
+                        if (currentLemma.Head.Equals(SOME.Head)) {
+                            var f = currentLemma.GetArgAsExpression(0);
+                            var g = currentLemma.GetArgAsExpression(1);
+
+                            var x = new Expression(GetUnusedVariable(INDIVIDUAL, currentLemma.GetVariables()));
+
+                            var fx = new Expression(f, x);
+                            var gx = new Expression(g, x);
+
+                            var gxNode = new ProofNode(gx, nextDepth, current, hasYoungerSibling: true);
+                            var fxNode = new ProofNode(fx, nextDepth, current, gxNode);
+
+                            stack.Push(gxNode);
+                            stack.Push(fxNode);
+                        }
+
+                        if (currentLemma.Depth < this.MaxDepth) {
+                            // plan +
+                            if (pt == Plan) {
+                                var able = new Expression(ABLE, SELF, currentLemma);
+                                var will = new Expression(WILL, currentLemma);
+
+                                var ableNode = new ProofNode(able, nextDepth, current, hasYoungerSibling: true);
+                                var willBasis = new Basis();
+                                willBasis.AddPremise(will);
+
+                                // @Bug this doesn't get the variable assignment
+                                // it needs!
+                                // 
+                                // the test: plan for some(red, apple)
+                                // when able(self, apple(self))
+                                ableNode.YoungerSiblingBases.Add(willBasis);
+                                stack.Push(ableNode);
+                            }
+                            
+                            // percept -
+                            var perceive = new Expression(PERCEIVE, SELF, currentLemma);
+                            var veridical = new Expression(VERIDICAL, SELF, currentLemma);
+
+                            var veridicalNode = new ProofNode(new Expression(NOT, veridical), nextDepth,
+                                current, hasYoungerSibling: true, isAssumption: true);
+                            var perceiveNode = new ProofNode(perceive, nextDepth,
+                                current, veridicalNode);
+
+                            stack.Push(veridicalNode);
+                            stack.Push(perceiveNode);
+                        }
+                    }
+
+                    var merge = current;
+
+                    // pass on the bases and merge them all the way to
+                    // its ancestral node.
+                    while (merge != null) {
+                        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+                            yield return null;
+                        }
+
+                        // we've exhausted all of the search possibilities
+                        // for this lemma. Set the bases to exhaustive.
+                        if (merge.NumInexhaustiveChildren == 0) {
+                            merge.ChildBases.Exhaust();
+                        }
+
+                        // if these bases are exhaustive, decrement
+                        // the number of bases that have to be exhausted
+                        // for the parent node's search.
+                        if (merge.Parent != null) {
+                            if (merge.ChildBases.IsExhaustive) {
+                                merge.Parent.NumInexhaustiveChildren--;
+                            }
+                        }
+
+                        Bases productBases;
+
+                        if (merge.IsAssumption) {
+                            // no refutation
+                            if (merge.ChildBases.IsEmpty() &&
+                                current.Depth == maxDepth) {
+                                var assumptionBasis = new Basis();
+                                assumptionBasis.AddPremise(merge.Lemma.GetArgAsExpression(0));
+                                var assumptionBases = new Bases();
+                                assumptionBases.Add(assumptionBasis);
+                                // we can safely assume the content of
+                                // this assumption node
+                                productBases = Bases.Meet(merge.YoungerSiblingBases, assumptionBases);
+                            } else {
+                                // otherwise, if there's a refutation,
+                                // or if it's too early too tell,
+                                // don't send anything
+                                productBases = new Bases();
+                            }
+                        } else {
+                            // here, we merge the bases from siblings and
+                            // children. sibling bases ^ child bases
+                            productBases = Bases.Meet(merge.YoungerSiblingBases, merge.ChildBases);                            
+                        }
+
+                        // trim each of the merged bases to
+                        // discard unused variable assignments.
+                        foreach (var productBasis in productBases) {
+                            var trimmedSubstitution = new Substitution();
+                            foreach (var assignment in productBasis.Substitution) {
+                                if (merge.Lemma.HasOccurenceOf(assignment.Key)) {
+                                    trimmedSubstitution.Add(assignment.Key, assignment.Value);
+                                }
+                            }
+                            productBasis.Substitution = trimmedSubstitution;
+                        }
+
+                        // we pass on our new bases to the older sibling
+                        // if we have one, to the parent otherwise.
+                        if (merge.OlderSibling != null) {
+                            merge.OlderSibling.YoungerSiblingBases.Add(productBases);
+                        } else if (merge.Parent != null) {
+                            merge.Parent.ChildBases.Add(productBases);
+                        }
+
+                        merge = merge.Parent;
+                    }
                 }
             }
 
-            // no new nodes were added, so quit!
-            if (depthUpperBound == queue.Count) {
-                break;
-            }
-
-            depthLowerBound = depthUpperBound;
-            depthUpperBound = queue.Count;
+            // increment the upper bound and go again.
+            maxDepth++;
         }
-
-        done.Item = true;
         yield break;
     }
 
@@ -1271,8 +874,7 @@ public class MentalState : MonoBehaviour {
                 HashSet<Substitution> unifiers = goal.GetMatches(supposition);
                 foreach (var unifier in unifiers) {
                     alternativeBases.Add(new Basis(new List<Expression>(),
-                        new Dictionary<Expression, Bases>(),
-                        unifier));
+                                                unifier));
                 }
                 // @Note: because finding a sentence in the
                 // supposition set would amount to
@@ -1291,12 +893,10 @@ public class MentalState : MonoBehaviour {
         // 
         // right now, we do an intertial query: if
         // M |- A at i and M |- ~A at j and j < i, then M |- A
-        var (success, sample) = BaseQuery(TensedQueryType.Inertial, goal, Timestamp);
-        if (success) {
+        if (Contains(goal)) {
             var premises = new List<Expression>();
             premises.Add(goal);
-            alternativeBases.Add(new Basis(premises, new Dictionary<Expression, Bases>(),
-                new Substitution()));
+            alternativeBases.Add(new Basis(premises, new Substitution()));
 
             // @Note we want all proofs, not just these basic ones,
             // because they may need to be falsified to accept the
@@ -1305,7 +905,7 @@ public class MentalState : MonoBehaviour {
         } else {
             // in case the goal is a formula,
             // try to see if there are any satisfying instances in the belief base.
-            var satisfiers = Satisfiers(goal, Timestamp);
+            var satisfiers = Satisfiers(goal);
 
             if (satisfiers.Count != 0) {
                 alternativeBases.UnionWith(satisfiers);
@@ -1320,7 +920,7 @@ public class MentalState : MonoBehaviour {
                 if (Locations.ContainsKey(location)) {
                     var premises = new List<Expression>();
                     premises.Add(goal);
-                    alternativeBases.Add(new Basis(premises, new Dictionary<Expression, Bases>(), new Substitution()));
+                    alternativeBases.Add(new Basis(premises, new Substitution()));
                 }
             }
         }
@@ -1353,13 +953,13 @@ public class MentalState : MonoBehaviour {
                     if (goal.Head.Equals(AT.Head)) {
                         var premises = new List<Expression>();
                         premises.Add(goal);
-                        alternativeBases.Add(new Basis(premises, new Dictionary<Expression, Bases>(), new Substitution()));
+                        alternativeBases.Add(new Basis(premises, new Substitution()));
                     }
                 } else {
                     if (goal.Head.Equals(NOT.Head)) {
                         var premises = new List<Expression>();
                         premises.Add(goal);
-                        alternativeBases.Add(new Basis(premises, new Dictionary<Expression, Bases>(), new Substitution()));
+                        alternativeBases.Add(new Basis(premises, new Substitution()));
                     }
                 }
             }
@@ -1420,7 +1020,7 @@ public class MentalState : MonoBehaviour {
                 foreach (var unifier in unifiers) {
                     HashSet<Basis> currentBases = new HashSet<Basis>();
                     currentBases.Add(new Basis(new List<Expression>(),
-                        new Dictionary<Expression, Bases>(), unifier));
+                        unifier));
 
                     for (int j = 0; j < premises.Length; j++) {
                         var meetBases = new HashSet<Basis>();
@@ -1516,8 +1116,7 @@ public class MentalState : MonoBehaviour {
                                 meetPremises.AddRange(currentBasis.Premises);
                                 meetPremises.Add(assumption);
                                 meetBases.Add(new Basis(meetPremises,
-                                    new Dictionary<Expression, Bases>(),
-                                    currentBasis.Substitution));
+                                                                        currentBasis.Substitution));
                             }
                         }
 
@@ -1527,8 +1126,7 @@ public class MentalState : MonoBehaviour {
                     var collectedBases = new HashSet<Basis>();
                     foreach (var currentBasis in currentBases) {
                         collectedBases.Add(new Basis(currentBasis.Premises,
-                            new Dictionary<Expression, Bases>(),
-                            DiscardUnusedAssignments(currentBasis.Substitution)));
+                                                        DiscardUnusedAssignments(currentBasis.Substitution)));
                     }
                     alternativeBases.UnionWith(collectedBases);
                 }
@@ -1667,8 +1265,7 @@ public class MentalState : MonoBehaviour {
                 // M :: will(neutral) |- neutral
                 if (goal.Equals(NEUTRAL)) {
                     alternativeBases.Add(new Basis(new List<Expression>{new Expression(WILL, NEUTRAL)},
-                        new Dictionary<Expression, Bases>(),
-                        new Substitution()));
+                                                new Substitution()));
                 }
 
                 Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
@@ -1778,7 +1375,7 @@ public class MentalState : MonoBehaviour {
         Expression percept =
             new Expression(PERCEIVE, SELF, new Expression(characteristic, param));
         
-        Add(percept, Timestamp);
+        Add(percept);
 
         return param;
     }
@@ -1943,11 +1540,11 @@ public class MentalState : MonoBehaviour {
         // A is more plausible than
         // at least one premise in each proof.
         foreach (var weakPremise in weakestPremises) {
-            Remove(weakPremise, Timestamp);
+            Remove(weakPremise);
         }
 
         // now, we add A.
-        Add(assertion, Timestamp);
+        Add(assertion);
         yield break;
     }
 
@@ -1971,11 +1568,9 @@ public class MentalState : MonoBehaviour {
 
         // @Note: we assume preferences are timestamped 0
         // and are eternal. This should change, eventually.
-        foreach (var preferenceAndTimes in preferencesInBeliefBase) {
-            if (preferenceAndTimes.Value.Contains(0) || preferenceAndTimes.Value.Contains(1)) {
-                preferables.Add((Expression) preferenceAndTimes.Key.GetArg(0));
-                preferables.Add((Expression) preferenceAndTimes.Key.GetArg(1));
-            }
+        foreach (var preference in preferencesInBeliefBase) {
+            preferables.Add(preference.GetArgAsExpression(0));
+            preferables.Add(preference.GetArgAsExpression(1));
         }
 
         // @Note: we'd probably want to consider AS_GOOD_AS in the future. For now,
