@@ -317,24 +317,28 @@ public class Testing : MonoBehaviour {
         MentalState.Initialize(
             new Expression(PERCEIVE, SELF, new Expression(BANANA, SELF)),
             // new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))),
-            new Expression(PERCEIVE, SELF,
-                new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF)))),
-            new Expression(NOT, new Expression(VERIDICAL, SELF,
-                new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))))),
+            // new Expression(PERCEIVE, SELF,
+                // new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF)))),
+            // new Expression(NOT, new Expression(VERIDICAL, SELF,
+                // new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))))),
             new Expression(IDENTITY, SELF, BOB),
-            new Expression(ABLE, SELF, new Expression(APPLE, SELF)),
+            // new Expression(ABLE, SELF, new Expression(APPLE, SELF)),
             new Expression(RED, SELF),
             new Expression(RED, BOB),
             new Expression(GREEN, SELF),
+            new Expression(BLUE, BOB),
+            // new Expression(BLUE, SELF),
             new Expression(NOT, new Expression(BLUE, SELF)));
 
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, RED, GREEN)));
-
         // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, APPLE, RED), Plan));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(TRULY, new Expression(SOME, APPLE, RED)), Plan));
         
         // StartCoroutine(LogBasesStream(MentalState, new Expression(RED, XE)));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, RED, GREEN)));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, GREEN, RED)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, BLUE, RED)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, RED, BLUE)));
         
         // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF)));
 
@@ -344,16 +348,42 @@ public class Testing : MonoBehaviour {
         // StartCoroutine(LogBasesStream(MentalState,
             // new Expression(AND, new Expression(RED, SELF), new Expression(BLUE, SELF))));
         
-        // StartCoroutine(LogBasesStream(MentalState,
-            // new Expression(NOT, new Expression(IDENTITY, SELF, EVAN))));
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(NOT, new Expression(IDENTITY, SELF, EVAN))));
 
         // StartCoroutine(LogBasesStream(MentalState,
-            // new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
+        //     new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
         
-        StartCoroutine(LogBasesStream(MentalState, new Expression(BANANA, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(BANANA, SELF)));
         
         // Log(new Expression(IDENTITY, SELF, BOB).GetHashCode());
         // Log(new Expression(IDENTITY, BOB, SELF).GetHashCode());
+        
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME, APPLE, RED), Plan));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+            // new Expression(SOME, RED, APPLE), Plan));
+        
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(AND,
+        //         new Expression(OR,
+        //             new Expression(RED, XE),
+        //             new Expression(NOT, new Expression(BLUE, XE))),
+        //         new Expression(TRULY, new Expression(IDENTITY, SELF, BOB)))));
+        
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(APPLE, SELF), Plan));
+        
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME, APPLE, RED), Plan));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(AND,
+        //         new Expression(OR,
+        //             new Expression(RED, XE),
+        //             new Expression(NOT, new Expression(BLUE, XE))),
+        //         new Expression(SOME, APPLE, RED)), Plan));
 
         // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(NOT, new Expression(NOT,
@@ -556,12 +586,13 @@ public class Testing : MonoBehaviour {
 
     public static IEnumerator LogBasesStream(MentalState m, Expression e, ProofType pt = Proof) {
         var result = new Bases();
+        var done = new Container<bool>(false);
 
-        m.StartCoroutine(m.StreamBasesIteratedDFS(result, e, pt));
+        m.StartCoroutine(m.StreamBasesIteratedDFS(result, e, done, pt));
 
         var waitingString = "waiting for '" + e + "' to be proved...";
         var isProvedByString = "'" + e + "'" + " is proved by: ";
-        while (!result.IsExhaustive) {
+        while (!done.Item) {
             // Log(waitingString);
             if (!result.IsEmpty()) {
                 Log(isProvedByString + result);

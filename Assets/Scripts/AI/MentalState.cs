@@ -162,25 +162,13 @@ public class Basis {
 
 public class Bases {
     private HashSet<Basis> BasisCollection;
-    public bool IsComplete {get; private set;}
-    public bool IsExhaustive {get; private set;}
 
     public Bases() {
         BasisCollection = new HashSet<Basis>();
-        IsComplete = false;
-        IsExhaustive = false;
     }
 
     public void Clear() {
         BasisCollection.Clear();
-    }
-
-    public void Complete() {
-        IsComplete = true;
-    }
-
-    public void Exhaust() {
-        IsExhaustive = true;
     }
 
     public bool IsEmpty() {
@@ -465,31 +453,32 @@ public class MentalState : MonoBehaviour {
         public readonly Expression Lemma;
         public readonly uint Depth;
         public readonly ProofNode Parent;
+        public readonly int MeetBasisIndex;
         public readonly ProofNode OlderSibling;
+        public readonly Expression Supplement;
         public readonly bool IsAssumption;
         #endregion
 
         #region Variables
-        public int NumInexhaustiveChildren;
-        public Bases YoungerSiblingBases;
-        public Bases ChildBases;
+        public List<Basis> YoungerSiblingBases;
+        public Bases ChildBases;        
         #endregion
 
         public ProofNode(Expression lemma, uint depth, ProofNode parent,
+            int meetBasisIndex,
             ProofNode olderSibling = null,
+            Expression supplement = null,
             bool hasYoungerSibling = false,
             bool isAssumption = false) {
             Lemma = lemma;
             Depth = depth;
             Parent = parent;
+            MeetBasisIndex = meetBasisIndex;
             OlderSibling = olderSibling;
+            Supplement = supplement;
             IsAssumption = isAssumption;
-            if (Parent != null) {
-                Parent.NumInexhaustiveChildren++;    
-            }
 
-            NumInexhaustiveChildren = -1;
-            YoungerSiblingBases = new Bases();
+            YoungerSiblingBases = new List<Basis>();
             if (!hasYoungerSibling) {
                 YoungerSiblingBases.Add(new Basis());
             }
@@ -497,7 +486,8 @@ public class MentalState : MonoBehaviour {
         }
     }
 
-    public IEnumerator StreamBasesIteratedDFS(Bases bases, Expression conclusion, ProofType pt = Proof) {
+    public IEnumerator StreamBasesIteratedDFS(Bases bases, Expression conclusion,
+        Container<bool> done, ProofType pt = Proof) {
         // we can only prove sentences.
         Debug.Assert(conclusion.Type.Equals(TRUTH_VALUE));
         
@@ -505,7 +495,8 @@ public class MentalState : MonoBehaviour {
         // with successively higher bounds on the
         // depth allowed.
         uint maxDepth = 0;
-        while (!bases.IsExhaustive) {
+        bool allExhaustive = false;
+        while (!allExhaustive) {
             // at the beginning of any iterated step,
             // we check if we've gone past
             // our allotted time budget.
@@ -513,11 +504,18 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
+            // Debug.Log("Starting search at d=" + maxDepth);
+
             bases.Clear();
+
+            // here, we check if the search is exhaustive
+            // by setting this flag to 'false' when we hit
+            // the maxDepth in any of our searches.
+            allExhaustive = true;
 
             // we set up our stack for DFS
             // with the intended
-            var root = new ProofNode(conclusion, 0, null);
+            var root = new ProofNode(conclusion, 0, null, 0);
             root.ChildBases = bases;
             var stack = new Stack<ProofNode>();
             stack.Push(root);
@@ -532,52 +530,76 @@ public class MentalState : MonoBehaviour {
 
                 // Debug.Log("visiting " + current.Lemma);
 
-                if (current.YoungerSiblingBases.IsEmpty()) {
-                    current.Parent.NumInexhaustiveChildren--;
-                    var merge = current.Parent;
-                    while (merge != null) {
-                        if (merge.NumInexhaustiveChildren == 0) {
-                            merge.ChildBases.Exhaust();
-                        }
-                        if (merge.Parent != null) {
-                            merge.Parent.NumInexhaustiveChildren--;
-                        }
-                        merge = merge.Parent;
-                    }
-                    
-                    continue;
-                }
+
+                // TODO 12/4
+                //
+                // Make it so that, if there aren't any younger sibling bases,
+                // we still send an empty down.
+                // Or figure out a way to signal a refutation
+                // before we hit this node. 
+                //                
+                // if (current.YoungerSiblingBases.Count == 0) {
+                //     var merge = current;
+                //     while () {
+
+                //     }
+                // }
                 
-                foreach (var youngerSiblingBasis in current.YoungerSiblingBases) {
+                for (int i = 0; i < current.YoungerSiblingBases.Count; i++) {
                     if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                            yield return null;
+                        yield return null;
                     }
 
+                    var youngerSiblingBasis = current.YoungerSiblingBases[i];
+
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
+
+                    // Debug.Log("substituted to " + currentLemma);
+
+                    var searchBases = new Bases();
 
                     // this is our base case.
                     if (Contains(currentLemma)) {
                         var basis = new Basis();
                         basis.AddPremise(currentLemma);
-                        current.ChildBases.Add(basis);
-                    } else {
+                        searchBases.Add(basis);
+                    } else if (currentLemma.GetVariables().Count > 0) {
                         var satisfiers = Satisfiers(currentLemma);
                         foreach (var satisfier in satisfiers) {
-                            current.ChildBases.Add(satisfier);
+                            searchBases.Add(satisfier);
                         }
                     }
+
+                    //
+                    // Slight @Bug: because we pop onto the stack,
+                    // the order of proofs for otherwise equivalent
+                    // can be reversed depending on depth.
+                    // This violates the natural ordering of reasons
+                    // that an NPC will provide to justify their
+                    // answer. We want those reasons to be maximally
+                    // simple (the least amount of inferential remove)
+                    // and consistent (the same answer will yield the
+                    // same reason, if that reason applies in both cases)
+                    // 
+                    // How can we ensure the nodes are pushed in the
+                    // correct order? I already tried to reverse the
+                    // order of the new nodes.
+                    //
+
+                    bool exhaustive = false;
 
                     // we only check against inference rules if
                     // our search bound hasn't been reached.
                     if (current.Depth < maxDepth) {
-                        current.NumInexhaustiveChildren = 0;
                         uint nextDepth = current.Depth + 1;
+                        exhaustive = true;
                         // inferences here
 
                         // truly +
                         if (currentLemma.Head.Equals(TRULY.Head)) {
                             var subclause = currentLemma.GetArgAsExpression(0);
-                            stack.Push(new ProofNode(subclause, nextDepth, current));
+                            stack.Push(new ProofNode(subclause, nextDepth, current, i));
+                            exhaustive = false;
                         }
 
                         // double negation +
@@ -585,12 +607,14 @@ public class MentalState : MonoBehaviour {
                             var subclause = currentLemma.GetArgAsExpression(0);
                             if (subclause.Head.Equals(NOT.Head)) {
                                 var subsubclause = subclause.GetArgAsExpression(0);
-                                stack.Push(new ProofNode(subsubclause, nextDepth, current));
+                                stack.Push(new ProofNode(subsubclause, nextDepth, current, i));
+                                exhaustive = false;
                             }
 
                             // nonidentity assumption
                             if (subclause.Head.Equals(IDENTITY.Head)) {
-                                stack.Push(new ProofNode(new Expression(NOT, currentLemma), nextDepth, current, isAssumption: true));
+                                stack.Push(new ProofNode(new Expression(NOT, currentLemma), nextDepth, current, i, isAssumption: true));
+                                exhaustive = false;
                             }
                         }
 
@@ -598,8 +622,9 @@ public class MentalState : MonoBehaviour {
                         if (currentLemma.Head.Equals(OR.Head)) {
                             var disjunctA = currentLemma.GetArgAsExpression(0);
                             var disjunctB = currentLemma.GetArgAsExpression(1);
-                            stack.Push(new ProofNode(disjunctA, nextDepth, current));
-                            stack.Push(new ProofNode(disjunctB, nextDepth, current));
+                            stack.Push(new ProofNode(disjunctA, nextDepth, current, i));
+                            stack.Push(new ProofNode(disjunctB, nextDepth, current, i));
+                            exhaustive = false;
                         }
 
                         // and +
@@ -607,11 +632,12 @@ public class MentalState : MonoBehaviour {
                             var conjunctA = currentLemma.GetArgAsExpression(0);
                             var conjunctB = currentLemma.GetArgAsExpression(1);
 
-                            var bNode = new ProofNode(conjunctB, nextDepth, current, hasYoungerSibling: true);
-                            var aNode = new ProofNode(conjunctA, nextDepth, current, bNode);
+                            var bNode = new ProofNode(conjunctB, nextDepth, current, i, hasYoungerSibling: true);
+                            var aNode = new ProofNode(conjunctA, nextDepth, current, i, bNode);
 
                             stack.Push(bNode);
                             stack.Push(aNode);
+                            exhaustive = false;
                         }
 
                         // some +
@@ -624,11 +650,12 @@ public class MentalState : MonoBehaviour {
                             var fx = new Expression(f, x);
                             var gx = new Expression(g, x);
 
-                            var gxNode = new ProofNode(gx, nextDepth, current, hasYoungerSibling: true);
-                            var fxNode = new ProofNode(fx, nextDepth, current, gxNode);
+                            var gxNode = new ProofNode(gx, nextDepth, current, i, hasYoungerSibling: true);
+                            var fxNode = new ProofNode(fx, nextDepth, current, i, gxNode);
 
                             stack.Push(gxNode);
                             stack.Push(fxNode);
+                            exhaustive = false;
                         }
 
                         if (currentLemma.Depth < this.MaxDepth) {
@@ -637,17 +664,10 @@ public class MentalState : MonoBehaviour {
                                 var able = new Expression(ABLE, SELF, currentLemma);
                                 var will = new Expression(WILL, currentLemma);
 
-                                var ableNode = new ProofNode(able, nextDepth, current, hasYoungerSibling: true);
-                                var willBasis = new Basis();
-                                willBasis.AddPremise(will);
+                                var ableNode = new ProofNode(able, nextDepth, current, i, supplement: will);
 
-                                // @Bug this doesn't get the variable assignment
-                                // it needs!
-                                // 
-                                // the test: plan for some(red, apple)
-                                // when able(self, apple(self))
-                                ableNode.YoungerSiblingBases.Add(willBasis);
                                 stack.Push(ableNode);
+                                exhaustive = false;
                             }
                             
                             // percept -
@@ -655,16 +675,37 @@ public class MentalState : MonoBehaviour {
                             var veridical = new Expression(VERIDICAL, SELF, currentLemma);
 
                             var veridicalNode = new ProofNode(new Expression(NOT, veridical), nextDepth,
-                                current, hasYoungerSibling: true, isAssumption: true);
+                                current, i, hasYoungerSibling: true, isAssumption: true);
                             var perceiveNode = new ProofNode(perceive, nextDepth,
-                                current, veridicalNode);
+                                current, i, veridicalNode);
 
                             stack.Push(veridicalNode);
                             stack.Push(perceiveNode);
+                            exhaustive = false;
                         }
+                    } else {
+                        exhaustive = false;
                     }
 
-                    var merge = current;
+                    allExhaustive = exhaustive;
+
+                    // we're not going to pass down the child bases this time,
+                    // because we don't have anything to give.
+                    if (searchBases.IsEmpty() &&
+                        !exhaustive &&
+                        current.Depth != maxDepth) {
+                        continue;
+                    }
+
+                    current.ChildBases.Add(searchBases);
+
+                    ProofNode merge = current;
+                    Bases sendBases = searchBases;
+                    int meetBasisIndex = i;
+
+                    // @Bug: we need a way to send an empty
+                    // search node to nodes never traversed,
+                    // because there are no sibling bases for it.
 
                     // pass on the bases and merge them all the way to
                     // its ancestral node.
@@ -673,74 +714,101 @@ public class MentalState : MonoBehaviour {
                             yield return null;
                         }
 
-                        // we've exhausted all of the search possibilities
-                        // for this lemma. Set the bases to exhaustive.
-                        if (merge.NumInexhaustiveChildren == 0) {
-                            merge.ChildBases.Exhaust();
-                        }
+                        // this is the basis which gave us this assignment -
+                        // we want to meet with this one, and none of the others.
+                        var meetBasis = merge.YoungerSiblingBases[meetBasisIndex];
 
-                        // if these bases are exhaustive, decrement
-                        // the number of bases that have to be exhausted
-                        // for the parent node's search.
-                        if (merge.Parent != null) {
-                            if (merge.ChildBases.IsExhaustive) {
-                                merge.Parent.NumInexhaustiveChildren--;
-                            }
-                        }
-
-                        Bases productBases;
-
-                        if (merge.IsAssumption) {
-                            // no refutation
-                            if (merge.ChildBases.IsEmpty() &&
-                                current.Depth == maxDepth) {
-                                var assumptionBasis = new Basis();
-                                assumptionBasis.AddPremise(merge.Lemma.GetArgAsExpression(0));
-                                var assumptionBases = new Bases();
-                                assumptionBases.Add(assumptionBasis);
-                                // we can safely assume the content of
-                                // this assumption node
-                                productBases = Bases.Meet(merge.YoungerSiblingBases, assumptionBases);
-                            } else {
-                                // otherwise, if there's a refutation,
-                                // or if it's too early too tell,
-                                // don't send anything
-                                productBases = new Bases();
-                            }
-                        } else {
-                            // here, we merge the bases from siblings and
-                            // children. sibling bases ^ child bases
-                            productBases = Bases.Meet(merge.YoungerSiblingBases, merge.ChildBases);                            
-                        }
+                        // Debug.Log("Merge " + merge.Lemma + " sending " + sendBases);
 
                         // trim each of the merged bases to
                         // discard unused variable assignments.
-                        foreach (var productBasis in productBases) {
+                        foreach (var sendBasis in sendBases) {
                             var trimmedSubstitution = new Substitution();
-                            foreach (var assignment in productBasis.Substitution) {
+                            foreach (var assignment in sendBasis.Substitution) {
                                 if (merge.Lemma.HasOccurenceOf(assignment.Key)) {
                                     trimmedSubstitution.Add(assignment.Key, assignment.Value);
                                 }
                             }
-                            productBasis.Substitution = trimmedSubstitution;
+                            sendBasis.Substitution = trimmedSubstitution;
+                        }
+
+                        // this is the fully assigned formula,
+                        // the proofs of which we're merging.
+                        var mergeLemma = merge.Lemma.Substitute(meetBasis.Substitution);
+                        // Debug.Log("Merging: " + mergeLemma + " sending: " + sendBases);
+
+                        Bases productBases = new Bases();
+
+                        if (merge.IsAssumption) {
+                            // no refutation
+                            if (sendBases.IsEmpty() &&
+                                exhaustive || current.Depth == maxDepth) {
+                                // we can safely assume the content of
+                                // this assumption node
+                                var assumptionBasis = new Basis();
+                                assumptionBasis.AddPremise(mergeLemma.GetArgAsExpression(0));
+                                var productBasis = new Basis(meetBasis, assumptionBasis);
+                                productBases.Add(productBasis);
+                            }
+                            // otherwise, if there's a refutation,
+                            // or if it's too early too tell,
+                            // don't send anything
+                        } else {
+                            var joinBases = sendBases;
+                            if (!joinBases.IsEmpty()) {
+
+                                // here, we merge the bases from siblings and
+                                // children. sibling bases ^ child bases
+
+                                // if we have a supplemental premise,
+                                // we add it here.
+                                if (merge.Supplement != null) {
+                                    joinBases = new Bases();
+                                    joinBases.Add(sendBases);
+                                    foreach (var joinBasis in joinBases) {
+                                        joinBasis.AddPremise(merge.Supplement.Substitute(joinBasis.Substitution));
+                                    }
+                                }
+
+                                // we form the product of our meet basis
+                                // and child bases.
+                                foreach (var joinBasis in joinBases) {
+                                    var productBasis = new Basis(meetBasis, joinBasis);
+                                    productBases.Add(productBasis);
+                                }
+                            }
+                        }
+
+                        if (productBases.IsEmpty() &&
+                            !exhaustive &&
+                            current.Depth != maxDepth) {
+                            break;
                         }
 
                         // we pass on our new bases to the older sibling
                         // if we have one, to the parent otherwise.
                         if (merge.OlderSibling != null) {
-                            merge.OlderSibling.YoungerSiblingBases.Add(productBases);
-                        } else if (merge.Parent != null) {
-                            merge.Parent.ChildBases.Add(productBases);
+                            foreach (var productBasis in productBases) {
+                                merge.OlderSibling.YoungerSiblingBases.Add(productBasis);
+                            }
+                            break;
                         }
+
+                        if (merge.Parent != null) {
+                            merge.Parent.ChildBases.Add(productBases);
+                            sendBases = productBases;
+                        }
+
+                        meetBasisIndex = merge.MeetBasisIndex;
 
                         merge = merge.Parent;
                     }
                 }
             }
-
             // increment the upper bound and go again.
             maxDepth++;
         }
+        done.Item = true;
         yield break;
     }
 
@@ -1115,8 +1183,7 @@ public class MentalState : MonoBehaviour {
                                 List<Expression> meetPremises = new List<Expression>();
                                 meetPremises.AddRange(currentBasis.Premises);
                                 meetPremises.Add(assumption);
-                                meetBases.Add(new Basis(meetPremises,
-                                                                        currentBasis.Substitution));
+                                meetBases.Add(new Basis(meetPremises, currentBasis.Substitution));
                             }
                         }
 
