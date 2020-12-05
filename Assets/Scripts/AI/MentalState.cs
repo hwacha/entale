@@ -497,8 +497,13 @@ public class MentalState : MonoBehaviour {
         // with successively higher bounds on the
         // depth allowed.
         uint maxDepth = 0;
-        bool allExhaustive = false;
-        while (!allExhaustive) {
+        // we use this to gauge if we've made an
+        // exhaustive search at this level.
+        // If the depth we reach is less than the
+        // maximum, then no further inferences
+        // were attempted.
+        uint reachedDepth = 0;
+        while (reachedDepth + 1 >= maxDepth) {
             // at the beginning of any iterated step,
             // we check if we've gone past
             // our allotted time budget.
@@ -510,10 +515,7 @@ public class MentalState : MonoBehaviour {
 
             bases.Clear();
 
-            // here, we check if the search is exhaustive
-            // by setting this flag to 'false' when we hit
-            // the maxDepth in any of our searches.
-            allExhaustive = true;
+            reachedDepth = 0;
 
             // we set up our stack for DFS
             // with the intended
@@ -531,22 +533,11 @@ public class MentalState : MonoBehaviour {
 
                 var current = stack.Pop();
 
+                if (current.Depth > reachedDepth) {
+                    reachedDepth = current.Depth;
+                }
+
                 // Debug.Log("visiting " + current.Lemma);
-
-
-                // TODO 12/4
-                //
-                // Make it so that, if there aren't any younger sibling bases,
-                // we still send an empty down.
-                // Or figure out a way to signal a refutation
-                // before we hit this node. 
-                               
-                // if (current.YoungerSiblingBases.Count == 0) {
-                //     var merge = current;
-                //     while () {
-
-                //     }
-                // }
                 
                 var sends = new List<KeyValuePair<Bases, bool>>();
                 
@@ -702,8 +693,6 @@ public class MentalState : MonoBehaviour {
                         exhaustive = false;
                     }
 
-                    allExhaustive = exhaustive;
-
                     // we're not going to pass down the child bases this time,
                     // because we don't have anything to give.
                     if (searchBases.IsEmpty() &&
@@ -714,14 +703,12 @@ public class MentalState : MonoBehaviour {
 
                     current.ChildBases.Add(searchBases);
                     sends.Add(new KeyValuePair<Bases, bool>(searchBases, exhaustive));
-
-                    // @Bug: we need a way to send an empty
-                    // search node to nodes never traversed,
-                    // because there are no sibling bases for it.
                 }
 
                 int meetBasisIndex = 0;
-                if (sends.Count == 0 && (current.Depth == maxDepth || current.Depth + 1 == this.MaxDepth)) {
+                // TODO fix this condition so that an empty bases gets sent only when
+                // it constitutes the last possible search for an assumption.
+                if (sends.Count == 0 && current.IsLastChild) {
                     sends.Add(new KeyValuePair<Bases, bool>(new Bases(), true));
                     meetBasisIndex = -1;
                 }
@@ -740,7 +727,7 @@ public class MentalState : MonoBehaviour {
 
                         // this is the basis which gave us this assignment -
                         // we want to meet with this one, and none of the others.
-                        var meetBasis = meetBasisIndex == -1 ? new Basis() : merge.YoungerSiblingBases[meetBasisIndex];
+                        var meetBasis = meetBasisIndex == -1 ? null : merge.YoungerSiblingBases[meetBasisIndex];
 
                         // Debug.Log("Merge " + merge.Lemma + " sending " + sendBases);
 
@@ -758,29 +745,35 @@ public class MentalState : MonoBehaviour {
 
                         // this is the fully assigned formula,
                         // the proofs of which we're merging.
-                        var mergeLemma = merge.Lemma.Substitute(meetBasis.Substitution);
+                        var mergeLemma = meetBasis == null ? merge.Lemma : merge.Lemma.Substitute(meetBasis.Substitution);
                         // Debug.Log("Merging: " + mergeLemma + " sending: " + sendBases);
 
                         Bases productBases = new Bases();
 
                         if (merge.IsAssumption) {
+                            
                             // no refutation
                             if (sendBases.IsEmpty() &&
                                 merge.ChildBases.IsEmpty() &&
-                                exhaustive || current.Depth == maxDepth) {
+                                (exhaustive || current.Depth == maxDepth || mergeLemma.Depth >= this.MaxDepth || merge.IsLastChild) &&
+                                meetBasis != null) {
+                                // Debug.Log("Assumption sending " + mergeLemma);
                                 // we can safely assume the content of
                                 // this assumption node
                                 var assumptionBasis = new Basis();
                                 assumptionBasis.AddPremise(mergeLemma.GetArgAsExpression(0));
+
                                 var productBasis = new Basis(meetBasis, assumptionBasis);
                                 productBases.Add(productBasis);
+                            } else {
+                                // Debug.Log("Assumption not Sending " + mergeLemma);
                             }
                             // otherwise, if there's a refutation,
                             // or if it's too early too tell,
                             // don't send anything
                         } else {
                             var joinBases = sendBases;
-                            if (!joinBases.IsEmpty()) {
+                            if (!joinBases.IsEmpty() && meetBasis != null) {
 
                                 // here, we merge the bases from siblings and
                                 // children. sibling bases ^ child bases
@@ -804,11 +797,11 @@ public class MentalState : MonoBehaviour {
                             }
                         }
 
-                        if (productBases.IsEmpty() &&
-                            !exhaustive &&
-                            current.Depth != maxDepth) {
-                            break;
-                        }
+                        // if (productBases.IsEmpty() &&
+                        //     !exhaustive &&
+                        //     current.Depth != maxDepth) {
+                        //     break;
+                        // }
 
                         // we pass on our new bases to the older sibling
                         // if we have one, to the parent otherwise.

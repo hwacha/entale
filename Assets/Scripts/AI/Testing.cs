@@ -317,10 +317,10 @@ public class Testing : MonoBehaviour {
         MentalState.Initialize(
             new Expression(PERCEIVE, SELF, new Expression(BANANA, SELF)),
             // new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))),
-            // new Expression(PERCEIVE, SELF,
-                // new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF)))),
-            // new Expression(NOT, new Expression(VERIDICAL, SELF,
-                // new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))))),
+            new Expression(PERCEIVE, SELF,
+                new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF)))),
+            new Expression(NOT, new Expression(VERIDICAL, SELF,
+                new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))))),
             new Expression(IDENTITY, SELF, BOB),
             // new Expression(ABLE, SELF, new Expression(APPLE, SELF)),
             new Expression(RED, SELF),
@@ -354,7 +354,7 @@ public class Testing : MonoBehaviour {
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
         
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(BANANA, SELF)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(BANANA, SELF)));
         
         // Log(new Expression(IDENTITY, SELF, BOB).GetHashCode());
         // Log(new Expression(IDENTITY, BOB, SELF).GetHashCode());
@@ -392,16 +392,14 @@ public class Testing : MonoBehaviour {
         //             new Expression(NOT, new Expression(BLUE, XE))),
         //         new Expression(SOME, APPLE, RED)))), Plan));
         
-        // int expressionDepth = 10;
+        int expressionDepth = 2;
 
-        // Expression big = new Expression(RED, SELF);
+        Expression big = new Expression(NOT, new Expression(IDENTITY, SELF, EVAN));
         // Expression big2 = new Expression(GREEN, SELF);
-        // for (int i = 0; i < expressionDepth; i++) {
-        //     big = new Expression(AND, big, big2);
-        //     big = new Expression(OR, big, big2);
-        //     big = new Expression(TRULY, big);
-        // }
-        // StartCoroutine(LogBasesStream(MentalState, big));
+        for (int i = 0; i < expressionDepth; i++) {
+            big = new Expression(TRULY, big);
+        }
+        StartCoroutine(LogBasesStream(MentalState, big));
 
         // MentalState.ProofMode = Proof;
         // MentalState.Initialize(
