@@ -343,16 +343,16 @@ public class Testing : MonoBehaviour {
         // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF)));
 
         // StartCoroutine(LogBasesStream(MentalState,
-            // new Expression(AND, new Expression(BLUE, SELF), new Expression(RED, SELF))));
-            // 
+        //     new Expression(AND, new Expression(GREEN, SELF), new Expression(RED, SELF))));
+
         // StartCoroutine(LogBasesStream(MentalState,
-            // new Expression(AND, new Expression(RED, SELF), new Expression(BLUE, SELF))));
+        //     new Expression(AND, new Expression(RED, SELF), new Expression(BLUE, SELF))));
         
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(NOT, new Expression(IDENTITY, SELF, EVAN))));
 
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
         
         // StartCoroutine(LogBasesStream(MentalState, new Expression(BANANA, SELF)));
         

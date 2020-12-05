@@ -461,7 +461,8 @@ public class MentalState : MonoBehaviour {
 
         #region Variables
         public List<Basis> YoungerSiblingBases;
-        public Bases ChildBases;        
+        public Bases ChildBases;
+        public bool IsLastChild;
         #endregion
 
         public ProofNode(Expression lemma, uint depth, ProofNode parent,
@@ -483,6 +484,7 @@ public class MentalState : MonoBehaviour {
                 YoungerSiblingBases.Add(new Basis());
             }
             ChildBases = new Bases();
+            IsLastChild = false;
         }
     }
 
@@ -517,6 +519,7 @@ public class MentalState : MonoBehaviour {
             // with the intended
             var root = new ProofNode(conclusion, 0, null, 0);
             root.ChildBases = bases;
+            root.IsLastChild = true;
             var stack = new Stack<ProofNode>();
             stack.Push(root);
 
@@ -537,13 +540,15 @@ public class MentalState : MonoBehaviour {
                 // we still send an empty down.
                 // Or figure out a way to signal a refutation
                 // before we hit this node. 
-                //                
+                               
                 // if (current.YoungerSiblingBases.Count == 0) {
                 //     var merge = current;
                 //     while () {
 
                 //     }
                 // }
+                
+                var sends = new List<KeyValuePair<Bases, bool>>();
                 
                 for (int i = 0; i < current.YoungerSiblingBases.Count; i++) {
                     if (FrameTimer.FrameDuration >= TIME_BUDGET) {
@@ -594,11 +599,13 @@ public class MentalState : MonoBehaviour {
                         uint nextDepth = current.Depth + 1;
                         exhaustive = true;
                         // inferences here
+                        
+                        var newStack = new Stack<ProofNode>();
 
                         // truly +
                         if (currentLemma.Head.Equals(TRULY.Head)) {
                             var subclause = currentLemma.GetArgAsExpression(0);
-                            stack.Push(new ProofNode(subclause, nextDepth, current, i));
+                            newStack.Push(new ProofNode(subclause, nextDepth, current, i));
                             exhaustive = false;
                         }
 
@@ -607,13 +614,13 @@ public class MentalState : MonoBehaviour {
                             var subclause = currentLemma.GetArgAsExpression(0);
                             if (subclause.Head.Equals(NOT.Head)) {
                                 var subsubclause = subclause.GetArgAsExpression(0);
-                                stack.Push(new ProofNode(subsubclause, nextDepth, current, i));
+                                newStack.Push(new ProofNode(subsubclause, nextDepth, current, i));
                                 exhaustive = false;
                             }
 
                             // nonidentity assumption
                             if (subclause.Head.Equals(IDENTITY.Head)) {
-                                stack.Push(new ProofNode(new Expression(NOT, currentLemma), nextDepth, current, i, isAssumption: true));
+                                newStack.Push(new ProofNode(new Expression(NOT, currentLemma), nextDepth, current, i, isAssumption: true));
                                 exhaustive = false;
                             }
                         }
@@ -622,8 +629,8 @@ public class MentalState : MonoBehaviour {
                         if (currentLemma.Head.Equals(OR.Head)) {
                             var disjunctA = currentLemma.GetArgAsExpression(0);
                             var disjunctB = currentLemma.GetArgAsExpression(1);
-                            stack.Push(new ProofNode(disjunctA, nextDepth, current, i));
-                            stack.Push(new ProofNode(disjunctB, nextDepth, current, i));
+                            newStack.Push(new ProofNode(disjunctA, nextDepth, current, i));
+                            newStack.Push(new ProofNode(disjunctB, nextDepth, current, i));
                             exhaustive = false;
                         }
 
@@ -635,8 +642,8 @@ public class MentalState : MonoBehaviour {
                             var bNode = new ProofNode(conjunctB, nextDepth, current, i, hasYoungerSibling: true);
                             var aNode = new ProofNode(conjunctA, nextDepth, current, i, bNode);
 
-                            stack.Push(bNode);
-                            stack.Push(aNode);
+                            newStack.Push(aNode);
+                            newStack.Push(bNode);
                             exhaustive = false;
                         }
 
@@ -653,8 +660,8 @@ public class MentalState : MonoBehaviour {
                             var gxNode = new ProofNode(gx, nextDepth, current, i, hasYoungerSibling: true);
                             var fxNode = new ProofNode(fx, nextDepth, current, i, gxNode);
 
-                            stack.Push(gxNode);
-                            stack.Push(fxNode);
+                            newStack.Push(fxNode);
+                            newStack.Push(gxNode);
                             exhaustive = false;
                         }
 
@@ -666,7 +673,7 @@ public class MentalState : MonoBehaviour {
 
                                 var ableNode = new ProofNode(able, nextDepth, current, i, supplement: will);
 
-                                stack.Push(ableNode);
+                                newStack.Push(ableNode);
                                 exhaustive = false;
                             }
                             
@@ -679,9 +686,17 @@ public class MentalState : MonoBehaviour {
                             var perceiveNode = new ProofNode(perceive, nextDepth,
                                 current, i, veridicalNode);
 
-                            stack.Push(veridicalNode);
-                            stack.Push(perceiveNode);
+                            newStack.Push(perceiveNode);
+                            newStack.Push(veridicalNode);
                             exhaustive = false;
+                        }
+
+                        // here we reverse the order of new proof nodes.
+                        if (newStack.Count > 0) {
+                            newStack.Peek().IsLastChild = true;
+                            do {
+                                stack.Push(newStack.Pop());
+                            } while (newStack.Count > 0);
                         }
                     } else {
                         exhaustive = false;
@@ -698,14 +713,23 @@ public class MentalState : MonoBehaviour {
                     }
 
                     current.ChildBases.Add(searchBases);
-
-                    ProofNode merge = current;
-                    Bases sendBases = searchBases;
-                    int meetBasisIndex = i;
+                    sends.Add(new KeyValuePair<Bases, bool>(searchBases, exhaustive));
 
                     // @Bug: we need a way to send an empty
                     // search node to nodes never traversed,
                     // because there are no sibling bases for it.
+                }
+
+                int meetBasisIndex = 0;
+                if (sends.Count == 0 && (current.Depth == maxDepth || current.Depth + 1 == this.MaxDepth)) {
+                    sends.Add(new KeyValuePair<Bases, bool>(new Bases(), true));
+                    meetBasisIndex = -1;
+                }
+
+                for (int i = 0; i < sends.Count; i++) {
+                    ProofNode merge = current;
+                    Bases sendBases = sends[i].Key;
+                    bool exhaustive = sends[i].Value;
 
                     // pass on the bases and merge them all the way to
                     // its ancestral node.
@@ -716,7 +740,7 @@ public class MentalState : MonoBehaviour {
 
                         // this is the basis which gave us this assignment -
                         // we want to meet with this one, and none of the others.
-                        var meetBasis = merge.YoungerSiblingBases[meetBasisIndex];
+                        var meetBasis = meetBasisIndex == -1 ? new Basis() : merge.YoungerSiblingBases[meetBasisIndex];
 
                         // Debug.Log("Merge " + merge.Lemma + " sending " + sendBases);
 
@@ -742,6 +766,7 @@ public class MentalState : MonoBehaviour {
                         if (merge.IsAssumption) {
                             // no refutation
                             if (sendBases.IsEmpty() &&
+                                merge.ChildBases.IsEmpty() &&
                                 exhaustive || current.Depth == maxDepth) {
                                 // we can safely assume the content of
                                 // this assumption node
@@ -803,6 +828,8 @@ public class MentalState : MonoBehaviour {
 
                         merge = merge.Parent;
                     }
+
+                    meetBasisIndex = i + 1;
                 }
             }
             // increment the upper bound and go again.
