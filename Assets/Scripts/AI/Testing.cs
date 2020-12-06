@@ -395,9 +395,9 @@ public class Testing : MonoBehaviour {
         int expressionDepth = 2;
 
         Expression big = new Expression(NOT, new Expression(IDENTITY, SELF, EVAN));
-        // Expression big2 = new Expression(GREEN, SELF);
+        Expression big2 = new Expression(GREEN, SELF);
         for (int i = 0; i < expressionDepth; i++) {
-            big = new Expression(TRULY, big);
+            big = new Expression(AND, big, big2);
         }
         StartCoroutine(LogBasesStream(MentalState, big));
 
