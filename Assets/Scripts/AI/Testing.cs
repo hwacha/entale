@@ -109,6 +109,25 @@ public class Testing : MonoBehaviour {
         // Log(!RELATION_2.IsPartialApplicationOf(PREDICATE));
         // Log(!INDIVIDUAL_TRUTH_RELATION.IsPartialApplicationOf(PREDICATE));
 
+        Log("Type comparisons");
+        Log(INDIVIDUAL < TRUTH_VALUE);
+        Log(INDIVIDUAL >= INDIVIDUAL && INDIVIDUAL >= INDIVIDUAL);
+        Log(PREDICATE > TRUTH_VALUE);
+        Log(RELATION_2 > PREDICATE);
+        Log(INDIVIDUAL_TRUTH_RELATION >= INDIVIDUAL_TRUTH_RELATION && INDIVIDUAL_TRUTH_RELATION <= INDIVIDUAL_TRUTH_RELATION); 
+        Log(INDIVIDUAL_TRUTH_RELATION > RELATION_2);
+
+        var assortedTypes = new SemanticType[]{
+            RELATION_2, QUANTIFIER, TRUTH_CONFORMITY_FUNCTION,
+                INDIVIDUAL, INDIVIDUAL_TRUTH_RELATION, DETERMINER
+        };
+        
+       Array.Sort(assortedTypes);
+        for (int i = 0; i < assortedTypes.Length; i++) {
+            Log(assortedTypes[i]);
+        }
+        Log("End type comparisons");
+
         // Log("testing removal");
         // Log("@TODO");
 
@@ -312,23 +331,30 @@ public class Testing : MonoBehaviour {
         // bases.AddDefeater(dd, ddBases);
 
         // Log(bases);
-        
-        // Testing base query
+        Expression a = new Expression(new Constant(TRUTH_VALUE, "A"));
+        // Testing lookup
         MentalState.Initialize(
-            new Expression(PERCEIVE, SELF, new Expression(BANANA, SELF)),
+            a
+        );
+
+        Log(MentalState.Contains(a));
+
+        // Testing proof
+        //MentalState.Initialize(
+        //    new Expression(PERCEIVE, SELF, new Expression(BANANA, SELF)),
             // new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))),
-            new Expression(PERCEIVE, SELF,
-                new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF)))),
-            new Expression(NOT, new Expression(VERIDICAL, SELF,
-                new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))))),
-            new Expression(IDENTITY, SELF, BOB),
-            // new Expression(ABLE, SELF, new Expression(APPLE, SELF)),
-            new Expression(RED, SELF),
-            new Expression(RED, BOB),
-            new Expression(GREEN, SELF),
-            new Expression(BLUE, BOB),
-            // new Expression(BLUE, SELF),
-            new Expression(NOT, new Expression(BLUE, SELF)));
+        //    new Expression(PERCEIVE, SELF,
+        //        new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF)))),
+        //    new Expression(NOT, new Expression(VERIDICAL, SELF,
+        //        new Expression(NOT, new Expression(VERIDICAL, SELF, new Expression(BANANA, SELF))))),
+        //    new Expression(IDENTITY, SELF, BOB),
+        //    // new Expression(ABLE, SELF, new Expression(APPLE, SELF)),
+        //    new Expression(RED, SELF),
+        //    new Expression(RED, BOB),
+        //    new Expression(GREEN, SELF),
+        //    new Expression(BLUE, BOB),
+        //    // new Expression(BLUE, SELF),
+        //    new Expression(NOT, new Expression(BLUE, SELF)));
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, APPLE, RED), Plan));
         // StartCoroutine(LogBasesStream(MentalState,
@@ -348,13 +374,13 @@ public class Testing : MonoBehaviour {
         // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(AND, new Expression(RED, SELF), new Expression(BLUE, SELF))));
         
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(NOT, new Expression(IDENTITY, SELF, EVAN))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(NOT, new Expression(IDENTITY, SELF, EVAN))));
 
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(NOT, new Expression(IDENTITY, SELF, BOB))));
         
-        StartCoroutine(LogBasesStream(MentalState, new Expression(BANANA, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(BANANA, SELF)));
         
         // Log(new Expression(IDENTITY, SELF, BOB).GetHashCode());
         // Log(new Expression(IDENTITY, BOB, SELF).GetHashCode());
@@ -392,14 +418,14 @@ public class Testing : MonoBehaviour {
         //             new Expression(NOT, new Expression(BLUE, XE))),
         //         new Expression(SOME, APPLE, RED)))), Plan));
         
-        int expressionDepth = 2;
+        //int expressionDepth = 2;
 
-        Expression big = new Expression(NOT, new Expression(IDENTITY, SELF, EVAN));
-        Expression big2 = new Expression(GREEN, SELF);
-        for (int i = 0; i < expressionDepth; i++) {
-            big = new Expression(AND, big, big2);
-        }
-        StartCoroutine(LogBasesStream(MentalState, big));
+        //Expression big = new Expression(NOT, new Expression(IDENTITY, SELF, EVAN));
+        //Expression big2 = new Expression(GREEN, SELF);
+        //for (int i = 0; i < expressionDepth; i++) {
+        //    big = new Expression(AND, big, big2);
+        //}
+        // StartCoroutine(LogBasesStream(MentalState, big));
 
         // MentalState.ProofMode = Proof;
         // MentalState.Initialize(

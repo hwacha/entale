@@ -27,7 +27,7 @@ using System.Collections.Generic;
 // expressions with a functional type combine with expressions of their
 // input types to yield an expression of the output type.
 // expressions can also partially apply to some but not all of their inputs.
-public abstract class SemanticType {
+public abstract class SemanticType : IComparable<SemanticType> {
     // Removes this type from the input of the semantic type,
     // or if no matching input type exists,
     // return the type itself
@@ -96,6 +96,24 @@ public abstract class SemanticType {
 
     public static readonly FunctionalType PROPOSITIONAL_QUANTIFIER =
         new FunctionalType(new SemanticType[]{TRUTH_FUNCTION, TRUTH_FUNCTION}, TRUTH_VALUE);
+
+    public abstract int CompareTo(SemanticType that);
+
+    public static bool operator < (SemanticType operand1, SemanticType operand2) {
+        return operand1.CompareTo(operand2) < 0;
+    }
+
+    public static bool operator > (SemanticType operand1, SemanticType operand2) {
+        return operand1.CompareTo(operand2) > 0;
+    }
+
+    public static bool operator <= (SemanticType operand1, SemanticType operand2) {
+        return operand1.CompareTo(operand2) <= 0;
+    }
+
+    public static bool operator >= (SemanticType operand1, SemanticType operand2) {
+        return operand1.CompareTo(operand2) >= 0;
+    }
 }
 
 public abstract class AtomicType : SemanticType {
@@ -106,10 +124,48 @@ public abstract class AtomicType : SemanticType {
 
         return this.Equals(((FunctionalType) that).Output);
     }
+
+    public override int CompareTo(SemanticType other) {
+        if (other is FunctionalType) {
+            return -1;
+        }
+
+        AtomicType that = other as AtomicType;
+
+        int thisValue = 0;
+
+        if (this.Equals(INDIVIDUAL)) {
+            thisValue = 0;
+        } else if (this.Equals(TRUTH_VALUE)) {
+            thisValue = 1;
+        } else if (this.Equals(CONFORMITY_VALUE)) {
+            thisValue = 2;
+        } else if (this.Equals(QUESTION)) {
+            thisValue = 3;
+        } else if (this.Equals(ASSERTION)) {
+            thisValue = 4;
+        }
+
+        int thatValue = 0;
+
+        if (that.Equals(INDIVIDUAL)) {
+            thatValue = 0;
+        } else if (that.Equals(TRUTH_VALUE)) {
+            thatValue = 1;
+        } else if (that.Equals(CONFORMITY_VALUE)) {
+            thatValue = 2;
+        } else if (that.Equals(QUESTION)) {
+            thatValue = 3;
+        } else if (that.Equals(ASSERTION)) {
+            thatValue = 4;
+        }
+
+        return thisValue - thatValue;
+    }
 }
 
 public class FunctionalType : SemanticType {
-    private SemanticType[] Input;
+    public readonly SemanticType[] Input;
     public AtomicType Output {get; private set;}
 
     public FunctionalType(SemanticType[] input, AtomicType output) {
@@ -199,6 +255,48 @@ public class FunctionalType : SemanticType {
         }
 
         return Output.Equals(that.Output);
+    }
+
+    public override int CompareTo(SemanticType other) {
+        // any functional type is greater than any
+        // atomic type.
+        if (other is AtomicType) {
+            return 1;
+        }
+
+        FunctionalType that = other as FunctionalType;
+        
+        // if the arities of these semantic types are
+        // unequal, the higher arity is greater.
+        if (this.Input.Length > that.Input.Length) {
+            return 1;
+        }
+
+        if (this.Input.Length < that.Input.Length) {
+            return -1;
+        }
+
+        for (int i = 0; i < Input.Length; i++) {
+            int inputComparison = Input[i].CompareTo(that.Input[i]);
+            if (inputComparison < 0) {
+                return -1;
+            }
+
+            if (inputComparison > 0) {
+                return 1;
+            }
+        }
+
+        var outputComparison = Output.CompareTo(that.Output);
+        if (outputComparison < 0) {
+            return -1;
+        }
+
+        if (outputComparison > 0) {
+            return 1;
+        }
+
+        return 0;
     }
 
     public override int GetHashCode() {

@@ -328,7 +328,8 @@ public class MentalState : MonoBehaviour {
         }
     }
 
-    private bool Contains(Expression sentence) {
+    // @Note change this to private once testing is done.
+    public bool Contains(Expression sentence) {
         // @Note right now, we disallow formulas in the
         // belief base. This is subject to change.
         if (sentence.GetVariables().Count > 0) {

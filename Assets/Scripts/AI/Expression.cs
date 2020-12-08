@@ -35,6 +35,10 @@ public abstract class Atom {
     }
 }
 
+public class Blank : Atom {
+    public Blank(SemanticType type) : base(type, "_") {}
+}
+
 // A constant. Just a regular symbol.
 public class Constant : Atom {
     public Constant(SemanticType type, String id) : base(type, id) {}
