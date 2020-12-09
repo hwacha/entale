@@ -6,258 +6,17 @@ using System.Collections.Generic;
 using static SemanticType;
 using static Expression;
 using static ProofType;
-using static BeliefRevisionPolicy;
-using static DecisionPolicy;
 using static InferenceRule;
 
 using UnityEngine;
 
 using Substitution = System.Collections.Generic.Dictionary<Variable, Expression>;
 
-//
-// a representation of the 'essential' parts of a proof for
-// a sentence S according to a belief state. It doesn't
-// represent the tree-structure of a proof. It just keeps
-// track of the 'open premsises': what is taken for granted
-// as an assumption or part of the belief base in order for
-// this proof to succeed. Also includes 'resolutions' if
-// the proof is a plan.
-// 
-// Also, the variable assignment for the proof of a formula
-// is keep track of, so that it's passed on recursively if
-// any other proofs depend on it. We want the same variable
-// assignment accross the same proof.
-// 
-public class Basis {
-    // premises are a list to preserve the
-    // order of resolutions: if one resolution
-    // depends on a further resolution, the latter
-    // should be executed first.
-    // 
-    // there may be repetition of premises, but
-    // this won't spell trouble for the proof,
-    // and may be necessary for resolutions.
-    public readonly List<Expression> Premises;
-    // a common variable assignment for
-    // all formulas in this proof.
-    public Substitution Substitution;
-
-    public Basis(List<Expression> premises,
-        Substitution substitution) {
-        Premises = premises;
-        Substitution = substitution;
-    }
-
-    public Basis() : this(new List<Expression>(),
-        new Substitution()) {}
-
-    // the product basis a x b.
-    public Basis(Basis a, Basis b) {
-        var productPremises = new List<Expression>();
-
-        productPremises.AddRange(a.Premises);
-        foreach (var bPremise in b.Premises) {
-            productPremises.Add(bPremise.Substitute(a.Substitution));
-        }
-
-        var productSubstitution = Compose(a.Substitution, b.Substitution);
-
-        Premises = productPremises;
-        Substitution = productSubstitution;
-    }
-
-    // simple
-    public void AddPremise(Expression premise) {
-        Premises.Add(premise);
-    }
-
-    // composes two substitutions together a * b,
-    // according the rule that the A[a * b] = (A[a])[b] 
-    public static Substitution Compose(Substitution a, Substitution b) {
-        Substitution composition = new Substitution();
-
-        foreach (KeyValuePair<Variable, Expression> bAssignment in b) {
-            composition[bAssignment.Key] = bAssignment.Value;
-        }
-
-        // here, we override the previous value if there is one.
-        foreach (KeyValuePair<Variable, Expression> aAssignment in a) {
-            composition[aAssignment.Key] = aAssignment.Value;
-        }
-
-        return composition;
-    }
-
-    public override String ToString() {
-        StringBuilder s = new StringBuilder();
-        s.Append("<");
-        if (Premises.Count > 0) {
-            s.Append(Premises[0]);
-            for (int i = 1; i < Premises.Count; i++) {
-                s.Append(", ");
-                s.Append(Premises[i]);
-            }
-        }
-
-        s.Append("> with {");
-        foreach (KeyValuePair<Variable, Expression> assignment in Substitution) {
-            s.Append(assignment.Key);
-            s.Append(" -> ");
-            s.Append(assignment.Value);
-            s.Append(", ");
-        }
-        s.Append("}");
-
-        return s.ToString();
-    }
-
-    public override int GetHashCode() {
-        int hash = 5381;
-        foreach (var p in Premises) {
-            hash = 33 * hash + p.GetHashCode();
-        }
-
-        foreach (var sub in Substitution) {
-            hash = 29 * hash + sub.Key.GetHashCode();
-            hash = 23 * hash + sub.Value.GetHashCode();
-            hash %= 100000000;
-        }
-        return hash;
-    }
-
-    public override bool Equals(object o) {
-        if (!(o is Basis)) {
-            return false;
-        }
-
-        Basis that = o as Basis;
-
-        if (this.Premises.Count != that.Premises.Count) {
-            return false;
-        }
-
-        for (int i = 0; i < Premises.Count; i++) {
-            if (!this.Premises[i].Equals(that.Premises[i])) {
-                return false;
-            }
-        }
-
-        if (this.Substitution.Count != that.Substitution.Count) {
-            return false;
-        }
-
-        foreach (var assignment in this.Substitution.Keys) {
-            if (!that.Substitution.ContainsKey(assignment)) {
-                return false;
-            }
-
-            if (!this.Substitution[assignment].Equals(that.Substitution[assignment])) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-}
-
-public class Bases {
-    private HashSet<Basis> BasisCollection;
-
-    public Bases() {
-        BasisCollection = new HashSet<Basis>();
-    }
-
-    public void Clear() {
-        BasisCollection.Clear();
-    }
-
-    public bool IsEmpty() {
-        return BasisCollection.Count == 0;
-    }
-
-    public bool Contains(Basis basis) {
-        return BasisCollection.Contains(basis);
-    }
-
-    public void Add(Basis basis) {
-        BasisCollection.Add(basis);
-    }
-
-    public void Add(Bases bases) {
-        BasisCollection.UnionWith(bases.BasisCollection);
-    }
-
-    // corresponds to the sum of two proofs:
-    // either basis is sufficient to prove S
-    public static Bases Join(Bases a, Bases b) {
-        Bases ret = new Bases();
-        ret.BasisCollection.UnionWith(a.BasisCollection);
-        ret.BasisCollection.UnionWith(b.BasisCollection);
-        return ret;
-    }
-
-    // corresponds to the product of two proofs:
-    // both bases are necessary to prove S
-    public static Bases Meet(Bases a, Bases b) {
-        Bases ret = new Bases();
-
-        foreach (var aBasis in a.BasisCollection) {
-            foreach (var bBasis in b.BasisCollection) {
-                ret.Add(new Basis(aBasis, bBasis));
-            }
-        }
-        return ret;
-    }
-
-    public IEnumerator<Basis> GetEnumerator() {
-        return BasisCollection.GetEnumerator();
-    }
-
-    public override String ToString() {
-        StringBuilder s = new StringBuilder();
-        s.Append("{\n");
-        foreach (var basis in BasisCollection) {
-            s.Append(basis);
-            s.Append('\n');
-        }
-        s.Append('}');
-        return s.ToString();
-    }
-}
-
-// variant ways of quering the belief base
-// given a timestamp
-public enum TensedQueryType {
-    Exact, // directly query the exact timestamp
-    Inertial, // checks the most recent timestamp between P and ~P
-    Eventive // @TODO figure it out
-}
-
 // The prover and the planner each use the same inference mechanism,
 // so this enum specifies some parameters to it.
 public enum ProofType {
     Proof,
     Plan
-}
-
-// @Note these policies might well
-// become sentences in the belief base
-// and can change dynamically, just like anything else.
-
-// Simple placeholder policies for how to revise beliefs.
-// Can be set with the mental state.
-// If there is a conflict between new and old information,
-// A conversation policy rejects new information, and
-// a liberal policy discards old information to accommodate the new.
-public enum BeliefRevisionPolicy {
-    Liberal,
-    Conservative
-}
-
-// @Note: this might be the difference
-// between risk aversion, rational calculus, etc.
-public enum DecisionPolicy {
-    Default
 }
 
 // A model of the mental state of an NPC.
@@ -279,9 +38,6 @@ public class MentalState : MonoBehaviour {
     // the time, in milliseconds, that the mental
     // state is allowed to run search in one frame
     protected static long TIME_BUDGET = 8;
-
-    public BeliefRevisionPolicy BeliefRevisionPolicy = Conservative;
-    public DecisionPolicy DecisionPolicy = Default;
 
     public FrameTimer FrameTimer;
 
@@ -350,7 +106,7 @@ public class MentalState : MonoBehaviour {
 
     // returns satisfiers in the belief base for this formula
     // at a given timestamp
-    private HashSet<Basis> Satisfiers(Expression formula) {
+    private HashSet<ProofBasis> Satisfiers(Expression formula) {
         // first, we get the domain to search through.
         // this is going to correspond to all sentences
         // that are structural candidates for matching
@@ -370,17 +126,21 @@ public class MentalState : MonoBehaviour {
         // expressions which would unify with F(x) are
         // included within the bounds of bot(bot) and top(top)
         // This will involve check partial type application
+        //
+        // BUT leave this until there's a geniune use case
+        // in inference, since the way it occurs now is
+        // potentially more efficient.
         var domain = BeliefBase.GetViewBetween(bottom, top);
         // then, we iterate through the domain and pattern match (unify)
         // the formula against the sentences in the belief base.
         // any sentences that match get added, along with the
         // unifying substitution, to the basis set.
-        HashSet<Basis> satisfiers = new HashSet<Basis>();
+        var satisfiers = new HashSet<ProofBasis>();
         foreach (Expression belief in domain) {
             // Debug.Log("domain includes " + belief);
             HashSet<Substitution> unifiers = formula.GetMatches(belief);
             foreach (Substitution unifier in unifiers) {
-                satisfiers.Add(new Basis(new List<Expression>(){belief},
+                satisfiers.Add(new ProofBasis(new List<Expression>(){belief},
                     unifier));
             }
         }
@@ -416,8 +176,8 @@ public class MentalState : MonoBehaviour {
         #endregion
 
         #region Variables
-        public List<Basis> YoungerSiblingBases;
-        public Bases ChildBases;
+        public List<ProofBasis> YoungerSiblingBases;
+        public ProofBases ChildBases;
         public bool IsLastChild;
         #endregion
 
@@ -435,20 +195,26 @@ public class MentalState : MonoBehaviour {
             Supplement = supplement;
             IsAssumption = isAssumption;
 
-            YoungerSiblingBases = new List<Basis>();
+            YoungerSiblingBases = new List<ProofBasis>();
             if (!hasYoungerSibling) {
-                YoungerSiblingBases.Add(new Basis());
+                YoungerSiblingBases.Add(new ProofBasis());
             }
-            ChildBases = new Bases();
+            ChildBases = new ProofBases();
             IsLastChild = false;
         }
     }
 
-    public IEnumerator StreamBasesIteratedDFS(Bases bases, Expression conclusion,
+    // TODO:
+    // - prevent cycles by tracking completed proofs of given lemmas
+    // - conditionals (maybe a different approach than having a list of
+    //   extra suppositions at each proof node?)
+    // - consistent ordering of inferential complexity
+    //   (this was working in BFS but seems messed up by the stack)
+    public IEnumerator StreamBasesIteratedDFS(ProofBases bases, Expression conclusion,
         Container<bool> done, ProofType pt = Proof) {
         // we can only prove sentences.
         Debug.Assert(conclusion.Type.Equals(TRUTH_VALUE));
-        
+ 
         // we're going to do a depth-first search
         // with successively higher bounds on the
         // depth allowed.
@@ -495,8 +261,8 @@ public class MentalState : MonoBehaviour {
 
                 // Debug.Log("visiting " + current.Lemma);
                 
-                var sends = new List<KeyValuePair<Bases, bool>>();
-                
+                var sends = new List<KeyValuePair<ProofBases, bool>>();
+ 
                 for (int i = 0; i < current.YoungerSiblingBases.Count; i++) {
                     if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                         yield return null;
@@ -508,11 +274,11 @@ public class MentalState : MonoBehaviour {
 
                     // Debug.Log("substituted to " + currentLemma);
 
-                    var searchBases = new Bases();
+                    var searchBases = new ProofBases();
 
                     // this is our base case.
                     if (Contains(currentLemma)) {
-                        var basis = new Basis();
+                        var basis = new ProofBasis();
                         basis.AddPremise(currentLemma);
                         searchBases.Add(basis);
                     } else if (currentLemma.GetVariables().Count > 0) {
@@ -658,20 +424,20 @@ public class MentalState : MonoBehaviour {
                     }
 
                     current.ChildBases.Add(searchBases);
-                    sends.Add(new KeyValuePair<Bases, bool>(searchBases, exhaustive));
+                    sends.Add(new KeyValuePair<ProofBases, bool>(searchBases, exhaustive));
                 }
 
                 int meetBasisIndex = 0;
                 // TODO fix this condition so that an empty bases gets sent only when
                 // it constitutes the last possible search for an assumption.
                 if (sends.Count == 0 && current.IsLastChild) {
-                    sends.Add(new KeyValuePair<Bases, bool>(new Bases(), true));
+                    sends.Add(new KeyValuePair<ProofBases, bool>(new ProofBases(), true));
                     meetBasisIndex = -1;
                 }
 
                 for (int i = 0; i < sends.Count; i++) {
                     ProofNode merge = current;
-                    Bases sendBases = sends[i].Key;
+                    ProofBases sendBases = sends[i].Key;
                     bool exhaustive = sends[i].Value;
 
                     // pass on the bases and merge them all the way to
@@ -704,22 +470,24 @@ public class MentalState : MonoBehaviour {
                         var mergeLemma = meetBasis == null ? merge.Lemma : merge.Lemma.Substitute(meetBasis.Substitution);
                         // Debug.Log("Merging: " + mergeLemma + " sending: " + sendBases);
 
-                        Bases productBases = new Bases();
+                        ProofBases productBases = new ProofBases();
 
                         if (merge.IsAssumption) {
                             
                             // no refutation
                             if (sendBases.IsEmpty() &&
                                 merge.ChildBases.IsEmpty() &&
-                                (exhaustive || current.Depth == maxDepth || mergeLemma.Depth >= this.MaxDepth || merge.IsLastChild) &&
-                                meetBasis != null) {
+                                meetBasis != null &&
+                                (exhaustive || current.Depth == maxDepth ||
+                                 mergeLemma.Depth >= this.MaxDepth ||
+                                 merge.IsLastChild)) {
                                 // Debug.Log("Assumption sending " + mergeLemma);
                                 // we can safely assume the content of
                                 // this assumption node
-                                var assumptionBasis = new Basis();
+                                var assumptionBasis = new ProofBasis();
                                 assumptionBasis.AddPremise(mergeLemma.GetArgAsExpression(0));
 
-                                var productBasis = new Basis(meetBasis, assumptionBasis);
+                                var productBasis = new ProofBasis(meetBasis, assumptionBasis);
                                 productBases.Add(productBasis);
                             } else {
                                 // Debug.Log("Assumption not Sending " + mergeLemma);
@@ -737,7 +505,7 @@ public class MentalState : MonoBehaviour {
                                 // if we have a supplemental premise,
                                 // we add it here.
                                 if (merge.Supplement != null) {
-                                    joinBases = new Bases();
+                                    joinBases = new ProofBases();
                                     joinBases.Add(sendBases);
                                     foreach (var joinBasis in joinBases) {
                                         joinBasis.AddPremise(merge.Supplement.Substitute(joinBasis.Substitution));
@@ -747,7 +515,7 @@ public class MentalState : MonoBehaviour {
                                 // we form the product of our meet basis
                                 // and child bases.
                                 foreach (var joinBasis in joinBases) {
-                                    var productBasis = new Basis(meetBasis, joinBasis);
+                                    var productBasis = new ProofBasis(meetBasis, joinBasis);
                                     productBases.Add(productBasis);
                                 }
                             }
@@ -788,603 +556,6 @@ public class MentalState : MonoBehaviour {
         yield break;
     }
 
-    // if this mental state, S, can prove the goal
-    // directly or via inference, then Basis(goal)
-    // returns the set of bases of goal, relative to S:
-    // that is, the premises needed to prove the goal,
-    // (that is, they aren't lemmas which are derived
-    // elsewhere in the proof).
-    // 
-    // ====
-    // 
-    // Why a set of lists?
-    // 
-    // This returns the set of alternative bases that
-    // each independently prove the goal. If the set
-    // is empty, that means this mental state doesn't
-    // prove the goal.
-    // 
-    // Also includes a substitution in case the goal
-    // is a formula.
-    // 
-    // ====
-    // 
-    // Why a list, and not a set?
-    // 
-    // The basis is a partially ordered collection, where the
-    // order corresponds to the proof depth of the premise:
-    // If one premise P occurs in the application of a rule
-    // whose other sentence is a lemma over a second premise Q,
-    // then Q comes before P in the list.
-    // 
-    // This corresponds to the order in which the NPC should perform
-    // actions. This is because the premises earlier in the order
-    // will serve as preconditions to the success of a later action.
-    // Also, duplicates in the sequence are allowed; a sequence
-    // where the same sentence occurs multiple times corresponds
-    // to the same action being performed again.
-    // 
-    // As for normal proofs, the order doesn't have a concrete interpretation,
-    // and can be ignored. Furthermore, duplicate premises should ultimately be
-    // discarded, in case a belief is discard to resolve an inconsistency.
-    // ====
-    // 
-    // @BUG pending expressions shouldn't be mutated in branches
-    // that don't have the expression as its ancestor.
-    // This'll cause false negatives.
-    // 
-    // ====
-    // 
-    // goal: the sentence to be proved
-    // suppositions: the set of sentences supposed at this point in search
-    //               due to  a conditional
-    // pendingExpressions: expressions that have commenced search but
-    //                     haven't completed. Used to prevent mutually
-    //                     recursive loops.
-    // completeExpressions: expressions that have been tried and found.
-    // alternativeBases: the resulting set of bases that each prove the goal.
-    // done: a flag that indicates when search has been completed.
-    //
-    public IEnumerator GetBases(
-        ProofType proofType,
-        Expression goal,
-        HashSet<Expression> suppositions,
-        Dictionary<Expression, List<HashSet<Expression>>> pendingExpressions,
-        Dictionary<Expression, KeyValuePair<HashSet<Expression>, HashSet<Basis>>> completeExpressions,
-        HashSet<Basis> alternativeBases,
-        Container<bool> done) {
-        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-            yield return null;
-        }
-
-        // Debug.Log("trying to prove " + goal);
-
-        // goal should be type t.
-        if (!goal.Type.Equals(TRUTH_VALUE)) {
-            throw new ArgumentException("Bases: goal/conclusion must be a sentence (type t)");
-        }
-
-        // if we have completed bases for this goal, go ahead
-        // and return with the previous value.
-        if (completeExpressions.ContainsKey(goal)) {
-            var suppositionsAndBases = completeExpressions[goal];
-            if (suppositions.SetEquals(suppositionsAndBases.Key)) {
-                alternativeBases.UnionWith(suppositionsAndBases.Value);
-                done.Item = true;
-                yield break;
-            }
-        }
-
-        // @Note: a bug where different formulas return the same proof
-        // allow duplicate proofs. We'd want a unify check here to fix that,
-        // or even something more sophisticated. It doesn't seem like the duplication
-        // is causing a problem, so no worry yet.
-        // 
-        // here, we eliminate repeated attempts to prove the same
-        // goal within the same proof.
-        if (pendingExpressions.ContainsKey(goal)) {
-            var listOfSuppositionSets = pendingExpressions[goal];
-            foreach (var suppositionSet in listOfSuppositionSets) {
-                if (suppositions.SetEquals(suppositionSet)) {
-                    done.Item = true;
-                    yield break;
-                }
-            }
-        } else {
-            pendingExpressions[goal] = new List<HashSet<Expression>>();
-        }
-
-        pendingExpressions[goal].Add(suppositions);
-
-        // if suppositions prove the goal, then
-        // nothing in our belief base will be under risk
-        // of being falsified by ~goal. So, our basis
-        // shouldn't include any premises in our basis.
-        // 
-        // @Note: the basis might include a stack of
-        // conclusions proved via supposition, and then
-        // pop them off. Maybe? Potentially not necessary.
-        if (suppositions.Contains(goal)) {
-            alternativeBases.Add(new Basis());
-            done.Item = true;
-            yield break;
-        } else {
-            foreach (Expression supposition in suppositions) {
-                // @Note: now that get matches is unidirectional
-                // as opposed to unification, we may now want
-                // to make a second call, here, in case we want to make 
-                // some sort of supposition -> goal match, interpreted
-                // universally instead of existentially.
-                HashSet<Substitution> unifiers = goal.GetMatches(supposition);
-                foreach (var unifier in unifiers) {
-                    alternativeBases.Add(new Basis(new List<Expression>(),
-                                                unifier));
-                }
-                // @Note: because finding a sentence in the
-                // supposition set would amount to
-                // logical vacuity, I used to return
-                // the basis set here. But, we actually
-                // probably want to know the other bases, too.
-                // 
-                // What will happen is that, because there's
-                // no premise to discard in this basis,
-                // no other sentence from another basis
-                // will be discarded.
-            }
-        }
-
-        // M's belief base has A => M |- A
-        // 
-        // right now, we do an intertial query: if
-        // M |- A at i and M |- ~A at j and j < i, then M |- A
-        if (Contains(goal)) {
-            var premises = new List<Expression>();
-            premises.Add(goal);
-            alternativeBases.Add(new Basis(premises, new Substitution()));
-
-            // @Note we want all proofs, not just these basic ones,
-            // because they may need to be falsified to accept the
-            // negation of A.
-            // yield return;
-        } else {
-            // in case the goal is a formula,
-            // try to see if there are any satisfying instances in the belief base.
-            var satisfiers = Satisfiers(goal);
-
-            if (satisfiers.Count != 0) {
-                alternativeBases.UnionWith(satisfiers);
-            }
-        }
-
-        // M.locations has X => M |- able(self, at(self, X))
-        if (goal.Head.Equals(ABLE.Head) && goal.GetArgAsExpression(0).Head.Equals(SELF.Head)) {
-            var abilityContent = goal.GetArgAsExpression(1);
-            if (abilityContent.Head.Equals(AT.Head) && abilityContent.GetArgAsExpression(0).Head.Equals(SELF.Head)) {
-                var location = abilityContent.GetArgAsExpression(1);
-                if (Locations.ContainsKey(location)) {
-                    var premises = new List<Expression>();
-                    premises.Add(goal);
-                    alternativeBases.Add(new Basis(premises, new Substitution()));
-                }
-            }
-        }
-
-        // dist(M.locations(x), M.locations(y)) < 1 => M |- at(x, y)
-        if (goal.Head.Equals(AT.Head) || 
-           (goal.Head.Equals(NOT.Head) && goal.GetArgAsExpression(0).Head.Equals(AT.Head))) {
-            float cutoffDistance = 5;
-
-            Expression nameA;
-            Expression nameB;
-
-            if (goal.Head.Equals(AT.Head)) {
-                nameA = goal.GetArgAsExpression(0);
-                nameB = goal.GetArgAsExpression(1);
-            } else {
-                nameA = goal.GetArgAsExpression(0).GetArgAsExpression(0);
-                nameB = goal.GetArgAsExpression(0).GetArgAsExpression(1);
-            }
-
-            if (Locations.ContainsKey(nameA) && Locations.ContainsKey(nameB)) {
-                var locationA = Locations[nameA];
-                var locationB = Locations[nameB];
-
-                var dx = locationA.x - locationB.x;
-                var dy = locationA.y - locationB.y;
-                var dz = locationA.z - locationB.z;
-
-                if (dx * dx + dy * dy + dz * dz <= cutoffDistance) {
-                    if (goal.Head.Equals(AT.Head)) {
-                        var premises = new List<Expression>();
-                        premises.Add(goal);
-                        alternativeBases.Add(new Basis(premises, new Substitution()));
-                    }
-                } else {
-                    if (goal.Head.Equals(NOT.Head)) {
-                        var premises = new List<Expression>();
-                        premises.Add(goal);
-                        alternativeBases.Add(new Basis(premises, new Substitution()));
-                    }
-                }
-            }
-        }
-
-        // @Note might want this to take an array instead,
-        // and trim out any unused variables.
-        Substitution DiscardUnusedAssignments(Substitution substitution) {
-            var trimmedSubstitution = new Substitution();
-            foreach (var assignment in substitution) {
-                if (goal.HasOccurenceOf(assignment.Key)) {
-                    trimmedSubstitution[assignment.Key] = assignment.Value;
-                }
-            }
-            return trimmedSubstitution;
-        }
-
-        int numRoutines = 0;
-
-        // a function for handling inference rules
-        IEnumerator ApplyInferenceRule(InferenceRule rule) {
-            numRoutines++;
-
-            Expression[] premises = new Expression[rule.Premises.Length];
-            Expression[] assumptions = new Expression[rule.Assumptions.Length];
-            Expression[] conclusions = new Expression[rule.Conclusions.Length];
-            
-            // change out variables in the rule to not collide
-            // with the variables in goal.
-            var usedVariables = goal.GetVariables();
-            var newVariableSubstitution = new Substitution();
-            var newUsedVariables = new HashSet<Variable>();
-            newUsedVariables.UnionWith(usedVariables);
-            foreach (var usedVariable in usedVariables) {
-                Variable newVariable = GetUnusedVariable(usedVariable.Type, newUsedVariables);
-                newVariableSubstitution.Add(usedVariable, new Expression(newVariable));
-            }
-
-            for (int i = 0; i < rule.Premises.Length; i++) {
-                premises[i] = rule.Premises[i].Substitute(newVariableSubstitution);
-            }
-
-            for (int i = 0; i < rule.Assumptions.Length; i++) {
-                assumptions[i] = rule.Assumptions[i].Substitute(newVariableSubstitution);
-            }
-
-            for (int i = 0; i < rule.Conclusions.Length; i++) {
-                conclusions[i] = rule.Conclusions[i].Substitute(newVariableSubstitution);
-            }
-
-            // Now, we go through the conclusions of the rules,
-            // trying to match a conclusion.
-            for (int i = 0; i < conclusions.Length; i++)
-            {
-                var unifiers = conclusions[i].GetMatches(goal);
-
-                // for each unifier, we get a different set of bases.
-                foreach (var unifier in unifiers) {
-                    HashSet<Basis> currentBases = new HashSet<Basis>();
-                    currentBases.Add(new Basis(new List<Expression>(),
-                        unifier));
-
-                    for (int j = 0; j < premises.Length; j++) {
-                        var meetBases = new HashSet<Basis>();
-                        foreach (var currentBasis in currentBases) {
-                            var premiseBases = new HashSet<Basis>();
-                            var doneFlag = new Container<bool>(false);
-                            StartCoroutine(
-                                    GetBases(proofType,
-                                    premises[j].Substitute(currentBasis.Substitution),
-                                    suppositions,
-                                    pendingExpressions,
-                                    completeExpressions,
-                                    premiseBases,
-                                    doneFlag));
-
-                            while (!doneFlag.Item) {
-                                yield return null;
-                            }
-                            
-                            foreach (var premiseBasis in premiseBases) {
-                                meetBases.Add(new Basis(currentBasis, premiseBasis));
-                            }
-                        }
-                        currentBases = meetBases;
-                    }
-
-                    // we try to disprove each of the other conclusions
-                    for (int j = 0; j < conclusions.Length; j++) {
-                        if (j == i) {
-                            continue;
-                        }
-                        var meetBases = new HashSet<Basis>();
-                        foreach (var currentBasis in currentBases) {
-                            var notConclusion = new Expression(NOT, conclusions[j].Substitute(currentBasis.Substitution));
-                            var conclusionBases = new HashSet<Basis>();
-                            var doneFlag = new Container<bool>(false);
-
-                            StartCoroutine(GetBases(proofType,
-                                notConclusion,
-                                suppositions,
-                                pendingExpressions,
-                                completeExpressions,
-                                conclusionBases,
-                                doneFlag));
-
-                            while (!doneFlag.Item) {
-                                yield return null;
-                            }
-
-                            foreach (var conclusionBasis in conclusionBases) {
-                                List<Expression> meetPremises = new List<Expression>();
-                                meetPremises.AddRange(currentBasis.Premises);
-                                meetPremises.AddRange(conclusionBasis.Premises);
-                                meetBases.Add(new Basis(currentBasis, conclusionBasis));
-                            }
-                        }
-                        currentBases = meetBases;
-                    }
-
-                    for (int j = 0; j < assumptions.Length; j++) {
-                        var meetBases = new HashSet<Basis>();
-
-                        foreach (var currentBasis in currentBases) {
-                            var assumption = assumptions[j].Substitute(currentBasis.Substitution);
-                            // here we want to try to disprove
-                            // the assumption. If we can't, then
-                            // the inference goes through by default.
-                            var assumptionDisbases = new HashSet<Basis>();
-                            var doneFlag = new Container<bool>(false);
-
-                            StartCoroutine(GetBases(proofType,
-                                    new Expression(NOT, assumption),
-                                    suppositions,
-                                    pendingExpressions,
-                                    completeExpressions,
-                                    assumptionDisbases,
-                                    doneFlag));
-
-                            bool disproven = false;
-
-                            while (!doneFlag.Item) {
-                                // if we have even one proof of ~A,
-                                // then we're good to break out of the search.
-                                if (assumptionDisbases.Count > 0) {
-                                    disproven = true;
-                                    break;
-                                }
-                                yield return null;
-                            }
-
-                            if (!disproven) {
-                                List<Expression> meetPremises = new List<Expression>();
-                                meetPremises.AddRange(currentBasis.Premises);
-                                meetPremises.Add(assumption);
-                                meetBases.Add(new Basis(meetPremises, currentBasis.Substitution));
-                            }
-                        }
-
-                        currentBases = meetBases;
-                    }
-
-                    var collectedBases = new HashSet<Basis>();
-                    foreach (var currentBasis in currentBases) {
-                        collectedBases.Add(new Basis(currentBasis.Premises,
-                                                        DiscardUnusedAssignments(currentBasis.Substitution)));
-                    }
-                    alternativeBases.UnionWith(collectedBases);
-                }
-            }
-
-            numRoutines--;
-        }
-
-        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-            yield return null;
-        }
-
-        // INFERENCES
-        // ==========
-
-        StartCoroutine(ApplyInferenceRule(VERUM_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(VEROUS_INTRODUCTION));
-
-        StartCoroutine(ApplyInferenceRule(TRULY_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(DOUBLE_NEGATION_INTRODUCTION));
-
-        StartCoroutine(ApplyInferenceRule(ITSELF_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(ITSELF_ELIMINATION));
-
-        // StartCoroutine(ApplyInferenceRule(CONVERSE_INTRODUCTION));
-        // StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_INTRODUCTION));
-        // StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_INTRODUCTION));
-        // StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_INTRODUCTION));
-        // StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_INTRODUCTION));
-        // StartCoroutine(ApplyInferenceRule(QUANTIFIER_PHRASE_COORDINATOR_2_ELIMINATION));
-        
-        StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_LEFT));
-        StartCoroutine(ApplyInferenceRule(DISJUNCTION_INTRODUCTION_RIGHT));
-        
-        StartCoroutine(ApplyInferenceRule(CONJUNCTION_INTRODUCTION));
-
-        StartCoroutine(ApplyInferenceRule(EXISTENTIAL_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(UNIVERSAL_ELIMINATION));
-
-        StartCoroutine(ApplyInferenceRule(SELECTOR_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(SELECTOR_INTRODUCTION_MODAL));
-        
-        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-            yield return null;
-        }
-
-        // conditional proof (conditional introduction)
-        // @note all of the proof annotations should be written
-        // in the sequent calculus, not natural deduction.
-        // Usually doesn't matter though.
-        // M, A |- B => M |- A -> B
-        if (goal.Head.Equals(IF.Head)) {
-            var antecedent = goal.GetArgAsExpression(0);
-
-            // @Note as a workaround, we skip if the antecedent
-            // is a lone variable, as it won't be helpful to know
-            // that's matching, and it causes loops with
-            // modus ponens.
-            if (!(antecedent.Head is Variable) && !antecedent.Type.Equals(antecedent.Head.Type)) {
-                var newSuppositions = new HashSet<Expression>();
-                foreach (Expression supposition in suppositions) {
-                    newSuppositions.Add(supposition);
-                }
-                // add the antecedent of the conditional
-                // to the list of suppositions.
-                newSuppositions.Add(antecedent);
-
-                // add the proofs of the consequent
-                // under the supposition of the antecedent.
-                var doneFlag = new Container<bool>(false);
-                StartCoroutine(GetBases(proofType,
-                    (Expression) goal.GetArg(1),
-                    newSuppositions,
-                    pendingExpressions,
-                    completeExpressions,
-                    alternativeBases,
-                    doneFlag));
-
-                while (!doneFlag.Item) {
-                    yield return null;
-                }
-            }
-        }
-
-        StartCoroutine(ApplyInferenceRule(BETTER_ANTISYMMETRY));
-        StartCoroutine(ApplyInferenceRule(BETTER_TRANSITIVITY));
-        StartCoroutine(ApplyInferenceRule(SELF_BELIEF_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(NEGATIVE_SELF_BELIEF_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(CLOSED_QUESTION_ASSUMPTION));
-        StartCoroutine(ApplyInferenceRule(PERCEPTUALLY_CLOSED_ASSUMPTION));
-
-        // @BUG this rule causes planning not to work.
-        // StartCoroutine(ApplyInferenceRule(SYMMETRY_OF_LOCATION));
-
-        StartCoroutine(ApplyInferenceRule(SOMETIMES_INTRODUCTION));
-        StartCoroutine(ApplyInferenceRule(Contrapose(PERCEPTUAL_BELIEF)));
-
-        StartCoroutine(ApplyInferenceRule(SPEECH_ABILITY));
-
-        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-            yield return null;
-        }
-
-        // @Note put all contractive rules here
-        // (rules whose premises are more complex than their conclusions,
-        //  and for which a premise may match the rule as a conclusion)
-        //  the depth check only applies if we don't want the size
-        //  of the premise to explode. It's fine to prove conclusions
-        //  that are very large (i.e. with DNE).
-        if (goal.Depth <= MaxDepth) {
-            StartCoroutine(ApplyInferenceRule(PERCEPTUAL_BELIEF));
-            StartCoroutine(ApplyInferenceRule(ALWAYS_ELIMINATION));
-            StartCoroutine(ApplyInferenceRule(MODUS_PONENS));
-            StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_LEFT)));
-            StartCoroutine(ApplyInferenceRule(Contrapose(DISJUNCTION_INTRODUCTION_RIGHT)));
-            StartCoroutine(ApplyInferenceRule(Contrapose(CONJUNCTION_INTRODUCTION)));
-            // StartCoroutine(ApplyInferenceRule(MODUS_TOLLENS));
-            StartCoroutine(ApplyInferenceRule(TRANSITIVITY_OF_LOCATION));
-            
-            StartCoroutine(ApplyInferenceRule(CONVERSE_ELIMINATION));
-            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_ELIMINATION));
-            StartCoroutine(ApplyInferenceRule(GEACH_TRUTH_FUNCTION_2_ELIMINATION));
-            StartCoroutine(ApplyInferenceRule(GEACH_QUANTIFIER_PHRASE_ELIMINATION));
-
-            // PLANNING
-            // ====
-            // @Note we might in the future add a check to see if there is
-            // no other proof of G. This is because you don't want to enact
-            // something you already believe to be true.
-            // 
-            // M |- able(self, A),  M :: will(A) => M |- A
-            if (proofType == Plan && alternativeBases.Count == 0) {
-
-                // here we assume it's a logical fact
-                // that we can will the neutral state of affairs.
-                // M :: will(neutral) |- neutral
-                if (goal.Equals(NEUTRAL)) {
-                    alternativeBases.Add(new Basis(new List<Expression>{new Expression(WILL, NEUTRAL)},
-                                                new Substitution()));
-                }
-
-                Expression ableToEnactGoal = new Expression(ABLE, SELF, goal);
-
-                HashSet<Basis> abilityBases = new HashSet<Basis>();
-                var doneFlag = new Container<bool>(false);
-
-                StartCoroutine(GetBases(proofType,
-                    ableToEnactGoal,
-                    suppositions,
-                    pendingExpressions,
-                    completeExpressions,
-                    abilityBases,
-                    doneFlag));
-
-                while (!doneFlag.Item) {
-                    yield return null;
-                }
-
-                foreach (Basis abilityBasis in abilityBases) {
-                    abilityBasis.Premises.Add(new Expression(WILL, goal));
-                    alternativeBases.Add(abilityBasis);
-                }
-            }
-        }
-
-        while (numRoutines > 0) {
-            yield return null;
-        }
-
-        var completeBases = new HashSet<Basis>();
-        completeBases.UnionWith(alternativeBases);
-
-        completeExpressions[goal] =
-            new KeyValuePair<HashSet<Expression>, HashSet<Basis>>(suppositions, completeBases);
-
-        done.Item = true;
-        yield break;
-
-        // @Note my assumption is: because removing premises
-        // occurs within the belief base, it's okay to have
-        // duplicate premises, even in a standard proof.
-        // If that turns out to be a faulty assumption,
-        // we can check if the proof mode is Proof, and
-        // if it is go through the list and remove duplicates.
-    }
-
-    public IEnumerator GetBases(ProofType proofType, Expression goal, HashSet<Basis> result, Container<bool> done) {
-        yield return StartCoroutine(GetBases(proofType, goal, new HashSet<Expression>(),
-            new Dictionary<Expression, List<HashSet<Expression>>>(),
-            new Dictionary<Expression, KeyValuePair<HashSet<Expression>, HashSet<Basis>>>(),
-            result, done));
-    }
-
-    // Asks if the expression is proven by this belief base.
-    public IEnumerator Query(Expression query, Container<bool> answer, Container<bool> queryDone) {
-        HashSet<Basis> bases = new HashSet<Basis>();
-        var doneFlag = new Container<bool>(false);
-        IEnumerator basesRoutine = GetBases(Proof, query, bases, doneFlag);
-        StartCoroutine(basesRoutine);
-
-        while (!doneFlag.Item) {
-            if (bases.Count > 0) {
-                answer.Item = true;
-                queryDone.Item = true;
-                StopCoroutine(basesRoutine);
-                yield break;
-            }
-            yield return null;
-        }
-
-        answer.Item = bases.Count > 0;
-        queryDone.Item = true;
-        yield break;
-    }
-
     // the characteristic should be a predicate
     // NOTE: (or formula with one free variable, TODO)
     // that captures its mode of presentation
@@ -1421,296 +592,5 @@ public class MentalState : MonoBehaviour {
         Add(percept);
 
         return param;
-    }
-
-    // TODO: finish this
-
-    // removes all parameters from the expression e
-    // and replaces them with demonstrative expressions, determiners, etc.
-    public IEnumerator ReplaceParameters(Expression e, Container<Expression> result) {
-        // for now, we assume every
-        // parameter has type e
-        if (!(e.Head is Name)) {
-            Debug.Assert(e.Head.Type.Equals(INDIVIDUAL));
-
-            var fc = new Expression(PERCEIVE, SELF, new Expression(FET, e));
-
-            var fcBases = new HashSet<Basis>();
-            var done = new Container<bool>(false);
-
-            StartCoroutine(GetBases(Proof, fc, fcBases, done));
-
-            while (!done.Item) {
-                yield return null;
-            }
-
-            Expression bestPredicate = null;
-            foreach (var fcBasis in fcBases) {
-                var predicate = fcBasis.Substitution[FET.Head as Variable];
-                if (bestPredicate == null || predicate.Depth < bestPredicate.Depth) {
-                    bestPredicate = predicate;
-                }
-            }
-
-            // if we fail, there's always 'this'
-            if (bestPredicate == null) {
-                result.Item = THIS;
-                yield break;
-            }
-
-            result.Item = new Expression(SELECTOR, bestPredicate);
-            yield break;
-        }
-
-        var newArgs = new Expression[e.NumArgs];
-
-        for (int i = 0; i < e.NumArgs; i++) {
-            if (e.GetArg(i) is Empty) {
-                continue;
-            }
-
-            Container<Expression> res = new Container<Expression>(null);
-
-            StartCoroutine(ReplaceParameters(e.GetArgAsExpression(i), res));
-
-            while (res.Item == null) {
-                yield return null;
-            }
-
-            newArgs[i] = res.Item;
-        }
-
-        result.Item = new Expression(new Expression(e.Head), newArgs);
-        yield break;
-    }
-
-    // Asserts a sentence to this mental state.
-    // 
-    // If the assertion is incompatible (i.e. inconsistent)
-    // with the NPC's current beliefs, then the NPC's
-    // are resolved by either rejecting the assertion,
-    // or discarding one of the NPC's beliefs
-    // that is incompatible with the assertion.
-    // 
-    // If accepted, then the sentence is added to
-    // the state's beliefs.
-    public IEnumerator Assert(Expression assertion) {
-        // We already believe assertion A.
-        // We accept it, but don't change our belief state.
-        var answer = new Container<bool>(false);
-        var queryDone = new Container<bool>(false);
-        var query = Query(assertion, answer, queryDone);
-        StartCoroutine(query);
-
-        while (!queryDone.Item) {
-            yield return null;
-        }
-
-        if (answer.Item) {
-            StopCoroutine(query);
-            yield break;
-        }
-
-        var notAssertionBases = new HashSet<Basis>();
-        var done = new Container<bool>(false);
-        var disproof = GetBases(Proof, new Expression(NOT, assertion), notAssertionBases, done);
-        StartCoroutine(disproof);
-
-        var weakestPremises = new HashSet<Expression>();
-
-        while (!done.Item || notAssertionBases.Count > 0) {
-            // if we have a proof of ~A come in,
-            // we want to evaluate the premises of the proof.
-            if (notAssertionBases.Count > 0) {
-                foreach (var notAssertionBasis in notAssertionBases) {
-                    Expression weakestPremise = VERUM;
-                    float weakestPlausibility = float.PositiveInfinity;
-                    foreach (var notAssertionPremise in notAssertionBasis.Premises) {
-                        float premisePlausibility;
-                        
-                        // here, we estimate the plausibility of the premises.
-                        // We'll want this probably to be its own judgement
-                        // which can be proven, but details for that aren't
-                        // clear yet.
-                        if (notAssertionPremise.Head.Equals(PERCEIVE.Head)) {
-                            premisePlausibility = 2;
-                        } else if (notAssertionPremise.Head.Equals(BELIEVE.Head)) {
-                            premisePlausibility = 1;
-                        } else {
-                            premisePlausibility = 3;
-                        }
-
-                        if (premisePlausibility < weakestPlausibility) {
-                            weakestPremise = notAssertionPremise;
-                            weakestPlausibility = premisePlausibility;
-                        } else if (premisePlausibility == weakestPlausibility) {
-                            // unclear what we want in this case.
-                            // should it be a coin flip, or should it be
-                            // a function of premise order? Right now,
-                            // I'll always remove the rightmost premise.
-                            weakestPremise = notAssertionPremise;
-                            weakestPlausibility = premisePlausibility;
-                        }
-                    }
-
-                    float assertionPlausibility;
-                    if (assertion.Head.Equals(PERCEIVE.Head)) {
-                        assertionPlausibility = 2.5f;
-                    } else if (assertion.Head.Equals(BELIEVE.Head)) {
-                        assertionPlausibility = 1.5f;
-                    } else {
-                        assertionPlausibility = 3.5f;
-                    }
-
-                    if (assertionPlausibility > weakestPlausibility) {
-                        weakestPremises.Add(weakestPremise);
-                    } else {
-                        // in this case, the assertion is
-                        // weaker than the weakest premise.
-                        // 
-                        // in this case, we reject the assertion.
-                        StopCoroutine(disproof);
-                        yield break;
-                    }
-                }
-                // here, we clear the bases so
-                // we don't repeat work next time.
-                notAssertionBases.Clear();
-            }
-            yield return null;
-        }
-
-        // A is more plausible than
-        // at least one premise in each proof.
-        foreach (var weakPremise in weakestPremises) {
-            Remove(weakPremise);
-        }
-
-        // now, we add A.
-        Add(assertion);
-        yield break;
-    }
-
-    // ranks the goals according to this mental state,
-    // and then stores the ranking.
-    public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
-        // first, we get our domain of elements for which preferences are defined.
-        // TODO stub
-        var preferencesInBeliefBase = new List<Expression>();
-        var preferables = new HashSet<Expression>();
-
-        // @Note: we assume preferences are timestamped 0
-        // and are eternal. This should change, eventually.
-        foreach (var preference in preferencesInBeliefBase) {
-            preferables.Add(preference.GetArgAsExpression(0));
-            preferables.Add(preference.GetArgAsExpression(1));
-        }
-
-        // @Note: we'd probably want to consider AS_GOOD_AS in the future. For now,
-        // we ignore that detail. We're also ignoring DERIVED preferences which
-        // might not be in the belief base, but are still relevant to decision making.
-        // @Q: How do we get those?
-
-        // the plan: find the sentence which is strictly better than any other sentence.
-        // NOTE: this strategy excludes any sentences not known to be better than
-        // netural, because they might be worse than neutral, for all we know.
-        // (Hence "risk averse")
-        
-        // @Note right now, the ranking is represented as a stack.
-        // This is wrong, as our preferences are only a partial
-        // ordering. Instead, we should have a tree structure
-        // where the sibling nodes are of undefined preference
-        // to one another/assumed indifferent. This way, we
-        // don't discard a goal that might be better than
-        // neutral but indifferent/unknown to something
-        // better than neutral.
-        Stack<Expression> ranking = new Stack<Expression>();
-        ranking.Push(NEUTRAL);
-        var storage = new Stack<Expression>();
-
-        foreach (var preferable in preferables) {
-            while (ranking.Count != 0) {
-                var bestSoFar = ranking.Peek();
-                
-                var answer = new Container<bool>(false);
-                var doneFlag = new Container<bool>(false);
-                StartCoroutine(Query(new Expression(BETTER, preferable, bestSoFar), answer, doneFlag));
-                while (!doneFlag.Item) {
-                    yield return null;
-                }
-
-                if (answer.Item) {
-                    ranking.Push(preferable);
-                    break;
-                } else {
-                    storage.Push(ranking.Pop());
-                }
-            }
-            while (storage.Count != 0) {
-                ranking.Push(storage.Pop());
-            }
-        }
-
-        var bestPlan = new List<Expression>();
-        while (ranking.Count != 0) {
-            Expression nextBestGoal = ranking.Pop();
-            var goalBases = new HashSet<Basis>();
-            var doneFlag = new Container<bool>(false);
-            StartCoroutine(GetBases(Plan, nextBestGoal, goalBases, doneFlag));
-
-            while (!doneFlag.Item) {
-                yield return null;
-            }
-
-            bool alreadyTrue = true;
-
-            // we go through each basis of the goal and
-            // find the best plan. If there is no plan,
-            // then we either can't enact it, or it's
-            // already true. In either case, we discard it.
-            foreach (var goalBasis in goalBases) {
-                // we decide the best plan for our goal
-                // and keep track of it.
-                // @Note: right now it's very simple;
-                // we simply choose the plan that takes
-                // the least actions.
-                // we'll want to incorporate the cost
-                // of actions in later.
-                var currentPlan = new List<Expression>();
-
-                alreadyTrue = true;
-                
-                foreach (var premise in goalBasis.Premises) {
-                    var boundPremise = premise.Substitute(goalBasis.Substitution);
-                    if (boundPremise.Head.Equals(WILL.Head)) {
-                        // @Note: we could send the argument
-                        // of the expression to reduce what we're
-                        // sending to the actuator. Not doing that
-                        // now for pedantic reasons.
-                        currentPlan.Add(boundPremise);
-                        alreadyTrue = false;
-                    }
-                }
-
-                if (alreadyTrue) {
-                    break;
-                }
-
-                if (currentPlan.Count == 0) {
-                    continue;
-                }
-
-                if (bestPlan.Count == 0 || currentPlan.Count < bestPlan.Count) {
-                    bestPlan = currentPlan;
-                }
-            }
-            if (bestPlan.Count != 0) {
-                break;
-            }
-        }
-
-        plan.AddRange(bestPlan);
-        done.Item = true;
-        yield break;
     }
 }
