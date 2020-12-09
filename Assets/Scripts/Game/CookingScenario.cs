@@ -29,7 +29,7 @@ public class CookingScenario : MonoBehaviour
 
     GameObject currentExpressionContainer;
 
-    Constant inputWord = null;
+    Name inputWord = null;
 
     GameObject SpawnExpressionContainer(Expression e, Vector3 pos, Quaternion rot, Transform parent) {
         GameObject expressionContainerInstance =
@@ -41,7 +41,7 @@ public class CookingScenario : MonoBehaviour
         return expressionContainerInstance;
     }
 
-    void setWord(Constant word) {
+    void setWord(Name word) {
         inputWord = word;
     }
 
@@ -185,8 +185,8 @@ public class CookingScenario : MonoBehaviour
                     Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
-                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Name>>{
+                    [ASSERTION] = new HashSet<Name>{YES.Head as Name}
                 };
                 stage_shown = true;
                 break;
@@ -198,8 +198,8 @@ public class CookingScenario : MonoBehaviour
                     Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
-                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant, NO.Head as Constant}
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Name>>{
+                    [ASSERTION] = new HashSet<Name>{YES.Head as Name, NO.Head as Name}
                 };
                 stage_shown = true;
                 break;
@@ -211,8 +211,8 @@ public class CookingScenario : MonoBehaviour
                     Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
-                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant, NO.Head as Constant}
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Name>>{
+                    [ASSERTION] = new HashSet<Name>{YES.Head as Name, NO.Head as Name}
                 };
                 stage_shown = true;
                 break;
@@ -224,8 +224,8 @@ public class CookingScenario : MonoBehaviour
                     Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
-                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Name>>{
+                    [ASSERTION] = new HashSet<Name>{YES.Head as Name}
                 };
                 stage_shown = true;
                 break;
@@ -237,8 +237,8 @@ public class CookingScenario : MonoBehaviour
                     Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
-                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Name>>{
+                    [ASSERTION] = new HashSet<Name>{YES.Head as Name}
                 };
                 stage_shown = true;
                 break;
@@ -250,8 +250,8 @@ public class CookingScenario : MonoBehaviour
                     Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
-                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Name>>{
+                    [ASSERTION] = new HashSet<Name>{YES.Head as Name}
                 };
                 stage_shown = true;
                 break;
@@ -263,8 +263,8 @@ public class CookingScenario : MonoBehaviour
                     Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
-                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant, NO.Head as Constant}
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Name>>{
+                    [ASSERTION] = new HashSet<Name>{YES.Head as Name, NO.Head as Name}
                 };
                 stage_shown = true;
                 break;
@@ -276,8 +276,8 @@ public class CookingScenario : MonoBehaviour
                     Quaternion.Euler(-15, 0, 0),
                     npc.GetComponent<Transform>()
                 );
-                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                    [ASSERTION] = new HashSet<Constant>{YES.Head as Constant, NO.Head as Constant}
+                radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Name>>{
+                    [ASSERTION] = new HashSet<Name>{YES.Head as Name, NO.Head as Name}
                 };
                 stage_shown = true;
                 break;
@@ -292,8 +292,8 @@ public class CookingScenario : MonoBehaviour
                         Quaternion.Euler(-15, 0, 0),
                         npc.GetComponent<Transform>()
                     );
-                    radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Constant>>{
-                        [ASSERTION] = new HashSet<Constant>{YES.Head as Constant}
+                    radialMenu.Lexicon = new Dictionary<SemanticType, HashSet<Name>>{
+                        [ASSERTION] = new HashSet<Name>{YES.Head as Name}
                     };
                 }
                 stage_shown = true;

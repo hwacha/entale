@@ -287,8 +287,7 @@ public class MentalState : MonoBehaviour {
 
     protected uint ParameterID;
 
-    private Dictionary<SemanticType,
-        Dictionary<Atom, HashSet<Expression>>> BeliefBase;
+    private SortedSet<Expression> BeliefBase;
 
     // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
@@ -318,8 +317,7 @@ public class MentalState : MonoBehaviour {
         if (BeliefBase != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
-        BeliefBase = new Dictionary<SemanticType,
-            Dictionary<Atom, HashSet<Expression>>>();
+        BeliefBase = new SortedSet<Expression>();
 
         for (int i = 0; i < initialBeliefs.Length; i++) {
             if (!Add(initialBeliefs[i])) {
@@ -330,25 +328,7 @@ public class MentalState : MonoBehaviour {
 
     // @Note change this to private once testing is done.
     public bool Contains(Expression sentence) {
-        // @Note right now, we disallow formulas in the
-        // belief base. This is subject to change.
-        if (sentence.GetVariables().Count > 0) {
-            return false;
-        }
-
-        // our belief base is index by the head's type
-        // as well as the head.
-        if (!BeliefBase.ContainsKey(sentence.Head.Type)) {
-            return false;
-        }
-
-        var beliefsByHeadType = BeliefBase[sentence.Head.Type];
-        if (!beliefsByHeadType.ContainsKey(sentence.Head)) {
-            return false;
-        }
-
-        var beliefsByHead = beliefsByHeadType[sentence.Head];
-        return beliefsByHead.Contains(sentence);
+        return BeliefBase.Contains(sentence);
     }
 
     // returns false if this belief is already in the belief base
@@ -356,36 +336,16 @@ public class MentalState : MonoBehaviour {
         Debug.Assert(belief.Type.Equals(TRUTH_VALUE));
         Debug.Assert(belief.GetVariables().Count == 0);
 
-        if (!BeliefBase.ContainsKey(belief.Head.Type)) {
-            BeliefBase[belief.Head.Type] =
-                new Dictionary<Atom, HashSet<Expression>>();
-        }
-        if (!BeliefBase[belief.Head.Type].ContainsKey(belief.Head)) {
-            BeliefBase[belief.Head.Type][belief.Head] =
-                new HashSet<Expression>();
-        }
-
-        if (BeliefBase[belief.Head.Type][belief.Head].Contains(belief)) {
-            return false;
-        }
-
-        BeliefBase[belief.Head.Type][belief.Head].Add(belief);
-
         if (belief.Depth > MaxDepth) {
             MaxDepth = belief.Depth;
         }
 
-        return true;
+        return BeliefBase.Add(belief);
     }
 
     // returns true if the item is successfully removed.
     private bool Remove(Expression sentence) {
-        if (!Contains(sentence)) {
-            return false;
-        }
-
-        BeliefBase[sentence.Head.Type][sentence.Head].Remove(sentence);
-        return true;
+        return BeliefBase.Remove(sentence);
     }
 
     // returns satisfiers in the belief base for this formula
@@ -396,26 +356,21 @@ public class MentalState : MonoBehaviour {
         // that are structural candidates for matching
         // the formula, given the structure of the formula's
         // variables and semantic types.
-        var domain = new HashSet<Expression>();
-        if (formula.Head is Constant) {
-            if (BeliefBase.ContainsKey(formula.Head.Type) &&
-                BeliefBase[formula.Head.Type].ContainsKey(formula.Head)) {
-                foreach (var sentence in BeliefBase[formula.Head.Type][formula.Head]) {
-                    domain.Add(sentence);
-                }
-            }
+        var variables = formula.GetVariables();
+        var bottomSubstitution = new Substitution();
+        var topSubstitution = new Substitution();
+        foreach (Variable v in variables) {
+            bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
+            topSubstitution.Add(v, new Expression(new Top(v.Type)));
         }
 
-        foreach (var beliefsByHeadType in BeliefBase) {
-            if (formula.Head.Type.IsPartialApplicationOf(beliefsByHeadType.Key)) {
-                foreach (var beliefsByHead in beliefsByHeadType.Value.Values) {
-                    foreach (var sentence in beliefsByHead) {
-                        domain.Add(sentence);
-                    }
-                }
-            }
-        }
-
+        var bottom = formula.Substitute(bottomSubstitution);
+        var top = formula.Substitute(topSubstitution);
+        // TODO change CompareTo() re: top/bottom so that
+        // expressions which would unify with F(x) are
+        // included within the bounds of bot(bot) and top(top)
+        // This will involve check partial type application
+        var domain = BeliefBase.GetViewBetween(bottom, top);
         // then, we iterate through the domain and pattern match (unify)
         // the formula against the sentences in the belief base.
         // any sentences that match get added, along with the
@@ -425,7 +380,7 @@ public class MentalState : MonoBehaviour {
             // Debug.Log("domain includes " + belief);
             HashSet<Substitution> unifiers = formula.GetMatches(belief);
             foreach (Substitution unifier in unifiers) {
-                satisfiers.Add(new Basis( new List<Expression>(){belief},
+                satisfiers.Add(new Basis(new List<Expression>(){belief},
                     unifier));
             }
         }
@@ -435,9 +390,9 @@ public class MentalState : MonoBehaviour {
 
     // gets a variable that's unused in the goal
     private static Variable GetUnusedVariable(SemanticType t, HashSet<Variable> usedVariables) {
-        Variable x = new Variable(t, "x_" + t);
+        Variable x = new Variable(t, 0);
         while (usedVariables.Contains(x)) {
-            x = new Variable(t, x.ID + "'");
+            x = new Variable(t, x.ID + 1);
         }
         return x;
     }
@@ -1475,7 +1430,7 @@ public class MentalState : MonoBehaviour {
     public IEnumerator ReplaceParameters(Expression e, Container<Expression> result) {
         // for now, we assume every
         // parameter has type e
-        if (e.Head is Parameter) {
+        if (!(e.Head is Name)) {
             Debug.Assert(e.Head.Type.Equals(INDIVIDUAL));
 
             var fc = new Expression(PERCEIVE, SELF, new Expression(FET, e));
@@ -1639,19 +1594,9 @@ public class MentalState : MonoBehaviour {
     // ranks the goals according to this mental state,
     // and then stores the ranking.
     public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
-        // if we don't have any preferences, then
-        // we return the empty list
-        // (or, equivalently, the list containing just
-        // the list to enact the neutral condtion)
-        if (!BeliefBase.ContainsKey(TRUTH_FUNCTION_2) ||
-            !BeliefBase[TRUTH_FUNCTION_2].ContainsKey(BETTER.Head)) {
-            plan.Add(new Expression(WILL, NEUTRAL));
-            done.Item = true;
-            yield break;
-        }
-
         // first, we get our domain of elements for which preferences are defined.
-        var preferencesInBeliefBase = BeliefBase[TRUTH_FUNCTION_2][BETTER.Head];
+        // TODO stub
+        var preferencesInBeliefBase = new List<Expression>();
         var preferables = new HashSet<Expression>();
 
         // @Note: we assume preferences are timestamped 0

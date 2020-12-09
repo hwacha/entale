@@ -38,7 +38,7 @@ public class ExpressionTrie {
         public void Add(Expression e) {
             var head = e.Head;
             if (!HeadSymbolNodes.ContainsKey(head)) { 
-                HeadSymbolNodes.Add(head, new HeadSymbolTrie());
+                HeadSymbolNodes.Add(head, new HeadSymbolTrie(head));
             }
 
             HeadSymbolNodes[head].Add(e);

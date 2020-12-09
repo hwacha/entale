@@ -109,25 +109,81 @@ public class Testing : MonoBehaviour {
         // Log(!RELATION_2.IsPartialApplicationOf(PREDICATE));
         // Log(!INDIVIDUAL_TRUTH_RELATION.IsPartialApplicationOf(PREDICATE));
 
-        Log("Type comparisons");
-        Log(INDIVIDUAL < TRUTH_VALUE);
-        Log(INDIVIDUAL >= INDIVIDUAL && INDIVIDUAL >= INDIVIDUAL);
-        Log(PREDICATE > TRUTH_VALUE);
-        Log(RELATION_2 > PREDICATE);
-        Log(INDIVIDUAL_TRUTH_RELATION >= INDIVIDUAL_TRUTH_RELATION && INDIVIDUAL_TRUTH_RELATION <= INDIVIDUAL_TRUTH_RELATION); 
-        Log(INDIVIDUAL_TRUTH_RELATION > RELATION_2);
+        // Log("Type comparisons");
+        // Log(INDIVIDUAL < TRUTH_VALUE);
+        // Log(INDIVIDUAL >= INDIVIDUAL && INDIVIDUAL >= INDIVIDUAL);
+        // Log(PREDICATE > TRUTH_VALUE);
+        // Log(RELATION_2 > PREDICATE);
+        // Log(INDIVIDUAL_TRUTH_RELATION >= INDIVIDUAL_TRUTH_RELATION && INDIVIDUAL_TRUTH_RELATION <= INDIVIDUAL_TRUTH_RELATION); 
+        // Log(INDIVIDUAL_TRUTH_RELATION > RELATION_2);
 
-        var assortedTypes = new SemanticType[]{
-            RELATION_2, QUANTIFIER, TRUTH_CONFORMITY_FUNCTION,
-                INDIVIDUAL, INDIVIDUAL_TRUTH_RELATION, DETERMINER
-        };
+        // var assortedTypes = new SemanticType[]{
+        //     RELATION_2, QUANTIFIER, TRUTH_CONFORMITY_FUNCTION,
+        //         INDIVIDUAL, INDIVIDUAL_TRUTH_RELATION, DETERMINER
+        // };
         
-       Array.Sort(assortedTypes);
-        for (int i = 0; i < assortedTypes.Length; i++) {
-            Log(assortedTypes[i]);
-        }
-        Log("End type comparisons");
+        // Array.Sort(assortedTypes);
+        // for (int i = 0; i < assortedTypes.Length; i++) {
+        //     Log(assortedTypes[i]);
+        // }
+        // Log("Assorted Expressions");
+        // var assortedExpressions = new Expression[]{
+        //     new Expression(BELIEVE, BOB, new Expression(AT, SELF, SELF)),
+        //     new Expression(GREEN, SELF), new Expression(IDENTITY, SELF, BOB),
+        //     XE, new Expression(RED, YE), VERUM, new Expression(NOT, new Expression(AND, FALSUM, NEUTRAL))
+        // };
+        
+        // Array.Sort(assortedExpressions);
+        // for (int i = 0; i < assortedExpressions.Length; i++) {
+        //     Log(assortedExpressions[i]);
+        // }
+        // Log("End expression ordering");
+        // Log("Percept ordering");
+        // uint n = 5;
+        // var percepts = new Expression[2 * n];
+        // for (uint i = 0; i < 2 * n; i += 2) {
+        //     percepts[i] = new Expression(PERCEIVE, SELF,
+        //             new Expression(RED, new Expression(new Parameter(INDIVIDUAL, i))));
+        //     percepts[i + 1] = new Expression(PERCEIVE, SELF,
+        //             new Expression(BLUE, new Expression(new Parameter(INDIVIDUAL, i))));
+        // }
 
+        // Array.Sort(percepts);
+        // for (uint i = 0; i < 2 * n; i++) {
+        //     Log(percepts[i]);
+        // }
+
+        // Log("End percept ordering");
+        Log("Bounds ordering");
+        var bounds = new Expression[]{
+            new Expression(new Top(TRUTH_VALUE)),
+            new Expression(new Bottom(TRUTH_VALUE)),
+            VERUM, FALSUM, new Expression(RED, SELF),
+            SELF, ASK,
+            new Expression(AT, ALICE, ALICE),
+            new Expression(AT, ALICE, BOB),
+            new Expression(AT, BOB, ALICE),
+            new Expression(AT, BOB, BOB),
+            new Expression(AT, new Expression(SELECTOR, RED), new Expression(SELECTOR, BLUE)),
+            new Expression(AT, ALICE, new Expression(new Top(INDIVIDUAL))),
+            new Expression(AT, ALICE, new Expression(new Bottom(INDIVIDUAL))),
+            new Expression(AT, new Expression(new Top(INDIVIDUAL)), new Expression(new Top(INDIVIDUAL))),
+            new Expression(AT, new Expression(new Bottom(INDIVIDUAL)), new Expression(new Bottom(INDIVIDUAL))),
+            new Expression(AT, new Expression(new Top(INDIVIDUAL)), BOB),
+            new Expression(AT, new Expression(new Bottom(INDIVIDUAL)), BOB),
+            new Expression(new Expression(new Top(PREDICATE)), new Expression(new Top(INDIVIDUAL))),
+            new Expression(new Expression(new Bottom(PREDICATE)), new Expression(new Bottom(INDIVIDUAL))),
+        };
+        Array.Sort(bounds);
+        for (int i = 0; i < bounds.Length; i++) {
+            Log(bounds[i]);
+        }
+        Log("End bounds ordering");
+        Log(new Expression(AT, new Expression(new Top(INDIVIDUAL)), BOB).CompareTo(
+            new Expression(AT, new Expression(new Top(INDIVIDUAL)), new Expression(new Top(INDIVIDUAL)))));
+        Log(new Expression(AT, new Expression(new Top(INDIVIDUAL)), new Expression(new Top(INDIVIDUAL))).CompareTo(
+            new Expression(AT, new Expression(new Top(INDIVIDUAL)), BOB)));
+        // Log("testing removal");
         // Log("testing removal");
         // Log("@TODO");
 
@@ -331,14 +387,24 @@ public class Testing : MonoBehaviour {
         // bases.AddDefeater(dd, ddBases);
 
         // Log(bases);
-        Expression a = new Expression(new Constant(TRUTH_VALUE, "A"));
+        Expression a = new Expression(new Name(TRUTH_VALUE, "A"));
         // Testing lookup
         MentalState.Initialize(
-            a
+            a,
+            new Expression(RED, SELF),
+            new Expression(RED, ALICE),
+            new Expression(RED, BOB),
+            new Expression(AT, ALICE, BOB)
         );
 
         Log(MentalState.Contains(a));
-
+        Log(MentalState.Contains(new Expression(RED, SELF)));
+        Log(!MentalState.Contains(new Expression(BLUE, SELF)));
+        
+        //StartCoroutine(LogBasesStream(MentalState, ST));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, XE)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(FET, XE)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(REET, XE, YE)));
         // Testing proof
         //MentalState.Initialize(
         //    new Expression(PERCEIVE, SELF, new Expression(BANANA, SELF)),

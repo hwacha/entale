@@ -16,67 +16,67 @@ public class RadialMenu : MonoBehaviour {
     const double RADIUS = 150;
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
 
-    public Dictionary<SemanticType, HashSet<Constant>> Lexicon =
-        new Dictionary<SemanticType, HashSet<Constant>> {
-            [TRUTH_VALUE] = new HashSet<Constant> {
-                VERUM.Head as Constant,
-                FALSUM.Head as Constant,
-                NEUTRAL.Head as Constant
+    public Dictionary<SemanticType, HashSet<Name>> Lexicon =
+        new Dictionary<SemanticType, HashSet<Name>>(){
+            [TRUTH_VALUE] = new HashSet<Name>{
+                VERUM.Head as Name,
+                FALSUM.Head as Name,
+                NEUTRAL.Head as Name
             },
-            [ASSERTION] = new HashSet<Constant> {
-                YES.Head as Constant,
-                NO.Head  as Constant
+            [ASSERTION] = new HashSet<Name>(){
+                YES.Head as Name,
+                NO.Head  as Name
             },
-            [CONFORMITY_VALUE] = new HashSet<Constant> {
-                ACCEPT.Head as Constant,
-                REFUSE.Head as Constant
+            [CONFORMITY_VALUE] = new HashSet<Name>(){
+                ACCEPT.Head as Name,
+                REFUSE.Head as Name
             },
-            [TRUTH_ASSERTION_FUNCTION] = new HashSet<Constant> {
-                ASSERT.Head as Constant,
-                DENY.Head as Constant
+            [TRUTH_ASSERTION_FUNCTION] = new HashSet<Name>(){
+                ASSERT.Head as Name,
+                DENY.Head as Name
             },
-            [TRUTH_QUESTION_FUNCTION] = new HashSet<Constant> {
-                ASK.Head as Constant
+            [TRUTH_QUESTION_FUNCTION] = new HashSet<Name>(){
+                ASK.Head as Name
             },
-            [TRUTH_CONFORMITY_FUNCTION] = new HashSet<Constant> {
-                WILL.Head as Constant,
-                WOULD.Head as Constant
+            [TRUTH_CONFORMITY_FUNCTION] = new HashSet<Name>(){
+                WILL.Head as Name,
+                WOULD.Head as Name
             },
-            [INDIVIDUAL] = new HashSet<Constant> {
-                SELF.Head as Constant,
-                BOB.Head  as Constant,
-                THIS.Head as Constant
+            [INDIVIDUAL] = new HashSet<Name>(){
+                SELF.Head as Name,
+                BOB.Head  as Name,
+                THIS.Head as Name
             },
-            [PREDICATE] = new HashSet<Constant> {
-                RED.Head  as Constant,
-                BLUE.Head as Constant,
-                TOMATO.Head as Constant,
-                BANANA.Head as Constant
+            [PREDICATE] = new HashSet<Name>(){
+                RED.Head  as Name,
+                BLUE.Head as Name,
+                TOMATO.Head as Name,
+                BANANA.Head as Name
             },
-            [RELATION_2] = new HashSet<Constant> {
-                IDENTITY.Head as Constant,
-                AT.Head       as Constant
+            [RELATION_2] = new HashSet<Name>(){
+                IDENTITY.Head as Name,
+                AT.Head       as Name
             },
-            [DETERMINER] = new HashSet<Constant> {
-                SELECTOR.Head as Constant
+            [DETERMINER] = new HashSet<Name>(){
+                SELECTOR.Head as Name
             },
-            [TRUTH_FUNCTION] = new HashSet<Constant> {
-                TRULY.Head as Constant,
-                NOT.Head as Constant
+            [TRUTH_FUNCTION] = new HashSet<Name>(){
+                TRULY.Head as Name,
+                NOT.Head as Name
             },
-            [TRUTH_FUNCTION_2] = new HashSet<Constant> {
-                AND.Head as Constant,
-                OR.Head  as Constant,
-                IF.Head  as Constant,
-                BETTER.Head as Constant,
-                AS_GOOD_AS.Head  as Constant
+            [TRUTH_FUNCTION_2] = new HashSet<Name>(){
+                AND.Head as Name,
+                OR.Head  as Name,
+                IF.Head  as Name,
+                BETTER.Head as Name,
+                AS_GOOD_AS.Head  as Name
             },
-            [INDIVIDUAL_TRUTH_RELATION] = new HashSet<Constant> {
-                BELIEVE.Head as Constant,
+            [INDIVIDUAL_TRUTH_RELATION] = new HashSet<Name>(){
+                BELIEVE.Head as Name,
             },
-            [QUANTIFIER] = new HashSet<Constant> {
-                SOME.Head as Constant,
-                ALL.Head as Constant
+            [QUANTIFIER] = new HashSet<Name>(){
+                SOME.Head as Name,
+                ALL.Head as Name
             }
         };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
@@ -85,7 +85,7 @@ public class RadialMenu : MonoBehaviour {
     bool semanticMenuOpen = false;
     bool constantMenuOpen = false;
 
-    public delegate void WordCallback(Constant word);
+    public delegate void WordCallback(Name name); 
     public event WordCallback wordCallback = null;
 
     // Start is called before the first frame update
@@ -129,7 +129,7 @@ public class RadialMenu : MonoBehaviour {
                 (float)(Math.Cos(theta) * RADIUS),
                 (float)(Math.Sin(theta) * RADIUS)
             );
-            radialMenuItem.semanticType = semanticType;
+            radialMenuItem.Type = semanticType;
             radialMenuItem.SetTypeIcon();
             radialMenuItem.gameObject.GetComponent<CanvasRenderer>().SetColor(RenderingOptions.ColorsByType[semanticType]);
             radialMenuItems.Add(radialMenuItem);
@@ -149,7 +149,7 @@ public class RadialMenu : MonoBehaviour {
         constantMenuOpen = true;
         double sliceTheta = 2f * Math.PI / Lexicon[semanticType].Count;
         double theta = INITIAL_ANGLE_OFFSET;
-        foreach (Constant constant in Lexicon[semanticType]) {
+        foreach (Name name in Lexicon[semanticType]) {
             theta = theta % (2f * Math.PI);
             var radialMenuItem = Instantiate(radialMenuItemPrefab);
             radialMenuItem.GetComponent<Transform>().SetParent(gameObject.transform);
@@ -157,8 +157,8 @@ public class RadialMenu : MonoBehaviour {
                 (float)(Math.Cos(theta) * RADIUS),
                 (float)(Math.Sin(theta) * RADIUS)
             );
-            radialMenuItem.constant = constant;
-            radialMenuItem.SetIcon(constant);
+            radialMenuItem.Name = name;
+            radialMenuItem.SetIcon(name);
             radialMenuItems.Add(radialMenuItem);
             theta += sliceTheta;
         }
@@ -189,11 +189,11 @@ public class RadialMenu : MonoBehaviour {
             var rmi = radialMenuItems[currentSliceIndex];
             if (semanticMenuOpen) {
                 CloseSemanticMenu();
-                OpenConstantMenu(rmi.semanticType);
+                OpenConstantMenu(rmi.Type);
             } else {
                 // Debug.Log(rmi.constant);
                 if (wordCallback != null) {
-                    wordCallback(rmi.constant);
+                    wordCallback(rmi.Name);
                 }
                 ExitMenu();
             }

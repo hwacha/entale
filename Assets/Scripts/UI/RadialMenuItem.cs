@@ -9,30 +9,30 @@ using static Icons;
 
 public class RadialMenuItem : MonoBehaviour
 {
-    UnityEngine.UI.Outline outline;
+    UnityEngine.UI.Outline Outline;
     Image Icon;
-    public SemanticType semanticType { get; set; }
-    public Constant constant { get; set; }
+    public SemanticType Type;
+    public Name Name;
 
     void Awake() {
-        outline = GetComponent<UnityEngine.UI.Outline>();
+        Outline = GetComponent<UnityEngine.UI.Outline>();
         Icon = GetComponent<Image>();
         Unhighlight();
     }
 
     public void Unhighlight() {
-        outline.enabled = false;
+        Outline.enabled = false;
     }
 
     public void Highlight() {
-        outline.enabled = true;
+        Outline.enabled = true;
     }
 
     public void SetTypeIcon() {
         Icon.sprite = Icons.GetTypeIcon();
     }
 
-    public void SetIcon(Constant constantIn) {
-        Icon.sprite = Icons.GetIcon(constantIn);
+    public void SetIcon(Name name) {
+        Icon.sprite = Icons.GetIcon(name);
     }
 }
