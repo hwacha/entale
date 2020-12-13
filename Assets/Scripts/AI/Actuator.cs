@@ -16,7 +16,7 @@ public class Actuator : MonoBehaviour {
     }
 
     protected IEnumerator Say(Expression e, float time) {
-
+        // TODO: figure this stuff out
         // var eWithoutParameters = new Container<Expression>(null);
         // Agent.MentalState.StartCoroutine(Agent.MentalState.ReplaceParameters(e, eWithoutParameters));
 
@@ -25,20 +25,21 @@ public class Actuator : MonoBehaviour {
         // }
 
         // GameObject eContainer = ArgumentContainer.From(eWithoutParameters.Item);
-        // ArgumentContainer eContainerScript = eContainer.GetComponent<ArgumentContainer>();
 
-        // eContainerScript.GenerateVisual();
+        var eContainer = ArgumentContainer.From(e);
+        ArgumentContainer eContainerScript = eContainer.GetComponent<ArgumentContainer>();
 
-        // var display = Agent.gameObject.transform.Find("Display");
-        // eContainer.transform.position = display.position;
-        // eContainer.transform.rotation = display.rotation;
-        // eContainer.transform.localScale *= 0.5f;
-        // eContainer.transform.SetParent(display);
+        eContainerScript.GenerateVisual();
 
-        // yield return new WaitForSeconds(time);
-        // Destroy(eContainer);
+        var display = Agent.gameObject.transform.Find("Display");
+        eContainer.transform.position = display.position;
+        eContainer.transform.rotation = display.rotation;
+        eContainer.transform.localScale *= 0.5f;
+        eContainer.transform.SetParent(display);
+
+        yield return new WaitForSeconds(time);
+        Destroy(eContainer);
         yield break;
-        // TODO stub
     }
 
     // @Note this should be removed when the planner is better.
@@ -134,63 +135,69 @@ public class Actuator : MonoBehaviour {
 
     // @Note we want this to be interruptible
     public IEnumerator ExecutePlan() {
-    //     while (true) {
-    //         List<Expression> plan = new List<Expression>();
-    //         var done = new Container<bool>(false);
-    //         Agent.MentalState.StartCoroutine(Agent.MentalState.DecideCurrentPlan(plan, done));
+        while (true) {
+            List<Expression> plan = new List<Expression>();
+            var done = new Container<bool>(false);
+            Agent.MentalState.StartCoroutine(Agent.MentalState.DecideCurrentPlan(plan, done));
 
-    //         while (!done.Item) {
-    //             yield return new WaitForSeconds(0.5f);
-    //         }
+            while (!done.Item) {
+                yield return null;
+            }
 
-    //         foreach (Expression action in plan) {
-    //             if (!action.Head.Equals(WILL.Head)) {
-    //                 throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
-    //             }
+            Debug.Log(plan);
 
-    //             // StartCoroutine(Say(action, 1));
+            foreach (Expression action in plan) {
+                if (!action.Head.Equals(WILL.Head)) {
+                    throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
+                }
 
-    //             var content = action.GetArgAsExpression(0);
+                Debug.Log(action);
 
-    //             if (content.Equals(NEUTRAL)) {
-    //                 // Debug.Log("Busy doin' nothin'");
-    //             }
+                // StartCoroutine(Say(action, 1));
 
-    //             // at(self, X)
-    //             else if (content.Head.Equals(AT.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
-    //                 var destination = content.GetArgAsExpression(1);
-    //                 // assumption: if we find this in a plan,
-    //                 // then the location of X should be known.
-    //                 var location = Agent.MentalState.Locations[destination];
-    //                 NavMeshPath path = new NavMeshPath();
+                var content = action.GetArgAsExpression(0);
 
-    //                 NavMeshAgent.CalculatePath(location, path);
+                if (content.Equals(NEUTRAL)) {
+                    // Debug.Log("Busy doin' nothin'");
+                }
 
-    //                 if (path.status != NavMeshPathStatus.PathPartial) {
-    //                     NavMeshAgent.SetPath(path);
-    //                     while (NavMeshAgent.remainingDistance > 1.9f) {
-    //                         yield return null;
-    //                     }
-    //                     NavMeshAgent.ResetPath();
-    //                 }
-    //             }
+                // at(self, X)
+                else if (content.Head.Equals(AT.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
+                    var destination = content.GetArgAsExpression(1);
+                    // assumption: if we find this in a plan,
+                    // then the location of X should be known.
+                    var location = Agent.MentalState.Locations[destination];
+                    NavMeshPath path = new NavMeshPath();
 
-    //             else if (content.Head.Equals(SAY.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
-    //                 var message = content.GetArgAsExpression(1);
-    //                 StartCoroutine(Say(message, 3));
-    //             }
+                    NavMeshAgent.CalculatePath(location, path);
 
-    //             var iTried = new Expression(TRIED, SELF, content);
+                    if (path.status != NavMeshPathStatus.PathPartial) {
+                        NavMeshAgent.SetPath(path);
+                        while (NavMeshAgent.remainingDistance > 1.9f) {
+                            yield return null;
+                        }
+                        NavMeshAgent.ResetPath();
+                    }
+                }
 
-    //             // we assert to the mental state that
-    //             // we've tried to perform this action.
-    //             // Agent.MentalState.Assert(iTried);
+                else if (content.Head.Equals(SAY.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
 
-    //             yield return new WaitForSeconds(2);
-    //         }
+                    var message = content.GetArgAsExpression(1);
+                    Debug.Log("saying " + message);
+                    StartCoroutine(Say(message, 1.5f));
+                }
 
-    //         yield return null;
-    //     }
+                var iTried = new Expression(TRIED, SELF, content);
+
+                // we assert to the mental state that
+                // we've tried to perform this action.
+                // Agent.MentalState.Assert(iTried);
+
+                yield return new WaitForSeconds(2);
+            }
+
+            yield return null;
+        }
         yield break;
         // TODO stub
     }

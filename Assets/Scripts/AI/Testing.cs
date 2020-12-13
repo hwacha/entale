@@ -104,7 +104,7 @@ public class Testing : MonoBehaviour {
         var result = new ProofBases();
         var done = new Container<bool>(false);
 
-        m.StartCoroutine(m.StreamBasesIteratedDFS(result, e, done, pt));
+        m.StartCoroutine(m.StreamProofs(result, e, done, pt));
 
         var waitingString = "waiting for '" + e + "' to be proved...";
         var isProvedByString = "'" + e + "'" + " is proved by: ";

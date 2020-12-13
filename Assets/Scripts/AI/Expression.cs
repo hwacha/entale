@@ -835,7 +835,8 @@ public class Expression : Argument, IComparable<Expression> {
     // the question of whether "A" is closed,
     // so you either believe A or ~A
     public static readonly Expression CLOSED = new Expression(new Name(TRUTH_FUNCTION, "closed"));
-
+    public static readonly Expression SEE = new Expression(new Name(TRUTH_FUNCTION, "see"));
+    public static readonly Expression GOOD = new Expression(new Name(TRUTH_FUNCTION, "good")); 
     // higher-order variables
     public static readonly Expression FTF = new Expression(new Variable(TRUTH_FUNCTION, 0));
     public static readonly Expression GTF = new Expression(new Variable(TRUTH_FUNCTION, 1));

@@ -43,7 +43,10 @@ public class MentalState : MonoBehaviour {
 
     protected uint ParameterID;
 
-    private SortedSet<Expression> BeliefBase;
+    private SortedSet<Expression> VisualBase;
+    // instead of having preferences, we just
+    // have binary desires, on the basis
+    private SortedSet<Expression> EvaluativeBase;
 
     // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
@@ -66,86 +69,36 @@ public class MentalState : MonoBehaviour {
     // @Note this doesn't check to see if
     // the initial belief set is inconsistent.
     // Assume, for now, as an invariant, that it is.
-    public void Initialize(params Expression[] initialBeliefs) {
+    public void Initialize(Expression[] initialVisuals,
+            Expression[] initialDesires) {
         ParameterID = 0;
         Locations = new Dictionary<Expression, Vector3>();
 
-        if (BeliefBase != null) {
+        if (VisualBase != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
-        BeliefBase = new SortedSet<Expression>();
+        VisualBase = new SortedSet<Expression>();
+        EvaluativeBase = new SortedSet<Expression>();
 
-        for (int i = 0; i < initialBeliefs.Length; i++) {
-            if (!Add(initialBeliefs[i])) {
-                throw new ArgumentException("MentalState(): expected sentences for belief base.");
+        for (int i = 0; i < initialVisuals.Length; i++) {
+            if (!initialVisuals[i].Type.Equals(TRUTH_VALUE)) {
+                throw new ArgumentException("MentalState(): expected sentences for visual base.");
             }
-        }
-    }
-
-    // @Note change this to private once testing is done.
-    public bool Contains(Expression sentence) {
-        return BeliefBase.Contains(sentence);
-    }
-
-    // returns false if this belief is already in the belief base
-    private bool Add(Expression belief) {
-        Debug.Assert(belief.Type.Equals(TRUTH_VALUE));
-        Debug.Assert(belief.GetVariables().Count == 0);
-
-        if (belief.Depth > MaxDepth) {
-            MaxDepth = belief.Depth;
-        }
-
-        return BeliefBase.Add(belief);
-    }
-
-    // returns true if the item is successfully removed.
-    private bool Remove(Expression sentence) {
-        return BeliefBase.Remove(sentence);
-    }
-
-    // returns satisfiers in the belief base for this formula
-    // at a given timestamp
-    private HashSet<ProofBasis> Satisfiers(Expression formula) {
-        // first, we get the domain to search through.
-        // this is going to correspond to all sentences
-        // that are structural candidates for matching
-        // the formula, given the structure of the formula's
-        // variables and semantic types.
-        var variables = formula.GetVariables();
-        var bottomSubstitution = new Substitution();
-        var topSubstitution = new Substitution();
-        foreach (Variable v in variables) {
-            bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
-            topSubstitution.Add(v, new Expression(new Top(v.Type)));
-        }
-
-        var bottom = formula.Substitute(bottomSubstitution);
-        var top = formula.Substitute(topSubstitution);
-        // TODO change CompareTo() re: top/bottom so that
-        // expressions which would unify with F(x) are
-        // included within the bounds of bot(bot) and top(top)
-        // This will involve check partial type application
-        //
-        // BUT leave this until there's a geniune use case
-        // in inference, since the way it occurs now is
-        // potentially more efficient.
-        var domain = BeliefBase.GetViewBetween(bottom, top);
-        // then, we iterate through the domain and pattern match (unify)
-        // the formula against the sentences in the belief base.
-        // any sentences that match get added, along with the
-        // unifying substitution, to the basis set.
-        var satisfiers = new HashSet<ProofBasis>();
-        foreach (Expression belief in domain) {
-            // Debug.Log("domain includes " + belief);
-            HashSet<Substitution> unifiers = formula.GetMatches(belief);
-            foreach (Substitution unifier in unifiers) {
-                satisfiers.Add(new ProofBasis(new List<Expression>(){belief},
-                    unifier));
+            VisualBase.Add(initialVisuals[i]);
+            if (initialVisuals[i].Depth > MaxDepth) {
+                MaxDepth = initialVisuals[i].Depth;
             }
         }
 
-        return satisfiers;
+        for (int i = 0; i < initialDesires.Length; i++) {
+            if (!initialDesires[i].Type.Equals(TRUTH_VALUE)) {
+                throw new ArgumentException("MentalState(): expected sentences for desire base.");
+            }
+            EvaluativeBase.Add(initialDesires[i]);
+            if (initialDesires[i].Depth > MaxDepth) {
+                MaxDepth = initialDesires[i].Depth;
+            }
+        }
     }
 
     // gets a variable that's unused in the goal
@@ -210,7 +163,7 @@ public class MentalState : MonoBehaviour {
     //   extra suppositions at each proof node?)
     // - consistent ordering of inferential complexity
     //   (this was working in BFS but seems messed up by the stack)
-    public IEnumerator StreamBasesIteratedDFS(ProofBases bases, Expression conclusion,
+    public IEnumerator StreamProofs(ProofBases bases, Expression conclusion,
         Container<bool> done, ProofType pt = Proof) {
         // we can only prove sentences.
         Debug.Assert(conclusion.Type.Equals(TRUTH_VALUE));
@@ -277,14 +230,74 @@ public class MentalState : MonoBehaviour {
                     var searchBases = new ProofBases();
 
                     // this is our base case.
-                    if (Contains(currentLemma)) {
-                        var basis = new ProofBasis();
-                        basis.AddPremise(currentLemma);
-                        searchBases.Add(basis);
-                    } else if (currentLemma.GetVariables().Count > 0) {
-                        var satisfiers = Satisfiers(currentLemma);
-                        foreach (var satisfier in satisfiers) {
-                            searchBases.Add(satisfier);
+                    if (currentLemma.GetVariables().Count == 0) {
+                        if (VisualBase.Contains(currentLemma)) {
+                            var basis = new ProofBasis();
+                            basis.AddPremise(new Expression(SEE, currentLemma));
+                            searchBases.Add(basis);
+                        }
+
+                        if (currentLemma.Head.Equals(GOOD.Head)) {
+                            if (EvaluativeBase.Contains(currentLemma)) {
+                                var basis = new ProofBasis();
+                                basis.AddPremise(currentLemma);
+                                searchBases.Add(basis);
+                            }
+                        }
+                        if (currentLemma.Head.Equals(ABLE.Head) &&
+                            currentLemma.GetArgAsExpression(0).Equals(SELF) &&
+                            currentLemma.GetArgAsExpression(1).Head.Equals(SAY.Head) &&
+                            currentLemma.GetArgAsExpression(1).GetArgAsExpression(0).Equals(SELF)) {
+                            var basis = new ProofBasis();
+                            basis.AddPremise(currentLemma);
+                            searchBases.Add(basis);
+                        }
+                    } else {
+                        // Satisfiers():
+                        // first, we get the domain to search through.
+                        // this is going to correspond to all sentences
+                        // that are structural candidates for matching
+                        // the formula, given the structure of the formula's
+                        // variables and semantic types.
+                        var variables = currentLemma.GetVariables();
+                        var bottomSubstitution = new Substitution();
+                        var topSubstitution = new Substitution();
+                        foreach (Variable v in variables) {
+                            bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
+                            topSubstitution.Add(v, new Expression(new Top(v.Type)));
+                        }
+
+                        var bottom = currentLemma.Substitute(bottomSubstitution);
+                        var top = currentLemma.Substitute(topSubstitution);
+                        // TODO change CompareTo() re: top/bottom so that
+                        // expressions which would unify with F(x) are
+                        // included within the bounds of bot(bot) and top(top)
+                        // This will involve check partial type application
+                        //
+                        // BUT leave this until there's a geniune use case
+                        // in inference, since the way it occurs now is
+                        // potentially more efficient.
+                        SortedSet<Expression> domain;
+                        if (currentLemma.Head.Equals(GOOD.Head)) {
+                            domain = EvaluativeBase.GetViewBetween(bottom, top);
+                        } else {
+                            domain = VisualBase.GetViewBetween(bottom, top);
+                        }
+
+                        // then, we iterate through the domain and pattern match (unify)
+                        // the formula against the sentences in the belief base.
+                        // any sentences that match get added, along with the
+                        // unifying substitution, to the basis set.
+                        foreach (Expression belief in domain) {
+                            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+                                yield return null;
+                            }
+                            // Debug.Log("domain includes " + belief);
+                            HashSet<Substitution> unifiers = currentLemma.GetMatches(belief);
+                            foreach (Substitution unifier in unifiers) {
+                                searchBases.Add(new ProofBasis(new List<Expression>(){belief},
+                                    unifier));
+                            }
                         }
                     }
 
@@ -378,7 +391,7 @@ public class MentalState : MonoBehaviour {
                             exhaustive = false;
                         }
 
-                        if (currentLemma.Depth < this.MaxDepth) {
+                        if (currentLemma.Depth <= this.MaxDepth) {
                             // plan +
                             if (pt == Plan) {
                                 var able = new Expression(ABLE, SELF, currentLemma);
@@ -389,19 +402,6 @@ public class MentalState : MonoBehaviour {
                                 newStack.Push(ableNode);
                                 exhaustive = false;
                             }
-                            
-                            // percept -
-                            var perceive = new Expression(PERCEIVE, SELF, currentLemma);
-                            var veridical = new Expression(VERIDICAL, SELF, currentLemma);
-
-                            var veridicalNode = new ProofNode(new Expression(NOT, veridical), nextDepth,
-                                current, i, hasYoungerSibling: true, isAssumption: true);
-                            var perceiveNode = new ProofNode(perceive, nextDepth,
-                                current, i, veridicalNode);
-
-                            newStack.Push(perceiveNode);
-                            newStack.Push(veridicalNode);
-                            exhaustive = false;
                         }
 
                         // here we reverse the order of new proof nodes.
@@ -586,11 +586,55 @@ public class MentalState : MonoBehaviour {
         // should just be added directly to the belief base.
         //StartCoroutine(Assert(new Expression(PERCEIVE, SELF, new Expression(characteristic, param))));
 
-        Expression percept =
-            new Expression(PERCEIVE, SELF, new Expression(characteristic, param));
+        Expression percept = new Expression(characteristic, param);
         
-        Add(percept);
+        VisualBase.Add(percept);
 
         return param;
     }
+
+    public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
+        foreach (var desire in EvaluativeBase) {
+            var proofBases = new ProofBases();
+            var proofDone = new Container<bool>(false);
+            StartCoroutine(StreamProofs(proofBases, desire, proofDone, Proof));
+            while (!proofDone.Item) {
+                yield return null;
+            }
+            if (!proofBases.IsEmpty()) {
+                continue;
+            }
+
+            var planBases = new ProofBases();
+            var planDone = new Container<bool>(false);
+            StartCoroutine(StreamProofs(planBases, desire, planDone, Plan));
+            while (!planDone.Item) {
+                yield return null;
+            }
+
+            if (!planBases.IsEmpty()) {
+                List<Expression> bestPlan = null;
+                foreach (var basis in planBases) {
+                    var resolutions = new List<Expression>();
+                    foreach (var premise in basis.Premises) {
+                        if (premise.Type.Equals(CONFORMITY_VALUE)) {
+                            resolutions.Add(premise);
+                        }
+                    }
+                    if (bestPlan == null || bestPlan.Count > resolutions.Count) {
+                        bestPlan = resolutions;
+                    }
+                }
+                plan.AddRange(bestPlan);
+                done.Item = true;
+                yield break;
+            }
+        }
+
+        plan.Add(new Expression(WILL, NEUTRAL));
+
+        done.Item = true;
+        yield break;
+    }
 }
+
