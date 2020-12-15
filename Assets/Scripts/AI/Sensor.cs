@@ -15,8 +15,7 @@ public class Sensor : MonoBehaviour {
     #endregion
 
     #region Fields
-        public Transform FullBodyTransform;
-        public bool SensorActive = false;
+        public bool SensorActive = true;
     #endregion
 
     // @Note for separate sense modalities,
@@ -37,39 +36,48 @@ public class Sensor : MonoBehaviour {
             // In normal circumstances, you know your own
             // location w/r/t where you're moving.
             Agent.MentalState.Locations[SELF] =
-                new Vector3(FullBodyTransform.position.x,
-                    FullBodyTransform.position.y,
-                    FullBodyTransform.position.z);
+                new Vector3(transform.position.x,
+                    transform.position.y,
+                    transform.position.z);
 
             // we'll put all the objects this sensor can see
             // so we avoid redundancy.
             var visibleObjects = new HashSet<GameObject>();
 
-            int layerMask = 1 << 9;
+            int layerMask = 1 << 11;
 
             RaycastHit hit;
             bool collided;
 
-            var forwardDirection = FullBodyTransform.TransformDirection(Vector3.forward);
-            var rightDirection = FullBodyTransform.TransformDirection(Vector3.right);
-            var upDirection = FullBodyTransform.TransformDirection(Vector3.up);
+            var forwardDirection = transform.TransformDirection(Vector3.forward);
+            var rightDirection = transform.TransformDirection(Vector3.right);
+            var upDirection = transform.TransformDirection(Vector3.up);
 
             collided = Physics.Raycast(
                 transform.position,
                 forwardDirection,
                 out hit,
+                Mathf.Infinity,
                 layerMask);
 
             // Here, we can assert whatever information
             // we gather from this raycast hit.
             void OnCollision(RaycastHit theHit) {
                 if (SensorActive) {
-                    visibleObjects.Add(theHit.transform.gameObject);
+                    var theObject = theHit.transform.gameObject;
+                    visibleObjects.Add(theObject);
 
                     var position = theHit.transform.gameObject.transform.position;
 
                     // TODO find a way to make the characteristic depend on the game object
-                    Agent.MentalState.ConstructPercept(TREE, position);
+                    var name = theObject.name;
+                    if (name.Equals("Tomato")) {
+                        Agent.MentalState.ConstructPercept(TOMATO, position);
+                    } else if (name.Equals("Banana")) {
+                        Debug.Log("seeing banana");
+                        Agent.MentalState.ConstructPercept(BANANA, position);
+                    }
+
                 }
             }
 
@@ -77,7 +85,7 @@ public class Sensor : MonoBehaviour {
                 OnCollision(hit);
             }
 
-            // Debug.DrawRay(transform.position, forwardDirection * 100, collided ? Color.blue : Color.white);
+            Debug.DrawRay(transform.position, forwardDirection * 100, collided ? Color.blue : Color.white);
 
             for (int i = 1; i < NUM_RINGS + 1; i++) {
                 // @Note here, we randomize the raycast within
@@ -100,9 +108,10 @@ public class Sensor : MonoBehaviour {
                         transform.position,
                         transform.TransformDirection(zDir + xDir + yDir),
                         out hit,
+                        Mathf.Infinity,
                         layerMask);
 
-                    // Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, collided ? Color.blue : Color.white);
+                    Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, collided ? Color.blue : Color.white);
 
                     if (collided && !visibleObjects.Contains(hit.transform.gameObject)) {
                         OnCollision(hit);

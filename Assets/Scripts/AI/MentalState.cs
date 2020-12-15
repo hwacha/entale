@@ -244,6 +244,7 @@ public class MentalState : MonoBehaviour {
                                 searchBases.Add(basis);
                             }
                         }
+
                         if (currentLemma.Head.Equals(ABLE.Head) &&
                             currentLemma.GetArgAsExpression(0).Equals(SELF) &&
                             currentLemma.GetArgAsExpression(1).Head.Equals(SAY.Head) &&
@@ -251,6 +252,38 @@ public class MentalState : MonoBehaviour {
                             var basis = new ProofBasis();
                             basis.AddPremise(currentLemma);
                             searchBases.Add(basis);
+                        }
+
+                        if (currentLemma.Head.Equals(ABLE.Head) &&
+                            currentLemma.GetArgAsExpression(0).Equals(SELF) &&
+                            currentLemma.GetArgAsExpression(1).Head.Equals(AT.Head) &&
+                            currentLemma.GetArgAsExpression(1).GetArgAsExpression(0).Equals(SELF)) {
+                            var basis = new ProofBasis();
+                            basis.AddPremise(currentLemma);
+                            searchBases.Add(basis);
+                        }
+
+                        if (currentLemma.Head.Equals(AT.Head)) {
+                            var a = currentLemma.GetArgAsExpression(0);
+                            var b = currentLemma.GetArgAsExpression(1);
+
+                            if (Locations.ContainsKey(a) &&
+                                Locations.ContainsKey(b)) {
+                                var aLocation = Locations[a];
+                                var bLocation = Locations[b];
+
+                                var dx = aLocation.x - bLocation.x;
+                                var dy = aLocation.y - bLocation.y;
+                                var dz = aLocation.z - bLocation.z;
+
+                                var distance = dx * dx + dy * dy + dz * dz;
+
+                                if (distance < 5) {
+                                    var basis = new ProofBasis();
+                                    basis.AddPremise(currentLemma);
+                                    searchBases.Add(basis);
+                                }
+                            }
                         }
                     } else {
                         // Satisfiers():

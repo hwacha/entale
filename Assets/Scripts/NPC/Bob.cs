@@ -10,9 +10,14 @@ public class Bob : Agent
     protected override void Start()
     {
         MentalState.Initialize(
-            new Expression(IDENTITY, SELF, BOB),
-            new Expression(RED, SELF),
-            new Expression(BLUE, EVAN)
+            new Expression[]{
+                new Expression(IDENTITY, SELF, BOB),
+                new Expression(RED, SELF),
+                new Expression(BLUE, EVAN)
+            },
+            new Expression[]{
+                new Expression(SAY, SELF, new Expression(RED, SELF))
+            }
         );
 
         // SPECIAL CASING THE TEST ROOM

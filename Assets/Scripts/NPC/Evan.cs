@@ -10,15 +10,24 @@ public class Evan : Agent
     protected override void Start()
     {
         MentalState.Initialize(
-            new Expression(IDENTITY, SELF, EVAN),
-            new Expression(BLUE, SELF),
-            new Expression(RED, BOB));
+            new Expression[]{
+                new Expression(IDENTITY, SELF, EVAN),
+                new Expression(BLUE, SELF),
+                new Expression(RED, BOB)
+            },
+            new Expression[]{
+                new Expression(SOME, BANANA, new Expression(AT, SELF)),
+                new Expression(SOME, TOMATO, new Expression(AT, SELF))
+            });
 
         var banana = GameObject.Find("Banana");
         var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
 
         var tomato = GameObject.Find("Tomato");
         var tomatoParam = MentalState.ConstructPercept(TOMATO, tomato.transform.position);
+
+        var bob = GameObject.Find("Bob");
+        MentalState.Locations[BOB] = bob.transform.position;
 
         // MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER, new Expression(AT, SELF, bananaParam), NEUTRAL)));
         // MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER, new Expression(AT, SELF, tomatoParam),

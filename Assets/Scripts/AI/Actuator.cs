@@ -144,14 +144,14 @@ public class Actuator : MonoBehaviour {
                 yield return null;
             }
 
-            Debug.Log(plan);
+            // Debug.Log(plan);
 
             foreach (Expression action in plan) {
                 if (!action.Head.Equals(WILL.Head)) {
                     throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
                 }
 
-                Debug.Log(action);
+                // Debug.Log(action);
 
                 // StartCoroutine(Say(action, 1));
 
@@ -183,7 +183,7 @@ public class Actuator : MonoBehaviour {
                 else if (content.Head.Equals(SAY.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
 
                     var message = content.GetArgAsExpression(1);
-                    Debug.Log("saying " + message);
+                    // Debug.Log("saying " + message);
                     StartCoroutine(Say(message, 1.5f));
                 }
 
