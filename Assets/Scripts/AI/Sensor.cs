@@ -74,7 +74,6 @@ public class Sensor : MonoBehaviour {
                     if (name.Equals("Tomato")) {
                         Agent.MentalState.ConstructPercept(TOMATO, position);
                     } else if (name.Equals("Banana")) {
-                        Debug.Log("seeing banana");
                         Agent.MentalState.ConstructPercept(BANANA, position);
                     }
 
@@ -85,7 +84,7 @@ public class Sensor : MonoBehaviour {
                 OnCollision(hit);
             }
 
-            Debug.DrawRay(transform.position, forwardDirection * 100, collided ? Color.blue : Color.white);
+            Debug.DrawRay(transform.position, forwardDirection * 10, collided ? Color.blue : Color.white);
 
             for (int i = 1; i < NUM_RINGS + 1; i++) {
                 // @Note here, we randomize the raycast within
@@ -111,7 +110,7 @@ public class Sensor : MonoBehaviour {
                         Mathf.Infinity,
                         layerMask);
 
-                    Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 100, collided ? Color.blue : Color.white);
+                    // Debug.DrawRay(transform.position, (zDir + xDir + yDir) * 10, collided ? Color.blue : Color.white);
 
                     if (collided && !visibleObjects.Contains(hit.transform.gameObject)) {
                         OnCollision(hit);

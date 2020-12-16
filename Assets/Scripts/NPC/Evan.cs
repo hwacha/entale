@@ -11,13 +11,11 @@ public class Evan : Agent
     {
         MentalState.Initialize(
             new Expression[]{
-                new Expression(IDENTITY, SELF, EVAN),
-                new Expression(BLUE, SELF),
-                new Expression(RED, BOB)
-            },
-            new Expression[]{
-                new Expression(SOME, BANANA, new Expression(AT, SELF)),
-                new Expression(SOME, TOMATO, new Expression(AT, SELF))
+                new Expression(SEE, new Expression(IDENTITY, SELF, EVAN)),
+                new Expression(SEE, new Expression(BLUE, SELF)),
+                new Expression(SEE, new Expression(RED, BOB)),
+                new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
+                new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF)))
             });
 
         var banana = GameObject.Find("Banana");

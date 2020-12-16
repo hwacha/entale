@@ -79,7 +79,7 @@ public abstract class SemanticType : IComparable<SemanticType> {
         new FunctionalType(new SemanticType[]{TRUTH_VALUE}, CONFORMITY_VALUE);
 
     public static readonly FunctionalType INDIVIDUAL_TRUTH_RELATION =
-        new FunctionalType(new SemanticType[]{INDIVIDUAL, TRUTH_VALUE}, TRUTH_VALUE);
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL}, TRUTH_VALUE);
 
     public static readonly FunctionalType RELATION_2_REDUCER =
         new FunctionalType(new SemanticType[]{RELATION_2, INDIVIDUAL}, TRUTH_VALUE);

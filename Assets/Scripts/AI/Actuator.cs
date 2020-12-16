@@ -43,19 +43,21 @@ public class Actuator : MonoBehaviour {
     }
 
     // @Note this should be removed when the planner is better.
-    public IEnumerator RespondTo(Expression utterance) {
-        // if (utterance.Type.Equals(ASSERTION)) {
-        //     if (utterance.Head.Equals(ASSERT.Head)) {
-        //         Agent.MentalState.StartCoroutine(
-        //         Agent.MentalState.Assert(utterance.GetArgAsExpression(0)));
-        //     }
-        //     if (utterance.Head.Equals(DENY.Head)) {
-        //         Agent.MentalState.StartCoroutine(
-        //         Agent.MentalState.Assert(
-        //             new Expression(NOT, utterance.GetArgAsExpression(0))));
-        //     }
-        //     yield break;
-        // }
+    public IEnumerator RespondTo(Expression utterance, Expression speaker) {
+        if (utterance.Type.Equals(ASSERTION)) {
+            if (utterance.Head.Equals(ASSERT.Head)) {
+                Agent.MentalState.StartCoroutine(
+                Agent.MentalState.ReceiveAssertion(
+                    utterance.GetArgAsExpression(0),
+                    speaker));
+            }
+            if (utterance.Head.Equals(DENY.Head)) {
+                Agent.MentalState.StartCoroutine(
+                Agent.MentalState.ReceiveAssertion(
+                    new Expression(NOT, utterance.GetArgAsExpression(0)), speaker));
+            }
+            yield break;
+        }
 
         // if (utterance.Type.Equals(QUESTION)) {
         //     if (utterance.Head.Equals(ASK.Head)) {
@@ -180,14 +182,14 @@ public class Actuator : MonoBehaviour {
                     }
                 }
 
-                else if (content.Head.Equals(SAY.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
+                else if (content.Head.Equals(SAY.Head) && content.GetArgAsExpression(1).Equals(SELF)) {
 
-                    var message = content.GetArgAsExpression(1);
+                    var message = content.GetArgAsExpression(0);
                     // Debug.Log("saying " + message);
                     StartCoroutine(Say(message, 1.5f));
                 }
 
-                var iTried = new Expression(TRIED, SELF, content);
+                // var iTried = new Expression(TRIED, content, SELF);
 
                 // we assert to the mental state that
                 // we've tried to perform this action.

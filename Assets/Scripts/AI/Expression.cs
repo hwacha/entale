@@ -836,7 +836,8 @@ public class Expression : Argument, IComparable<Expression> {
     // so you either believe A or ~A
     public static readonly Expression CLOSED = new Expression(new Name(TRUTH_FUNCTION, "closed"));
     public static readonly Expression SEE = new Expression(new Name(TRUTH_FUNCTION, "see"));
-    public static readonly Expression GOOD = new Expression(new Name(TRUTH_FUNCTION, "good")); 
+    public static readonly Expression GOOD = new Expression(new Name(TRUTH_FUNCTION, "good"));
+
     // higher-order variables
     public static readonly Expression FTF = new Expression(new Variable(TRUTH_FUNCTION, 0));
     public static readonly Expression GTF = new Expression(new Variable(TRUTH_FUNCTION, 1));
@@ -859,6 +860,7 @@ public class Expression : Argument, IComparable<Expression> {
 
     // individual-truth relations
     public static readonly Expression SAY = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "say"));
+    public static readonly Expression KNOW = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
     public static readonly Expression BELIEVE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "believe"));
     public static readonly Expression ABLE    = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
     public static readonly Expression PERCEIVE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceive"));

@@ -43,10 +43,7 @@ public class MentalState : MonoBehaviour {
 
     protected uint ParameterID;
 
-    private SortedSet<Expression> VisualBase;
-    // instead of having preferences, we just
-    // have binary desires, on the basis
-    private SortedSet<Expression> EvaluativeBase;
+    private SortedSet<Expression> KnowledgeBase;
 
     // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
@@ -69,34 +66,22 @@ public class MentalState : MonoBehaviour {
     // @Note this doesn't check to see if
     // the initial belief set is inconsistent.
     // Assume, for now, as an invariant, that it is.
-    public void Initialize(Expression[] initialVisuals,
-            Expression[] initialDesires) {
+    public void Initialize(Expression[] initialKnowledge) {
         ParameterID = 0;
         Locations = new Dictionary<Expression, Vector3>();
 
-        if (VisualBase != null) {
+        if (KnowledgeBase != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
-        VisualBase = new SortedSet<Expression>();
-        EvaluativeBase = new SortedSet<Expression>();
+        KnowledgeBase = new SortedSet<Expression>();
 
-        for (int i = 0; i < initialVisuals.Length; i++) {
-            if (!initialVisuals[i].Type.Equals(TRUTH_VALUE)) {
-                throw new ArgumentException("MentalState(): expected sentences for visual base.");
+        for (int i = 0; i < initialKnowledge.Length; i++) {
+            if (!initialKnowledge[i].Type.Equals(TRUTH_VALUE)) {
+                throw new ArgumentException("MentalState(): expected sentences for base.");
             }
-            VisualBase.Add(initialVisuals[i]);
-            if (initialVisuals[i].Depth > MaxDepth) {
-                MaxDepth = initialVisuals[i].Depth;
-            }
-        }
-
-        for (int i = 0; i < initialDesires.Length; i++) {
-            if (!initialDesires[i].Type.Equals(TRUTH_VALUE)) {
-                throw new ArgumentException("MentalState(): expected sentences for desire base.");
-            }
-            EvaluativeBase.Add(initialDesires[i]);
-            if (initialDesires[i].Depth > MaxDepth) {
-                MaxDepth = initialDesires[i].Depth;
+            KnowledgeBase.Add(initialKnowledge[i]);
+            if (initialKnowledge[i].Depth > MaxDepth) {
+                MaxDepth = initialKnowledge[i].Depth;
             }
         }
     }
@@ -229,35 +214,27 @@ public class MentalState : MonoBehaviour {
 
                     var searchBases = new ProofBases();
 
-                    // this is our base case.
+                    // these are our base cases.
                     if (currentLemma.GetVariables().Count == 0) {
-                        if (VisualBase.Contains(currentLemma)) {
-                            var basis = new ProofBasis();
-                            basis.AddPremise(new Expression(SEE, currentLemma));
-                            searchBases.Add(basis);
-                        }
-
-                        if (currentLemma.Head.Equals(GOOD.Head)) {
-                            if (EvaluativeBase.Contains(currentLemma)) {
-                                var basis = new ProofBasis();
-                                basis.AddPremise(currentLemma);
-                                searchBases.Add(basis);
-                            }
-                        }
-
-                        if (currentLemma.Head.Equals(ABLE.Head) &&
-                            currentLemma.GetArgAsExpression(0).Equals(SELF) &&
-                            currentLemma.GetArgAsExpression(1).Head.Equals(SAY.Head) &&
-                            currentLemma.GetArgAsExpression(1).GetArgAsExpression(0).Equals(SELF)) {
+                        if (KnowledgeBase.Contains(currentLemma)) {
                             var basis = new ProofBasis();
                             basis.AddPremise(currentLemma);
                             searchBases.Add(basis);
                         }
 
                         if (currentLemma.Head.Equals(ABLE.Head) &&
-                            currentLemma.GetArgAsExpression(0).Equals(SELF) &&
-                            currentLemma.GetArgAsExpression(1).Head.Equals(AT.Head) &&
-                            currentLemma.GetArgAsExpression(1).GetArgAsExpression(0).Equals(SELF)) {
+                            currentLemma.GetArgAsExpression(1).Equals(SELF) &&
+                            currentLemma.GetArgAsExpression(0).Head.Equals(SAY.Head) &&
+                            currentLemma.GetArgAsExpression(0).GetArgAsExpression(1).Equals(SELF)) {
+                            var basis = new ProofBasis();
+                            basis.AddPremise(currentLemma);
+                            searchBases.Add(basis);
+                        }
+
+                        if (currentLemma.Head.Equals(ABLE.Head) &&
+                            currentLemma.GetArgAsExpression(1).Equals(SELF) &&
+                            currentLemma.GetArgAsExpression(0).Head.Equals(AT.Head) &&
+                            currentLemma.GetArgAsExpression(0).GetArgAsExpression(0).Equals(SELF)) {
                             var basis = new ProofBasis();
                             basis.AddPremise(currentLemma);
                             searchBases.Add(basis);
@@ -310,12 +287,7 @@ public class MentalState : MonoBehaviour {
                         // BUT leave this until there's a geniune use case
                         // in inference, since the way it occurs now is
                         // potentially more efficient.
-                        SortedSet<Expression> domain;
-                        if (currentLemma.Head.Equals(GOOD.Head)) {
-                            domain = EvaluativeBase.GetViewBetween(bottom, top);
-                        } else {
-                            domain = VisualBase.GetViewBetween(bottom, top);
-                        }
+                        SortedSet<Expression> domain = KnowledgeBase.GetViewBetween(bottom, top);
 
                         // then, we iterate through the domain and pattern match (unify)
                         // the formula against the sentences in the belief base.
@@ -427,12 +399,30 @@ public class MentalState : MonoBehaviour {
                         if (currentLemma.Depth <= this.MaxDepth) {
                             // plan +
                             if (pt == Plan) {
-                                var able = new Expression(ABLE, SELF, currentLemma);
+                                var able = new Expression(ABLE, currentLemma, SELF);
                                 var will = new Expression(WILL, currentLemma);
 
                                 var ableNode = new ProofNode(able, nextDepth, current, i, supplement: will);
 
                                 newStack.Push(ableNode);
+                                exhaustive = false;
+                            }
+
+                            // see -
+                            if (!currentLemma.Head.Equals(SEE.Head)) {
+                                var see = new Expression(SEE, currentLemma);
+                                var seeNode = new ProofNode(see, nextDepth, current, i);
+                                newStack.Push(seeNode);
+                                exhaustive = false;
+                            }
+
+                            // knows -
+                            if (!currentLemma.Head.Equals(KNOW.Head)) {
+                                var know = new Expression(KNOW, currentLemma,
+                                    new Expression(GetUnusedVariable(INDIVIDUAL, currentLemma.GetVariables())));
+
+                                var knowNode = new ProofNode(know, nextDepth, current, i);
+                                newStack.Push(knowNode);
                                 exhaustive = false;
                             }
                         }
@@ -615,22 +605,35 @@ public class MentalState : MonoBehaviour {
             Locations.Add(param, new Vector3(location.x, location.y, location.z));
         }
 
-        // @NOTE once tense is implemented, this shouldn't be an assertion, and
-        // should just be added directly to the belief base.
-        //StartCoroutine(Assert(new Expression(PERCEIVE, SELF, new Expression(characteristic, param))));
-
-        Expression percept = new Expression(characteristic, param);
+        Expression percept = new Expression(SEE, new Expression(characteristic, param));
         
-        VisualBase.Add(percept);
+        // we need to queue this up so that it doesn't cause a
+        // concurrent modification problem.
+        
+        KnowledgeBase.Add(percept);
 
         return param;
     }
 
+    // a direct assertion.
+    // @TODO add an inference rule to cover knowledge from
+    // assertion. Now is a simple fix.
+    public IEnumerator ReceiveAssertion(Expression content, Expression speaker) {
+        KnowledgeBase.Add(new Expression(KNOW, content, speaker));
+        // TODO check to see if this is inconsistent
+        // with the current knowledge base
+        yield return null;
+    }
+
     public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
-        foreach (var desire in EvaluativeBase) {
+        var lowerBound = new Expression(GOOD, new Expression(new Bottom(TRUTH_VALUE)));
+        var upperBound = new Expression(GOOD, new Expression(new Top(TRUTH_VALUE)));
+        var evaluativeBase = KnowledgeBase.GetViewBetween(lowerBound, upperBound);
+        foreach (var good in evaluativeBase) {
+            var content = good.GetArgAsExpression(0);
             var proofBases = new ProofBases();
             var proofDone = new Container<bool>(false);
-            StartCoroutine(StreamProofs(proofBases, desire, proofDone, Proof));
+            StartCoroutine(StreamProofs(proofBases, content, proofDone, Proof));
             while (!proofDone.Item) {
                 yield return null;
             }
@@ -640,7 +643,7 @@ public class MentalState : MonoBehaviour {
 
             var planBases = new ProofBases();
             var planDone = new Container<bool>(false);
-            StartCoroutine(StreamProofs(planBases, desire, planDone, Plan));
+            StartCoroutine(StreamProofs(planBases, content, planDone, Plan));
             while (!planDone.Item) {
                 yield return null;
             }
