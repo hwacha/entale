@@ -59,79 +59,70 @@ public class Actuator : MonoBehaviour {
             yield break;
         }
 
-        // if (utterance.Type.Equals(QUESTION)) {
-        //     if (utterance.Head.Equals(ASK.Head)) {
-        //         var answerPositive = new Container<bool>(false);
-        //         var donePositive = new Container<bool>(false);
-        //         Agent.MentalState.StartCoroutine(Agent.MentalState.Query(
-        //             utterance.GetArgAsExpression(0),
-        //             answerPositive,
-        //             donePositive));
+        if (utterance.Type.Equals(QUESTION)) {
+            if (utterance.Head.Equals(ASK.Head)) {
+                var positiveProofs = new ProofBases();
+                var donePositive = new Container<bool>(false);
+                Agent.MentalState.StartCoroutine(Agent.MentalState.StreamProofs(
+                    positiveProofs,
+                    utterance.GetArgAsExpression(0),
+                    donePositive));
 
-        //         var answerNegative = new Container<bool>(false);
-        //         var doneNegative = new Container<bool>(false);
+                var negativeProofs = new ProofBases();
+                var doneNegative = new Container<bool>(false);
                 
-        //         Agent.MentalState.StartCoroutine(
-        //             Agent.MentalState.Query(
-        //                 new Expression(NOT, utterance.GetArgAsExpression(0)),
-        //                 answerNegative,
-        //                 doneNegative));
+                Agent.MentalState.StartCoroutine(
+                    Agent.MentalState.StreamProofs(
+                        negativeProofs,
+                        new Expression(NOT, utterance.GetArgAsExpression(0)),
+                        doneNegative));
 
-        //         while (!donePositive.Item || !doneNegative.Item) {
-        //             if (answerPositive.Item) {
-        //                 StartCoroutine(Say(YES, 5));
-        //                 yield break;
-        //             }
+                while (!donePositive.Item || !doneNegative.Item) {
+                    yield return new WaitForSeconds(0.5f);
+                }
 
-        //             if (answerNegative.Item) {
-        //                 StartCoroutine(Say(NO, 5));
-        //                 yield break;
-        //             }
+                if (!positiveProofs.IsEmpty()) {
+                    StartCoroutine(Say(YES, 5));
+                    yield break;
+                }
 
-        //             yield return new WaitForSeconds(0.5f);
-        //         }
+                if (!negativeProofs.IsEmpty()) {
+                    StartCoroutine(Say(NO, 5));
+                    yield break;
+                }
 
-        //         if (answerPositive.Item) {
-        //             StartCoroutine(Say(YES, 5));
-        //             yield break;
-        //         }
+                StartCoroutine(Say(MAYBE, 5));
+            }
 
-        //         if (answerNegative.Item) {
-        //             StartCoroutine(Say(NO, 5));
-        //             yield break;
-        //         }
+            yield break;
+        }
 
-        //         StartCoroutine(Say(MAYBE, 5));
-        //     }
+        if (utterance.Type.Equals(CONFORMITY_VALUE)) {
+            if (utterance.Head.Equals(WOULD.Head)) {
+                var content = utterance.GetArgAsExpression(0);
+                var proofs = new ProofBases();
+                var done = new Container<bool>(false);
 
-        //     yield break;
-        // }
+                Agent.MentalState.StartCoroutine(
+                    Agent.MentalState.StreamProofs(proofs, content, done, ProofType.Plan));
 
-        // if (utterance.Type.Equals(CONFORMITY_VALUE)) {
-        //     if (utterance.Head.Equals(WOULD.Head)) {
-        //         var done = new Container<bool>(false);
-        //         var answer = new Container<bool>(false);
-        //         Agent.MentalState.StartCoroutine(
-        //             Agent.MentalState.Query(new Expression(ABLE, SELF,
-        //                 utterance.GetArgAsExpression(0)), answer, done));
+                while (!done.Item) {
+                    yield return new WaitForSeconds(0.5f);
+                }
 
-        //         while (!done.Item) {
-        //             yield return new WaitForSeconds(0.5f);
-        //         }
-
-        //         if (answer.Item) {
-        //             StartCoroutine(Say(ACCEPT, 5));
-        //             Agent.MentalState.StartCoroutine(Agent.MentalState.Assert(
-        //                 new Expression(BETTER, utterance.GetArgAsExpression(0), NEUTRAL)));
-        //         } else {
-        //             StartCoroutine(Say(REFUSE, 5));
-        //         }
-        //     }
+                if (!proofs.IsEmpty()) {
+                    StartCoroutine(Say(ACCEPT, 5));
+                    Agent.MentalState.StartCoroutine(
+                        Agent.MentalState.ReceiveRequest(content, speaker));
+                } else {
+                    StartCoroutine(Say(REFUSE, 5));
+                }
+            }
             
-        //     yield break;
-        // }
+            yield break;
+        }
+
         yield break;
-        // TODO stub
     }
 
 

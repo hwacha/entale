@@ -210,7 +210,7 @@ public class MentalState : MonoBehaviour {
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
-                    // Debug.Log("substituted to " + currentLemma);
+                    Debug.Log("substituted to " + currentLemma);
 
                     var searchBases = new ProofBases();
 
@@ -625,15 +625,39 @@ public class MentalState : MonoBehaviour {
         yield return null;
     }
 
+    public IEnumerator ReceiveRequest(Expression content, Expression speaker) {
+        // the proposition we add here, we want to be the equivalent to
+        // knowledge in certain ways. So, for example, knows(p, S) -> p
+        // in the same way that X(p, S) -> good(p).
+        // 
+        // Right now, we literally have this as S knows that p is good,
+        // but this feels somehow not aesthetically pleasing to me. I'll
+        // try it out for now.
+        KnowledgeBase.Add(new Expression(KNOW, new Expression(GOOD, content), speaker));
+
+        yield return null;
+    }
+
     public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
-        var lowerBound = new Expression(GOOD, new Expression(new Bottom(TRUTH_VALUE)));
-        var upperBound = new Expression(GOOD, new Expression(new Top(TRUTH_VALUE)));
-        var evaluativeBase = KnowledgeBase.GetViewBetween(lowerBound, upperBound);
+        var goodProofs = new ProofBases();
+        var goodDone = new Container<bool>(false);
+        // we're going to get our domain of goods by trying to prove
+        // good(p) and seeing what it assigns to p.
+        StartCoroutine(StreamProofs(goodProofs, new Expression(GOOD, ST), goodDone));
+        while (!goodDone.Item) {
+            yield return null;
+        }
+
+        List<Expression> evaluativeBase = new List<Expression>();
+        foreach (var goodProof in goodProofs) {
+            var assignment = goodProof.Substitution[ST.Head as Variable];
+            evaluativeBase.Add(assignment);
+        }
+
         foreach (var good in evaluativeBase) {
-            var content = good.GetArgAsExpression(0);
             var proofBases = new ProofBases();
             var proofDone = new Container<bool>(false);
-            StartCoroutine(StreamProofs(proofBases, content, proofDone, Proof));
+            StartCoroutine(StreamProofs(proofBases, good, proofDone, Proof));
             while (!proofDone.Item) {
                 yield return null;
             }
@@ -643,7 +667,7 @@ public class MentalState : MonoBehaviour {
 
             var planBases = new ProofBases();
             var planDone = new Container<bool>(false);
-            StartCoroutine(StreamProofs(planBases, content, planDone, Plan));
+            StartCoroutine(StreamProofs(planBases, good, planDone, Plan));
             while (!planDone.Item) {
                 yield return null;
             }

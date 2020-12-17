@@ -14,7 +14,7 @@ public class Bob : Agent
                 new Expression(SEE, new Expression(IDENTITY, SELF, BOB)),
                 new Expression(SEE, new Expression(RED, SELF)),
                 new Expression(SEE, new Expression(BLUE, EVAN)),
-                new Expression(GOOD, new Expression(SOME, GREEN, new Expression(AT, SELF)))
+                // new Expression(GOOD, new Expression(SOME, GREEN, new Expression(AT, SELF)))
             }
         );
 
