@@ -635,7 +635,7 @@ public class MentalState : MonoBehaviour {
         // try it out for now.
         KnowledgeBase.Add(new Expression(KNOW, new Expression(GOOD, content), speaker));
 
-        yield return null;
+        yield break;
     }
 
     public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
