@@ -19,47 +19,11 @@ public class Testing : MonoBehaviour {
         FrameTimer = gameObject.GetComponent<FrameTimer>();
 
         // DON'T COMMENT ABOVE THIS LINE
-
-        // // Log("End percept ordering");
-        // Log("Bounds ordering");
-        // var bounds = new Expression[]{
-        //     new Expression(new Top(TRUTH_VALUE)),
-        //     new Expression(new Bottom(TRUTH_VALUE)),
-        //     VERUM, FALSUM, new Expression(RED, SELF),
-        //     SELF, ASK,
-        //     new Expression(AT, ALICE, ALICE),
-        //     new Expression(AT, ALICE, BOB),
-        //     new Expression(AT, BOB, ALICE),
-        //     new Expression(AT, BOB, BOB),
-        //     new Expression(AT, new Expression(SELECTOR, RED), new Expression(SELECTOR, BLUE)),
-        //     new Expression(ALL, RED, new Expression(AT, new Empty(INDIVIDUAL), ALICE)),
-        // //  new Expression(AT, ALICE, new Expression(new Top(INDIVIDUAL))),
-        // //  new Expression(AT, ALICE, new Expression(new Bottom(INDIVIDUAL))),
-        // //  new Expression(AT, new Expression(new Top(INDIVIDUAL)), new Expression(new Top(INDIVIDUAL))),
-        // //  new Expression(AT, new Expression(new Bottom(INDIVIDUAL)), new Expression(new Bottom(INDIVIDUAL))),
-        // //  new Expression(AT, new Expression(new Top(INDIVIDUAL)), BOB),
-        // //  new Expression(AT, new Expression(new Bottom(INDIVIDUAL)), BOB),
-        //     new Expression(new Expression(new Top(PREDICATE)), new Expression(new Top(INDIVIDUAL))),
-        //     new Expression(new Expression(new Bottom(PREDICATE)), new Expression(new Bottom(INDIVIDUAL))),
-        //     new Expression(ALL, RED, new Expression(new Bottom(PREDICATE))),
-        //     new Expression(ALL, RED, new Expression(new Top(PREDICATE)))
-        // };
-        // Array.Sort(bounds);
-        // for (int i = 0; i < bounds.Length; i++) {
-        //     Log(bounds[i]);
-        // }
-        // Log("End bounds ordering");
-
         MentalState.FrameTimer = FrameTimer;
 
-        // Here, I'm going to test how to gather all the sources of knowledge for good(s)
         MentalState.Initialize(new Expression[]{
-            new Expression(GOOD, new Expression(RED, SELF)),
-            new Expression(KNOW, new Expression(GOOD, new Expression(BLUE, SELF)), SELF)
+            new Expression(RED, SELF)
         });
-
-        StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, ST)));
-        
     }
 
     public static String Verbose(Expression e) {
@@ -88,15 +52,21 @@ public class Testing : MonoBehaviour {
         return a + ", " + b + ": " + SubstitutionString(a.GetMatches(b));
     }
 
-    public static IEnumerator LogBasesStream(MentalState m, Expression e, ProofType pt = Proof) {
+    public static IEnumerator LogBasesStream(MentalState m, Expression e, ProofType pt = Proof, float timeout = -1) {
         var result = new ProofBases();
         var done = new Container<bool>(false);
-
-        m.StartCoroutine(m.StreamProofs(result, e, done, pt));
+        
+        var startTime = Time.time;
+        var proofRoutine = m.StreamProofs(result, e, done, pt);
+        m.StartCoroutine(proofRoutine);
 
         var waitingString = "waiting for '" + e + "' to be proved...";
         var isProvedByString = "'" + e + "'" + " is proved by: ";
         while (!done.Item) {
+            if (startTime + timeout <= Time.time) {
+                m.StopCoroutine(proofRoutine);
+                break;
+            }
             // Log(waitingString);
             if (!result.IsEmpty()) {
                 Log(isProvedByString + result);
