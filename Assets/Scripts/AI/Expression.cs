@@ -4,50 +4,163 @@ using System.Collections.Generic;
 using static SemanticType;
 
 // a wrapper for simple symbols.
-public abstract class Atom {
+public abstract class Atom : IComparable<Atom> {
     // @Note we might want this to be an integer or enum
     // in the future, and then provide a table
     // from integers to strings.
     public SemanticType Type { get; private set; }
-    public String ID { get; private set; }
 
-    public Atom(SemanticType type, String id) {
+    public Atom(SemanticType type) {
         Type = type;
+    }
+
+    public int CompareTo(Atom that) {
+        var typeComparison = this.Type.CompareTo(that.Type);
+        if (typeComparison < 0) {
+            return -1;
+        }
+        if (typeComparison > 0) {
+            return 1;
+        }
+
+        var thisValue = 0;
+        if (this is Bottom) {
+            thisValue = 0;
+        } else if (this is Variable) {
+            thisValue = 1;
+        } else if (this is Parameter) {
+            thisValue = 2;
+        } else if (this is Name) {
+            thisValue = 3;
+        } else if (this is Top) {
+            thisValue = 4;
+        }
+
+        var thatValue = 0;
+        
+        if (that is Bottom) {
+            thatValue = 0;
+        } else if (that is Variable) {
+            thatValue = 1;
+        } else if (that is Parameter) {
+            thatValue = 2;
+        } else if (that is Name) {
+            thatValue = 3;
+        } else if (that is Top) {
+            thatValue = 4;
+        }
+
+        var comparison = thisValue - thatValue;
+
+        if (comparison < 0) {
+            return -1;
+        }
+        if (comparison > 0) {
+            return 1;
+        }
+
+        if (this is Variable) {
+            Variable v1 = this as Variable;
+            Variable v2 = that as Variable;
+            return v1.ID.CompareTo(v2.ID);
+        } else if (this is Parameter) {
+            Parameter p1 = this as Parameter;
+            Parameter p2 = that as Parameter;
+            return p1.ID.CompareTo(p2.ID);
+        } else if (this is Name) {
+            Name n1 = this as Name;
+            Name n2 = that as Name;
+            return String.Compare(n1.ID, n2.ID);
+        }
+
+        return 0;
+    }
+}
+
+// an atom that serves as an upper and
+// lower bound for a comparison within
+// a given type.
+public abstract class Bound : Atom {
+    public Bound(SemanticType type) : base(type) {}
+}
+
+// A constant. Cannot be reassigned.
+public abstract class Constant : Atom {
+    public Constant(SemanticType type) : base(type) {}
+}
+
+// A variable. Can be replaced by
+// different values in a substitution.
+public class Variable : Atom {
+    public readonly uint ID;
+    public Variable(SemanticType type, uint id) : base(type) {
         ID = id;
     }
 
-    public override String ToString() {
+    public override string ToString() {
+        return "{" + ID + "}";
+    }
+
+    public override int GetHashCode() {
+        return 23 * Type.GetHashCode() * (int) ID;
+    } 
+}
+
+// A symbol that can be publicly
+// expressed by this NPC.
+public class Name : Constant {
+    public readonly string ID;
+    public Name(SemanticType type, string id) : base(type) {
+        ID = id;
+    }
+
+    public override string ToString() {
         return ID;
     }
 
-    public override bool Equals(Object o) {
-        if (!(o is Atom)) {
-            return false;
-        }
-
-        Atom that = o as Atom;
-
-        return this.Type.Equals(that.Type) && this.ID.Equals(that.ID);
-    }
- 
     public override int GetHashCode() {
-        return Type.GetHashCode() * ID.GetHashCode();
+        return 29 * Type.GetHashCode() * ID.GetHashCode();
     }
 }
 
-// A constant. Just a regular symbol.
-public class Constant : Atom {
-    public Constant(SemanticType type, String id) : base(type, id) {}
-}
-
-// A variable. Can be replaced by different values in a substitution.
-public class Variable : Atom {
-    public Variable(SemanticType type, String id) : base(type, id) {}
-}
-
-// A parameter. A private symbol the mental state can assign as a name.
+// A parameter. A private symbol the
+// mental state can privately assign.
 public class Parameter : Constant {
-    public Parameter(SemanticType type, uint id) : base(type, "$" + id.ToString()) {}
+    public readonly uint ID;
+    public Parameter(SemanticType type, uint id) : base(type) {
+        ID = id;
+    }
+
+    public override string ToString() {
+        return "$" + ID;
+    }
+
+    public override int GetHashCode() {
+        return 31 * Type.GetHashCode() * (int) ID;
+    }
+}
+
+public class Bottom : Bound {
+    public Bottom(SemanticType type) : base(type) {}
+
+    public override string ToString() {
+        return "\u22A5";
+    }
+}
+
+public class Top : Bound {
+    public Top(SemanticType type) : base(type) {}
+
+    public override string ToString() {
+        return "\u22A4";
+    }
+}
+
+// @note used as a placeholder in
+// the expression trie without
+// another interpretation.
+public class Blank : Atom {
+    public Blank(SemanticType type) : base(type) {}
 }
 
 // a wrapper for what can occur in the
@@ -84,7 +197,7 @@ public class Empty : Argument {
     }
 }
 
-public class Expression : Argument {
+public class Expression : Argument, IComparable<Expression> {
     public Atom Head { get; protected set; }
     protected Argument[] Args;
     public int NumArgs { get; protected set; }
@@ -351,7 +464,7 @@ public class Expression : Argument {
 
         // both head symbols are constants or parameters. We need to recur on arguments and
         // collect results of unifying them.
-        if (!(this.Head is Variable) && !(that.Head is Variable)) {
+        if (this.Head is Constant && that.Head is Constant) {
             if (!this.Head.Equals(that.Head)) {
                 return new HashSet<Dictionary<Variable, Expression>>();
             }
@@ -593,139 +706,211 @@ public class Expression : Argument {
         return hash;
     }
 
+    public int CompareTo(Expression that) {
+        var typeComparison = this.Type.CompareTo(that.Type);
+        if (typeComparison < 0) {
+            return -1;
+        }
+        if (typeComparison > 0) {
+            return 1;
+        }
+
+        // if we have a bound, then
+        // we test this before we
+        // test for it here.
+        if (Type.Equals(Head.Type) && Head is Top &&
+            that.Type.Equals(that.Head.Type) && that.Head is Top) {
+            return 0;
+        }
+        if (Type.Equals(Head.Type) && Head is Top) {
+            return 1;
+        }
+        if (that.Type.Equals(that.Head.Type) && that.Head is Top) {
+            return -1;
+        }
+
+        var headTypeComparison = this.Head.Type.CompareTo(that.Head.Type);
+        if (headTypeComparison < 0) {
+            return -1;
+        }
+        if (headTypeComparison > 0) {
+            return 1;
+        }
+
+        var headComparison = this.Head.CompareTo(that.Head);
+        if (headComparison < 0) {
+            return -1;
+        }
+        if (headComparison > 0) {
+            return 1;
+        }
+
+        for (int i = 0; i < Args.Length; i++) {
+            var thisArg = Args[i];
+            var thatArg = that.Args[i];
+
+            if (thisArg is Empty && thatArg is Empty) {
+                return 0;
+            }
+            if (thisArg is Empty) {
+                return -1;
+            }
+            if (thatArg is Empty) {
+                return 1;
+            }
+
+            var thisExpression = thisArg as Expression;
+            var thatExpression = thatArg as Expression;
+            var subComparison = thisExpression.CompareTo(thatExpression);
+
+            if (subComparison < 0) {
+                return -1;
+            }
+            if (subComparison > 0) {
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+
+
     // Individual constants
-    public static readonly Expression SELF    = new Expression(new Constant(INDIVIDUAL, "self"));
-    public static readonly Expression ALICE   = new Expression(new Constant(INDIVIDUAL, "alice"));
-    public static readonly Expression BOB     = new Expression(new Constant(INDIVIDUAL, "bob"));
-    public static readonly Expression CHARLIE = new Expression(new Constant(INDIVIDUAL, "charlie"));
-    public static readonly Expression EVAN = new Expression(new Constant(INDIVIDUAL, "evan"));
-    public static readonly Expression SOUP = new Expression(new Constant(INDIVIDUAL, "soup"));
-    public static readonly Expression SWEETBERRY = new Expression(new Constant(INDIVIDUAL, "sweetberry"));
-    public static readonly Expression SPICYBERRY = new Expression(new Constant(INDIVIDUAL, "spicyberry"));
-    public static readonly Expression FOREST_KING = new Expression(new Constant(INDIVIDUAL, "forest_king"));
+    public static readonly Expression SELF    = new Expression(new Name(INDIVIDUAL, "self"));
+    public static readonly Expression ALICE   = new Expression(new Name(INDIVIDUAL, "alice"));
+    public static readonly Expression BOB     = new Expression(new Name(INDIVIDUAL, "bob"));
+    public static readonly Expression CHARLIE = new Expression(new Name(INDIVIDUAL, "charlie"));
+    public static readonly Expression EVAN = new Expression(new Name(INDIVIDUAL, "evan"));
+    public static readonly Expression SOUP = new Expression(new Name(INDIVIDUAL, "soup"));
+    public static readonly Expression SWEETBERRY = new Expression(new Name(INDIVIDUAL, "sweetberry"));
+    public static readonly Expression SPICYBERRY = new Expression(new Name(INDIVIDUAL, "spicyberry"));
+    public static readonly Expression FOREST_KING = new Expression(new Name(INDIVIDUAL, "forest_king"));
 
     // Individual variables
-    public static readonly Expression XE = new Expression(new Variable(INDIVIDUAL, "x"));
-    public static readonly Expression YE = new Expression(new Variable(INDIVIDUAL, "y"));
-    public static readonly Expression ZE = new Expression(new Variable(INDIVIDUAL, "z"));
+    public static readonly Expression XE = new Expression(new Variable(INDIVIDUAL, 0));
+    public static readonly Expression YE = new Expression(new Variable(INDIVIDUAL, 1));
+    public static readonly Expression ZE = new Expression(new Variable(INDIVIDUAL, 2));
 
     // Truth Value constants
-    public static readonly Expression VERUM  = new Expression(new Constant(TRUTH_VALUE, "verum"));
-    public static readonly Expression FALSUM = new Expression(new Constant(TRUTH_VALUE, "falsum"));
-    public static readonly Expression NEUTRAL = new Expression(new Constant(TRUTH_VALUE, "neutral"));
+    public static readonly Expression VERUM  = new Expression(new Name(TRUTH_VALUE, "verum"));
+    public static readonly Expression FALSUM = new Expression(new Name(TRUTH_VALUE, "falsum"));
+    public static readonly Expression NEUTRAL = new Expression(new Name(TRUTH_VALUE, "neutral"));
 
     // Truth Value variables
-    public static readonly Expression ST = new Expression(new Variable(TRUTH_VALUE, "S"));
-    public static readonly Expression TT = new Expression(new Variable(TRUTH_VALUE, "T"));
-    public static readonly Expression PT = new Expression(new Variable(TRUTH_VALUE, "P"));
+    public static readonly Expression ST = new Expression(new Variable(TRUTH_VALUE, 0));
+    public static readonly Expression TT = new Expression(new Variable(TRUTH_VALUE, 1));
+    public static readonly Expression PT = new Expression(new Variable(TRUTH_VALUE, 2));
 
     // Predicate constants
-    public static readonly Expression RED  = new Expression(new Constant(PREDICATE, "red"));
-    public static readonly Expression BLUE = new Expression(new Constant(PREDICATE, "blue"));
-    public static readonly Expression GREEN = new Expression(new Constant(PREDICATE, "green"));
-    public static readonly Expression YELLOW = new Expression(new Constant(PREDICATE, "yellow"));
-    public static readonly Expression APPLE = new Expression(new Constant(PREDICATE, "apple"));
-    public static readonly Expression SPICY = new Expression(new Constant(PREDICATE, "spicy"));
-    public static readonly Expression SWEET = new Expression(new Constant(PREDICATE, "sweet"));
-    public static readonly Expression TREE = new Expression(new Constant(PREDICATE, "tree"));
-    public static readonly Expression TOMATO = new Expression(new Constant(PREDICATE, "tomato"));
-    public static readonly Expression BANANA = new Expression(new Constant(PREDICATE, "banana"));
+    public static readonly Expression RED  = new Expression(new Name(PREDICATE, "red"));
+    public static readonly Expression BLUE = new Expression(new Name(PREDICATE, "blue"));
+    public static readonly Expression GREEN = new Expression(new Name(PREDICATE, "green"));
+    public static readonly Expression YELLOW = new Expression(new Name(PREDICATE, "yellow"));
+    public static readonly Expression APPLE = new Expression(new Name(PREDICATE, "apple"));
+    public static readonly Expression SPICY = new Expression(new Name(PREDICATE, "spicy"));
+    public static readonly Expression SWEET = new Expression(new Name(PREDICATE, "sweet"));
+    public static readonly Expression TREE = new Expression(new Name(PREDICATE, "tree"));
+    public static readonly Expression TOMATO = new Expression(new Name(PREDICATE, "tomato"));
+    public static readonly Expression BANANA = new Expression(new Name(PREDICATE, "banana"));
 
     // a predicate that applies to any individual
-    public static readonly Expression VEROUS = new Expression(new Constant(PREDICATE, "verous"));
+    public static readonly Expression VEROUS = new Expression(new Name(PREDICATE, "verous"));
 
     // Predicate variables
-    public static readonly Expression FET = new Expression(new Variable(PREDICATE, "F"));
+    public static readonly Expression FET = new Expression(new Variable(PREDICATE, 0));
     // @Note I may want a constant called get eventually
-    public static readonly Expression GET = new Expression(new Variable(PREDICATE, "G"));
+    public static readonly Expression GET = new Expression(new Variable(PREDICATE, 1));
 
     // 2-place relation constants
-    public static readonly Expression IDENTITY = new Expression(new Constant(RELATION_2, "="));
-    public static readonly Expression AT       = new Expression(new Constant(RELATION_2, "at"));
-    public static readonly Expression ADDED_TO = new Expression(new Constant(RELATION_2, "added_to"));
+    public static readonly Expression IDENTITY = new Expression(new Name(RELATION_2, "="));
+    public static readonly Expression AT       = new Expression(new Name(RELATION_2, "at"));
+    public static readonly Expression ADDED_TO = new Expression(new Name(RELATION_2, "added_to"));
 
     // 2-place relation variables
-    public static readonly Expression REET = new Expression(new Variable(RELATION_2, "R"));
+    public static readonly Expression REET = new Expression(new Variable(RELATION_2, 0));
 
     // 1-place truth functions
-    public static readonly Expression NOT = new Expression(new Constant(TRUTH_FUNCTION, "not"));
-    public static readonly Expression TRULY = new Expression(new Constant(TRUTH_FUNCTION, "truly"));
+    public static readonly Expression NOT = new Expression(new Name(TRUTH_FUNCTION, "not"));
+    public static readonly Expression TRULY = new Expression(new Name(TRUTH_FUNCTION, "truly"));
     // the question of whether "A" is closed,
     // so you either believe A or ~A
-    public static readonly Expression CLOSED = new Expression(new Constant(TRUTH_FUNCTION, "closed"));
+    public static readonly Expression CLOSED = new Expression(new Name(TRUTH_FUNCTION, "closed"));
+    public static readonly Expression SEE = new Expression(new Name(TRUTH_FUNCTION, "see"));
+    public static readonly Expression GOOD = new Expression(new Name(TRUTH_FUNCTION, "good"));
 
     // higher-order variables
-    public static readonly Expression FTF = new Expression(new Variable(TRUTH_FUNCTION, "FTF"));
-    public static readonly Expression GTF = new Expression(new Variable(TRUTH_FUNCTION, "GTF"));
-    public static readonly Expression FTTF = new Expression(new Variable(TRUTH_FUNCTION_2, "FTTF"));
-    public static readonly Expression PQP = new Expression(new Variable(QUANTIFIER_PHRASE, "PQP"));
-    public static readonly Expression QQP = new Expression(new Variable(QUANTIFIER_PHRASE, "QQP"));
+    public static readonly Expression FTF = new Expression(new Variable(TRUTH_FUNCTION, 0));
+    public static readonly Expression GTF = new Expression(new Variable(TRUTH_FUNCTION, 1));
+    public static readonly Expression FTTF = new Expression(new Variable(TRUTH_FUNCTION_2, 0));
+    public static readonly Expression PQP = new Expression(new Variable(QUANTIFIER_PHRASE, 0));
+    public static readonly Expression QQP = new Expression(new Variable(QUANTIFIER_PHRASE, 1));
 
     // 2-place truth functions
-    public static readonly Expression AND = new Expression(new Constant(TRUTH_FUNCTION_2, "and"));
-    public static readonly Expression OR  = new Expression(new Constant(TRUTH_FUNCTION_2, "or"));
-    public static readonly Expression IF  = new Expression(new Constant(TRUTH_FUNCTION_2, "if"));
-    public static readonly Expression BETTER = new Expression(new Constant(TRUTH_FUNCTION_2, "better"));
-    public static readonly Expression AS_GOOD_AS = new Expression(new Constant(TRUTH_FUNCTION_2, "~"));
+    public static readonly Expression AND = new Expression(new Name(TRUTH_FUNCTION_2, "and"));
+    public static readonly Expression OR  = new Expression(new Name(TRUTH_FUNCTION_2, "or"));
+    public static readonly Expression IF  = new Expression(new Name(TRUTH_FUNCTION_2, "if"));
+    public static readonly Expression BETTER = new Expression(new Name(TRUTH_FUNCTION_2, "better"));
+    public static readonly Expression AS_GOOD_AS = new Expression(new Name(TRUTH_FUNCTION_2, "~"));
 
     // truth-conformity relations
     // "will" is interpreted as an instruction for the actuator in LOT
     // and is interpreted as a promise when expression in public language
-    public static readonly Expression WILL  = new Expression(new Constant(TRUTH_CONFORMITY_FUNCTION, "will"));
-    public static readonly Expression WOULD = new Expression(new Constant(TRUTH_CONFORMITY_FUNCTION, "would"));
+    public static readonly Expression WILL  = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "will"));
+    public static readonly Expression WOULD = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "would"));
 
     // individual-truth relations
-    public static readonly Expression SAY = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "say"));
-    public static readonly Expression BELIEVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "believe"));
-    public static readonly Expression ABLE    = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "able"));
-    public static readonly Expression PERCEIVE = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceive"));
-    public static readonly Expression VERIDICAL = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "veridical"));
-    public static readonly Expression TRIED = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "tried"));
+    public static readonly Expression SAY = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "say"));
+    public static readonly Expression KNOW = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
+    public static readonly Expression BELIEVE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "believe"));
+    public static readonly Expression ABLE    = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
+    public static readonly Expression PERCEIVE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceive"));
+    public static readonly Expression VERIDICAL = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "veridical"));
+    public static readonly Expression TRIED = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "tried"));
     public static readonly Expression PERCEPTUALLY_CLOSED =
-        new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
+        new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
 
     // @Note we might want to make this a 2-place truth function
-    public static readonly Expression WHEN = new Expression(new Constant(INDIVIDUAL_TRUTH_RELATION, "when"));
+    public static readonly Expression WHEN = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "when"));
 
     // determiners
-    public static readonly Expression SELECTOR = new Expression(new Constant(DETERMINER, "selector"));
+    public static readonly Expression SELECTOR = new Expression(new Name(DETERMINER, "selector"));
 
     // quantifiers
-    public static readonly Expression SOME = new Expression(new Constant(QUANTIFIER, "some"));
-    public static readonly Expression ALL  = new Expression(new Constant(QUANTIFIER, "all"));
+    public static readonly Expression SOME = new Expression(new Name(QUANTIFIER, "some"));
+    public static readonly Expression ALL  = new Expression(new Name(QUANTIFIER, "all"));
     public static readonly Expression QUANTIFIER_PHRASE_COORDINATOR_2 =
-        new Expression(new Constant(SemanticType.QUANTIFIER_PHRASE_COORDINATOR_2, "rel2"));
+        new Expression(new Name(SemanticType.QUANTIFIER_PHRASE_COORDINATOR_2, "rel2"));
 
     // sentential adverbs/quantifiers
-    public static readonly Expression ALWAYS = new Expression(new Constant(PROPOSITIONAL_QUANTIFIER, "always"));
-    public static readonly Expression SOMETIMES = new Expression(new Constant(PROPOSITIONAL_QUANTIFIER, "sometimes"));
-    public static readonly Expression NORMALLY = new Expression(new Constant(PROPOSITIONAL_QUANTIFIER, "normally"));
-    public static readonly Expression NORMAL = new Expression(new Constant(PROPOSITIONAL_QUANTIFIER, "normal"));
+    public static readonly Expression ALWAYS = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "always"));
+    public static readonly Expression SOMETIMES = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "sometimes"));
+    public static readonly Expression NORMALLY = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "normally"));
+    public static readonly Expression NORMAL = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "normal"));
 
     // weird function words
-    public static readonly Expression ITSELF = new Expression(new Constant(RELATION_2_REDUCER, "itself"));
+    public static readonly Expression ITSELF = new Expression(new Name(RELATION_2_REDUCER, "itself"));
     // for permutations of arguments for higher-arity functions,
     // 'shift': ABC -> CAB and 'swap': ABC -> BAC should do the trick
-    public static readonly Expression CONVERSE = new Expression(new Constant(RELATION_2_MODIFIER, "converse"));
+    public static readonly Expression CONVERSE = new Expression(new Name(RELATION_2_MODIFIER, "converse"));
     // more function words: Geach
-    public static readonly Expression GEACH_TRUTH_FUNCTION = new Expression(new Constant(SemanticType.GEACH_TRUTH_FUNCTION, "geach"));
-    public static readonly Expression GEACH_TRUTH_FUNCTION_2 = new Expression(new Constant(SemanticType.GEACH_TRUTH_FUNCTION_2, "geach"));
-    public static readonly Expression GEACH_QUANTIFIER_PHRASE = new Expression(new Constant(SemanticType.GEACH_QUANTIFIER_PHRASE, "geach"));
+    public static readonly Expression GEACH_TRUTH_FUNCTION = new Expression(new Name(SemanticType.GEACH_TRUTH_FUNCTION, "geach"));
+    public static readonly Expression GEACH_TRUTH_FUNCTION_2 = new Expression(new Name(SemanticType.GEACH_TRUTH_FUNCTION_2, "geach"));
+    public static readonly Expression GEACH_QUANTIFIER_PHRASE = new Expression(new Name(SemanticType.GEACH_QUANTIFIER_PHRASE, "geach"));
 
     // question and assert functions
-    public static readonly Expression ASK = new Expression(new Constant(TRUTH_QUESTION_FUNCTION, "ask"));
-    public static readonly Expression ASSERT = new Expression(new Constant(TRUTH_ASSERTION_FUNCTION, "assert"));
-    public static readonly Expression DENY = new Expression(new Constant(TRUTH_ASSERTION_FUNCTION, "deny"));
+    public static readonly Expression ASK = new Expression(new Name(TRUTH_QUESTION_FUNCTION, "ask"));
+    public static readonly Expression ASSERT = new Expression(new Name(TRUTH_ASSERTION_FUNCTION, "assert"));
+    public static readonly Expression DENY = new Expression(new Name(TRUTH_ASSERTION_FUNCTION, "deny"));
 
     // assertion constants
-    public static readonly Expression YES = new Expression(new Constant(ASSERTION, "assert"));
-    public static readonly Expression NO  = new Expression(new Constant(ASSERTION, "deny"));
-    public static readonly Expression MAYBE = new Expression(new Constant(ASSERTION, "maybe"));
+    public static readonly Expression YES = new Expression(new Name(ASSERTION, "assert"));
+    public static readonly Expression NO  = new Expression(new Name(ASSERTION, "deny"));
+    public static readonly Expression MAYBE = new Expression(new Name(ASSERTION, "maybe"));
 
     // conformity constants
-    public static readonly Expression ACCEPT = new Expression(new Constant(CONFORMITY_VALUE, "accept"));
-    public static readonly Expression REFUSE = new Expression(new Constant(CONFORMITY_VALUE, "refuse"));
+    public static readonly Expression ACCEPT = new Expression(new Name(CONFORMITY_VALUE, "accept"));
+    public static readonly Expression REFUSE = new Expression(new Name(CONFORMITY_VALUE, "refuse"));
 
     // heads for deictic expressions
-    public static readonly Expression THIS = new Expression(new Constant(INDIVIDUAL, "this"));
+    public static readonly Expression THIS = new Expression(new Name(INDIVIDUAL, "this"));
 }

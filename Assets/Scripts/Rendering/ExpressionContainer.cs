@@ -145,7 +145,9 @@ public class ExpressionContainer : MonoBehaviour
             }
 
             Expression currentExpression = (Expression) currentDrawInfo.Argument;
-            Texture2D headTexture = Resources.Load<Texture2D>("Textures/Symbols/" + ((Expression) currentDrawInfo.Argument).Head.ID);
+            var head = ((Expression) currentDrawInfo.Argument).Head;
+            var nameString = head is Name ? ((Name) head).ID : "";
+            Texture2D headTexture = Resources.Load<Texture2D>("Textures/Symbols/" + nameString);
 
             // if we're an expression, we want to draw the head symbol
             // @Note this has to be in a specific RGBA format to work.

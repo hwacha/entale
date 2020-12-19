@@ -9,7 +9,7 @@ public abstract class Icons {
         return Resources.Load<Sprite>("Sprites/white_circle") as Sprite;
     }
 
-    public static Sprite GetIcon(Constant constant) {
-        return Resources.Load<Sprite>("Textures/Symbols/" + constant.ID) as Sprite;
+    public static Sprite GetIcon(Name name) {
+        return Resources.Load<Sprite>("Textures/Symbols/" + name.ID) as Sprite;
     }
 }

@@ -133,8 +133,10 @@ public class ArgumentContainer : MonoBehaviour {
 
                 symbol.layer = LayerMask.NameToLayer("Pre-render Expression");
 
+                var head = ((Expression) Argument).Head;
+                var nameString = head is Name ? ((Name) head).ID : "";
                 Texture2D symbolTexture =
-                    Resources.Load<Texture2D>("Textures/Symbols/" + ((Expression) Argument).Head.ID);
+                    Resources.Load<Texture2D>("Textures/Symbols/" + nameString);
 
                 symbol.GetComponent<Renderer>().material.SetTexture("_MainTex", symbolTexture);
             }

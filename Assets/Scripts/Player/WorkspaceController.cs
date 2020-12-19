@@ -636,7 +636,7 @@ public class WorkspaceController : MonoBehaviour
                             //     EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression)));
                             
                             targetedActuator.StartCoroutine(
-                                targetedActuator.RespondTo(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression));
+                                targetedActuator.RespondTo(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression, Expression.CHARLIE));
 
                             Destroy(EquippedExpression);
                             EquippedExpression = null;
