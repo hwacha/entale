@@ -210,7 +210,7 @@ public class MentalState : MonoBehaviour {
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
-                    Debug.Log("substituted to " + currentLemma);
+                    // Debug.Log("substituted to " + currentLemma);
 
                     var searchBases = new ProofBases();
 
