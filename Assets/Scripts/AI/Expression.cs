@@ -868,12 +868,12 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression TRIED = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "tried"));
     public static readonly Expression PERCEPTUALLY_CLOSED =
         new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
-
-    // @Note we might want to make this a 2-place truth function
-    public static readonly Expression WHEN = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "when"));
-
+    
     // determiners
     public static readonly Expression SELECTOR = new Expression(new Name(DETERMINER, "selector"));
+
+    // tensers
+    public static readonly Expression WHEN = new Expression(new Name(TENSER, "when"));
 
     // quantifiers
     public static readonly Expression SOME = new Expression(new Name(QUANTIFIER, "some"));

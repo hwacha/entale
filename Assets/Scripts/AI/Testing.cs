@@ -21,8 +21,38 @@ public class Testing : MonoBehaviour {
         // DON'T COMMENT ABOVE THIS LINE
         MentalState.FrameTimer = FrameTimer;
 
+        var es = new SortedSet<Expression>{
+            new Expression(WHEN, new Expression(KNOW,
+                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  20))),
+                ALICE), new Expression(new Parameter(TIME, 25))),
+            new Expression(WHEN, new Expression(KNOW,
+                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  10))),
+                EVAN), new Expression(new Parameter(TIME, 28))),
+            new Expression(WHEN, new Expression(KNOW,
+                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  10))),
+                BOB), new Expression(new Parameter(TIME, 20))),
+            new Expression(WHEN, new Expression(KNOW,
+                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  15))),
+                SELF), new Expression(new Parameter(TIME, 40))),
+        };
+
+        // suppose we're trying to prove when(red(self), 30)
+        var bottom = new Expression(WHEN, new Expression(KNOW,
+                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  0))),
+                new Expression(new Bottom(INDIVIDUAL))), new Expression(new Parameter(TIME, 0)));
+
+        var top = new Expression(WHEN, new Expression(KNOW,
+                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  30))),
+                new Expression(new Top(INDIVIDUAL))), new Expression(new Parameter(TIME, 30)));
+
+        var timespan = es.GetViewBetween(bottom, top);
+
+        foreach (var x in timespan) {
+            Debug.Log(x);
+        }
+
         MentalState.Initialize(new Expression[]{
-            new Expression(RED, SELF)
+            new Expression(SEE, new Expression(RED, SELF))
         });
     }
 

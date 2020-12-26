@@ -42,6 +42,7 @@ public class MentalState : MonoBehaviour {
     public FrameTimer FrameTimer;
 
     protected uint ParameterID;
+    protected uint Timestamp = 0;
 
     private SortedSet<Expression> KnowledgeBase;
 
@@ -56,11 +57,10 @@ public class MentalState : MonoBehaviour {
     // I'll just make it public for now.
     //
     public Dictionary<Expression, Vector3> Locations;
-    // protected uint Timestamp = 0;
     int MaxDepth = 0;
 
     void Update() {
-        //Timestamp++;
+        Timestamp++;
     }
 
     // @Note this doesn't check to see if
@@ -68,17 +68,20 @@ public class MentalState : MonoBehaviour {
     // Assume, for now, as an invariant, that it is.
     public void Initialize(Expression[] initialKnowledge) {
         ParameterID = 0;
+        Timestamp = 1;
         Locations = new Dictionary<Expression, Vector3>();
 
         if (KnowledgeBase != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
         KnowledgeBase = new SortedSet<Expression>();
+        var timeParameter = new Expression(new Parameter(TIME, Timestamp));
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
             if (!initialKnowledge[i].Type.Equals(TRUTH_VALUE)) {
                 throw new ArgumentException("MentalState(): expected sentences for base.");
             }
+
             KnowledgeBase.Add(initialKnowledge[i]);
             if (initialKnowledge[i].Depth > MaxDepth) {
                 MaxDepth = initialKnowledge[i].Depth;
@@ -220,6 +223,25 @@ public class MentalState : MonoBehaviour {
                             var basis = new ProofBasis();
                             basis.AddPremise(currentLemma);
                             searchBases.Add(basis);
+                        }
+
+                        if (currentLemma.Head.Equals(WHEN.Head)) {
+                            var state = currentLemma.GetArgAsExpression(0);
+                            var first = new Expression(WHEN, state, new Expression(new Parameter(TIME, 0)));
+                            var firstNegative = new Expression(WHEN, new Expression(NOT, state), new Expression(new Parameter(TIME, 0)));
+
+                            var timespan = KnowledgeBase.GetViewBetween(first, currentLemma);
+                            var timespanNegative = KnowledgeBase.GetViewBetween(firstNegative,
+                                new Expression(WHEN, new Expression(NOT, state), currentLemma.GetArgAsExpression(1)));
+                            var lastPositiveSample = timespan.Max;
+                            var lastNegativeSample = timespanNegative.Max;
+                            var compareTime = lastPositiveSample.GetArgAsExpression(1).CompareTo(lastNegativeSample.GetArgAsExpression(1));
+
+                            if (compareTime > 0) {
+                                var basis = new ProofBasis();
+                                basis.AddPremise(currentLemma);
+                                searchBases.Add(basis);
+                            }
                         }
 
                         if (currentLemma.Head.Equals(ABLE.Head) &&
@@ -605,8 +627,10 @@ public class MentalState : MonoBehaviour {
             Locations.Add(param, new Vector3(location.x, location.y, location.z));
         }
 
-        Expression percept = new Expression(SEE, new Expression(characteristic, param));
-        
+        var timeParam = new Expression(new Parameter(TIME, Timestamp));
+
+        var percept = new Expression(SEE, new Expression(WHEN, new Expression(characteristic, param), timeParam));
+
         // we need to queue this up so that it doesn't cause a
         // concurrent modification problem.
         
@@ -619,7 +643,8 @@ public class MentalState : MonoBehaviour {
     // @TODO add an inference rule to cover knowledge from
     // assertion. Now is a simple fix.
     public IEnumerator ReceiveAssertion(Expression content, Expression speaker) {
-        KnowledgeBase.Add(new Expression(KNOW, content, speaker));
+        var timeParam = new Expression(new Parameter(TIME, Timestamp));
+        KnowledgeBase.Add(new Expression(KNOW, new Expression(WHEN, content, timeParam)));
         // TODO check to see if this is inconsistent
         // with the current knowledge base
         yield return null;

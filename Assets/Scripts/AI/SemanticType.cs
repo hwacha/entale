@@ -43,6 +43,7 @@ public abstract class SemanticType : IComparable<SemanticType> {
     public abstract bool IsPartialApplicationOf(SemanticType that);
 
     // references to the atomic types.
+    public static readonly AtomicType TIME = new I();
     public static readonly AtomicType INDIVIDUAL = new E();
     public static readonly AtomicType TRUTH_VALUE = new T();
     public static readonly AtomicType CONFORMITY_VALUE = new C();
@@ -96,6 +97,9 @@ public abstract class SemanticType : IComparable<SemanticType> {
 
     public static readonly FunctionalType PROPOSITIONAL_QUANTIFIER =
         new FunctionalType(new SemanticType[]{TRUTH_FUNCTION, TRUTH_FUNCTION}, TRUTH_VALUE);
+
+    public static readonly FunctionalType TENSER =
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE, TIME}, TRUTH_VALUE);
 
     public abstract int CompareTo(SemanticType that);
 
@@ -323,6 +327,12 @@ public class FunctionalType : SemanticType {
         s.Append(" -> " + Output.ToString() + ")");
 
         return s.ToString();
+    }
+}
+
+public class I : AtomicType {
+    public override string ToString() {
+        return "i";
     }
 }
 
