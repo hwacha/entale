@@ -31,9 +31,6 @@ public class Testing : MonoBehaviour {
             new Expression(WHEN, new Expression(KNOW,
                 new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  10))),
                 BOB), new Expression(new Parameter(TIME, 20))),
-            new Expression(WHEN, new Expression(KNOW,
-                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  15))),
-                SELF), new Expression(new Parameter(TIME, 40))),
         };
 
         // suppose we're trying to prove when(red(self), 30)

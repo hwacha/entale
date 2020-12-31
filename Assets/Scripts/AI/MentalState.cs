@@ -440,8 +440,9 @@ public class MentalState : MonoBehaviour {
 
                             // knows -
                             if (!currentLemma.Head.Equals(KNOW.Head)) {
-                                var know = new Expression(KNOW, currentLemma,
-                                    new Expression(GetUnusedVariable(INDIVIDUAL, currentLemma.GetVariables())));
+                                var know = new Expression(WHEN, new Expression(KNOW, currentLemma,
+                                    new Expression(GetUnusedVariable(INDIVIDUAL, currentLemma.GetVariables()))),
+                                    new Expression(new Parameter(TIME, Timestamp)));
 
                                 var knowNode = new ProofNode(know, nextDepth, current, i);
                                 newStack.Push(knowNode);
