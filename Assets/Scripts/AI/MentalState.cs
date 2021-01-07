@@ -104,7 +104,64 @@ public class MentalState : MonoBehaviour {
         ParameterID++;
         return param;
     }
-    
+
+    // changes all time indices to zero
+    public static Expression ZeroTimeIndices(Expression e) {
+        var newHead = e.Head;
+        if (e.Head.Type.Equals(TIME)) {
+            newHead = new Parameter(TIME, 0);
+        }
+        var newArgs = new Argument[e.NumArgs];
+        for (int i = 0; i < e.NumArgs; i++) {
+            var arg = e.GetArg(i);
+            if (arg is Empty) {
+                newArgs[i] = arg;
+            } else {
+                newArgs[i] = ZeroTimeIndices(arg as Expression);
+            }
+        }
+        return new Expression(new Expression(newHead), newArgs);
+    }
+
+    // applies narrow-scope negation to an expression.
+    // e.g. believe(x, P) => believe(x, ~P)
+    //
+    // works specifically for sentential attitudes
+    // with one free sentential argument
+    //
+    // for other sentence types, regular wide-scope
+    // negation will be applied
+    public static Expression NarrowNegation(Expression e) {
+        Debug.Assert(e.Type.Equals(TRUTH_VALUE));
+
+        if (e.Head.Type.Equals(INDIVIDUAL_TRUTH_RELATION) ||
+            e.Head.Type.Equals(TENSER)) {
+            return new Expression(new Expression(e.Head),
+                    NarrowNegation(e.GetArgAsExpression(0)),
+                    e.GetArg(1));
+        }
+
+        if (e.Head.Equals(NOT.Head)) {
+            return e.GetArgAsExpression(0);
+        }
+
+        return new Expression(NOT, e);
+    }
+
+    public uint GetNarrowTime(Expression e) {
+        Debug.Assert(e.Type.Equals(TRUTH_VALUE));
+
+        if (e.Head.Equals(WHEN.Head)) {
+            var subclause = e.GetArgAsExpression(0);
+            if (subclause.Head.Equals(KNOW.Head)) {
+                return GetNarrowTime(subclause);
+            }
+            return (e.GetArgAsExpression(1).Head as Parameter).ID;
+        }
+
+        return Timestamp;
+    }
+
     private class ProofNode {
         #region Parameters
         public readonly Expression Lemma;
@@ -155,7 +212,6 @@ public class MentalState : MonoBehaviour {
         Container<bool> done, ProofType pt = Proof) {
         // we can only prove sentences.
         Debug.Assert(conclusion.Type.Equals(TRUTH_VALUE));
- 
         // we're going to do a depth-first search
         // with successively higher bounds on the
         // depth allowed.
@@ -215,35 +271,67 @@ public class MentalState : MonoBehaviour {
 
                     // Debug.Log("substituted to " + currentLemma);
 
+                    // the bases we get from directly
+                    // querying the knowledge base.
                     var searchBases = new ProofBases();
+
+
+                    // Satisfiers():
+                    // first, we get the domain to search through.
+                    // this is going to correspond to all sentences
+                    // that are structural candidates for matching
+                    // the formula, given the structure of the formula's
+                    // variables and semantic types.
+                    var variables = currentLemma.GetVariables();
+                    var bottomSubstitution = new Substitution();
+                    var topSubstitution = new Substitution();
+                    foreach (Variable v in variables) {
+                        bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
+                        topSubstitution.Add(v, new Expression(new Top(v.Type)));
+                    }
+
+                    var bottom = currentLemma.Substitute(bottomSubstitution);
+                    var top = currentLemma.Substitute(topSubstitution);
+
+                    // inertial tensed query
+                    var positiveZero = ZeroTimeIndices(bottom);
+                    var negativeZero = NarrowNegation(bottom);
+                    var negativeCurrent = NarrowNegation(top);
+
+                    // TODO change CompareTo() re: top/bottom so that
+                    // expressions which would unify with F(x) are
+                    // included within the bounds of bot(bot) and top(top)
+                    // This will involve check partial type application
+                    //
+                    // BUT leave this until there's a geniune use case
+                    // in inference, since the way it occurs now is
+                    // potentially more efficient.
+                    
+                    var timespan = KnowledgeBase.GetViewBetween(positiveZero, top);
+                    var timespanNegative = KnowledgeBase.GetViewBetween(negativeZero, negativeCurrent);
+                    var lastPositiveSample = timespan.Max;
+                    var lastNegativeSample = timespanNegative.Max;
+
+                    if (lastPositiveSample != null) {
+                        // even if there are variables,
+                        // we only yield the most recent (for now)
+                        // TODO: multiple satisfiers for one formula
+                        if (lastNegativeSample == null) {
+                            searchBases.Add(new ProofBasis(new List<Expression>(){lastPositiveSample}, new Substitution()));
+                        } else {
+                            var lastPositiveTime = GetNarrowTime(lastPositiveSample);
+                            var lastNegativeTime = GetNarrowTime(lastNegativeSample);
+                            // in this case, the positive case is
+                            // more recent than the negative case.
+                            if (lastPositiveTime > lastNegativeTime) {
+                                // TODO: figure out substitutions too.
+                                searchBases.Add(new ProofBasis(new List<Expression>(){lastPositiveSample}, new Substitution()));
+                            }
+                        }
+                    }
 
                     // these are our base cases.
                     if (currentLemma.GetVariables().Count == 0) {
-                        if (KnowledgeBase.Contains(currentLemma)) {
-                            var basis = new ProofBasis();
-                            basis.AddPremise(currentLemma);
-                            searchBases.Add(basis);
-                        }
-
-                        if (currentLemma.Head.Equals(WHEN.Head)) {
-                            var state = currentLemma.GetArgAsExpression(0);
-                            var first = new Expression(WHEN, state, new Expression(new Parameter(TIME, 0)));
-                            var firstNegative = new Expression(WHEN, new Expression(NOT, state), new Expression(new Parameter(TIME, 0)));
-
-                            var timespan = KnowledgeBase.GetViewBetween(first, currentLemma);
-                            var timespanNegative = KnowledgeBase.GetViewBetween(firstNegative,
-                                new Expression(WHEN, new Expression(NOT, state), currentLemma.GetArgAsExpression(1)));
-                            var lastPositiveSample = timespan.Max;
-                            var lastNegativeSample = timespanNegative.Max;
-                            var compareTime = lastPositiveSample.GetArgAsExpression(1).CompareTo(lastNegativeSample.GetArgAsExpression(1));
-
-                            if (compareTime > 0) {
-                                var basis = new ProofBasis();
-                                basis.AddPremise(currentLemma);
-                                searchBases.Add(basis);
-                            }
-                        }
-
                         if (currentLemma.Head.Equals(ABLE.Head) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
                             currentLemma.GetArgAsExpression(0).Head.Equals(SAY.Head) &&
@@ -282,48 +370,6 @@ public class MentalState : MonoBehaviour {
                                     basis.AddPremise(currentLemma);
                                     searchBases.Add(basis);
                                 }
-                            }
-                        }
-                    } else {
-                        // Satisfiers():
-                        // first, we get the domain to search through.
-                        // this is going to correspond to all sentences
-                        // that are structural candidates for matching
-                        // the formula, given the structure of the formula's
-                        // variables and semantic types.
-                        var variables = currentLemma.GetVariables();
-                        var bottomSubstitution = new Substitution();
-                        var topSubstitution = new Substitution();
-                        foreach (Variable v in variables) {
-                            bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
-                            topSubstitution.Add(v, new Expression(new Top(v.Type)));
-                        }
-
-                        var bottom = currentLemma.Substitute(bottomSubstitution);
-                        var top = currentLemma.Substitute(topSubstitution);
-                        // TODO change CompareTo() re: top/bottom so that
-                        // expressions which would unify with F(x) are
-                        // included within the bounds of bot(bot) and top(top)
-                        // This will involve check partial type application
-                        //
-                        // BUT leave this until there's a geniune use case
-                        // in inference, since the way it occurs now is
-                        // potentially more efficient.
-                        SortedSet<Expression> domain = KnowledgeBase.GetViewBetween(bottom, top);
-
-                        // then, we iterate through the domain and pattern match (unify)
-                        // the formula against the sentences in the belief base.
-                        // any sentences that match get added, along with the
-                        // unifying substitution, to the basis set.
-                        foreach (Expression belief in domain) {
-                            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                                yield return null;
-                            }
-                            // Debug.Log("domain includes " + belief);
-                            HashSet<Substitution> unifiers = currentLemma.GetMatches(belief);
-                            foreach (Substitution unifier in unifiers) {
-                                searchBases.Add(new ProofBasis(new List<Expression>(){belief},
-                                    unifier));
                             }
                         }
                     }
@@ -419,7 +465,7 @@ public class MentalState : MonoBehaviour {
                         }
 
                         if (currentLemma.Depth <= this.MaxDepth) {
-                            // plan +
+                            // plan -
                             if (pt == Plan) {
                                 var able = new Expression(ABLE, currentLemma, SELF);
                                 var will = new Expression(WILL, currentLemma);

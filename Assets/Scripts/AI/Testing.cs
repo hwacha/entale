@@ -44,13 +44,26 @@ public class Testing : MonoBehaviour {
 
         var timespan = es.GetViewBetween(bottom, top);
 
-        foreach (var x in timespan) {
-            Debug.Log(x);
-        }
+        // foreach (var x in timespan) {
+        //     Debug.Log(x);
+        // }
 
         MentalState.Initialize(new Expression[]{
-            new Expression(SEE, new Expression(RED, SELF))
+            new Expression(WHEN,
+                new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 10))), BOB),
+                new Expression(new Parameter(TIME, 20))),
+
+            new Expression(WHEN,
+                new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 10))), BOB),
+                new Expression(new Parameter(TIME, 20))),
+                        new Expression(WHEN,
+            
+            new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 20))), BOB),
+                new Expression(new Parameter(TIME, 25))),
         });
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 30)))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(WHEN, new Expression(NOT, new Expression(GREEN, SELF)), new Expression(new Parameter(TIME, 30)))));
     }
 
     public static String Verbose(Expression e) {
@@ -90,7 +103,7 @@ public class Testing : MonoBehaviour {
         var waitingString = "waiting for '" + e + "' to be proved...";
         var isProvedByString = "'" + e + "'" + " is proved by: ";
         while (!done.Item) {
-            if (startTime + timeout <= Time.time) {
+            if (startTime + timeout >= Time.time) {
                 m.StopCoroutine(proofRoutine);
                 break;
             }

@@ -382,6 +382,22 @@ public class Expression : Argument, IComparable<Expression> {
         return new Expression(newHead, substitutedArgs);
     }
 
+    public Expression ZeroTimeIndices() {
+        if (Type.Equals(TIME)) {
+            return new Expression(new Parameter(TIME, 0));
+        }
+        Argument[] replacedArgs = new Argument[Args.Length];
+        for (int i = 0; i < Args.Length; i++) {
+            if (Args[i] is Expression) {
+                replacedArgs[i] = (Args[i] as Expression).ZeroTimeIndices();
+            } else {
+                replacedArgs[i] = Args[i];
+            }
+        }
+
+        return new Expression(new Expression(Head), replacedArgs);
+    }
+
     private void GetSelfSubstitution(Dictionary<Variable, Expression> sub) {
         if (Head is Variable) {
             sub[(Variable) Head] = this;
