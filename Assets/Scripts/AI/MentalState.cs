@@ -42,7 +42,7 @@ public class MentalState : MonoBehaviour {
     public FrameTimer FrameTimer;
 
     protected uint ParameterID;
-    protected uint Timestamp = 0;
+    public uint Timestamp = 0; // public for testing purposes
 
     private SortedSet<Expression> KnowledgeBase;
 
@@ -121,45 +121,6 @@ public class MentalState : MonoBehaviour {
             }
         }
         return new Expression(new Expression(newHead), newArgs);
-    }
-
-    // applies narrow-scope negation to an expression.
-    // e.g. believe(x, P) => believe(x, ~P)
-    //
-    // works specifically for sentential attitudes
-    // with one free sentential argument
-    //
-    // for other sentence types, regular wide-scope
-    // negation will be applied
-    public static Expression NarrowNegation(Expression e) {
-        Debug.Assert(e.Type.Equals(TRUTH_VALUE));
-
-        if (e.Head.Type.Equals(INDIVIDUAL_TRUTH_RELATION) ||
-            e.Head.Type.Equals(TENSER)) {
-            return new Expression(new Expression(e.Head),
-                    NarrowNegation(e.GetArgAsExpression(0)),
-                    e.GetArg(1));
-        }
-
-        if (e.Head.Equals(NOT.Head)) {
-            return e.GetArgAsExpression(0);
-        }
-
-        return new Expression(NOT, e);
-    }
-
-    public uint GetNarrowTime(Expression e) {
-        Debug.Assert(e.Type.Equals(TRUTH_VALUE));
-
-        if (e.Head.Equals(WHEN.Head)) {
-            var subclause = e.GetArgAsExpression(0);
-            if (subclause.Head.Equals(KNOW.Head)) {
-                return GetNarrowTime(subclause);
-            }
-            return (e.GetArgAsExpression(1).Head as Parameter).ID;
-        }
-
-        return Timestamp;
     }
 
     private class ProofNode {
@@ -275,7 +236,6 @@ public class MentalState : MonoBehaviour {
                     // querying the knowledge base.
                     var searchBases = new ProofBases();
 
-
                     // Satisfiers():
                     // first, we get the domain to search through.
                     // this is going to correspond to all sentences
@@ -294,9 +254,46 @@ public class MentalState : MonoBehaviour {
                     var top = currentLemma.Substitute(topSubstitution);
 
                     // inertial tensed query
-                    var positiveZero = ZeroTimeIndices(bottom);
-                    var negativeZero = NarrowNegation(bottom);
-                    var negativeCurrent = NarrowNegation(top);
+                    // @Note: in this iteration, direct, tensed queries
+                    // can only take place on an evidential predicate.
+                    // All others go for regular containment.
+                    if (currentLemma.Head.Type.Equals(PREDICATE_EVIDENTIAL_FUNCTION)) {
+                        var valence = bottom.GetArgAsExpression(3);
+                        var negation = valence.Equals(VERUM) ? FALSUM : VERUM;
+                        var zero = new Expression(
+                                new Expression(bottom.Head),
+                                bottom.GetArgAsExpression(0),
+                                bottom.GetArgAsExpression(1),
+                                new Expression(new Parameter(TIME, 0)),
+                                bottom.GetArgAsExpression(3),
+                                bottom.GetArgAsExpression(4));
+
+                        // we go through the timespan of samples in reverse
+                        // order. All positive samples more recent than
+                        // the most recent negative sample
+                        // entail the target sentence.
+                        var timespan = KnowledgeBase.GetViewBetween(zero, top);
+                        Expression currentSubject = null;
+                        var admissible = true;
+                        foreach (var sample in timespan.Reverse()) {
+                            var sampleSubject = sample.GetArgAsExpression(0);
+                            if (currentSubject == null ||
+                               !currentSubject.Equals(sampleSubject)) {
+                                currentSubject = sampleSubject;
+                                admissible = true;
+                            }
+
+                            if (sample.GetArgAsExpression(3).Equals(negation)) {
+                                admissible = false;
+                            }
+
+                            if (admissible) {
+                                var basis = new ProofBasis();
+                                basis.AddPremise(sample);
+                                searchBases.Add(basis);
+                            }
+                        }
+                    }
 
                     // TODO change CompareTo() re: top/bottom so that
                     // expressions which would unify with F(x) are
@@ -306,29 +303,6 @@ public class MentalState : MonoBehaviour {
                     // BUT leave this until there's a geniune use case
                     // in inference, since the way it occurs now is
                     // potentially more efficient.
-                    
-                    var timespan = KnowledgeBase.GetViewBetween(positiveZero, top);
-                    var timespanNegative = KnowledgeBase.GetViewBetween(negativeZero, negativeCurrent);
-                    var lastPositiveSample = timespan.Max;
-                    var lastNegativeSample = timespanNegative.Max;
-
-                    if (lastPositiveSample != null) {
-                        // even if there are variables,
-                        // we only yield the most recent (for now)
-                        // TODO: multiple satisfiers for one formula
-                        if (lastNegativeSample == null) {
-                            searchBases.Add(new ProofBasis(new List<Expression>(){lastPositiveSample}, new Substitution()));
-                        } else {
-                            var lastPositiveTime = GetNarrowTime(lastPositiveSample);
-                            var lastNegativeTime = GetNarrowTime(lastNegativeSample);
-                            // in this case, the positive case is
-                            // more recent than the negative case.
-                            if (lastPositiveTime > lastNegativeTime) {
-                                // TODO: figure out substitutions too.
-                                searchBases.Add(new ProofBasis(new List<Expression>(){lastPositiveSample}, new Substitution()));
-                            }
-                        }
-                    }
 
                     // these are our base cases.
                     if (currentLemma.GetVariables().Count == 0) {
@@ -392,6 +366,9 @@ public class MentalState : MonoBehaviour {
 
                     bool exhaustive = false;
 
+                    // TODO add expansion rules to turn predicates into
+                    // evidential predicates.
+
                     // we only check against inference rules if
                     // our search bound hasn't been reached.
                     if (current.Depth < maxDepth) {
@@ -408,6 +385,18 @@ public class MentalState : MonoBehaviour {
                             exhaustive = false;
                         }
 
+                        if (currentLemma.Head.Type.Equals(PREDICATE)) {
+                            newStack.Push(new ProofNode(new Expression(EVIDENTIALIZER,
+                                new Expression(currentLemma.Head),
+                                currentLemma.GetArgAsExpression(0),
+                                new Expression(new Parameter(TIME, Timestamp)),
+                                VERUM,
+                                new Expression(new Variable(SemanticType.SOURCE, 0))),
+                                nextDepth, current, i));
+                            exhaustive = false;
+                        }
+
+
                         // double negation +
                         if (currentLemma.Head.Equals(NOT.Head)) {
                             var subclause = currentLemma.GetArgAsExpression(0);
@@ -420,6 +409,17 @@ public class MentalState : MonoBehaviour {
                             // nonidentity assumption
                             if (subclause.Head.Equals(IDENTITY.Head)) {
                                 newStack.Push(new ProofNode(new Expression(NOT, currentLemma), nextDepth, current, i, isAssumption: true));
+                                exhaustive = false;
+                            }
+
+                            if (subclause.Head.Type.Equals(PREDICATE)) {
+                                newStack.Push(new ProofNode(new Expression(EVIDENTIALIZER,
+                                    new Expression(subclause.Head),
+                                    subclause.GetArgAsExpression(0),
+                                    new Expression(new Parameter(TIME, Timestamp)),
+                                    FALSUM,
+                                    new Expression(new Variable(SemanticType.SOURCE, 0))),
+                                    nextDepth, current, i));
                                 exhaustive = false;
                             }
                         }
@@ -473,25 +473,6 @@ public class MentalState : MonoBehaviour {
                                 var ableNode = new ProofNode(able, nextDepth, current, i, supplement: will);
 
                                 newStack.Push(ableNode);
-                                exhaustive = false;
-                            }
-
-                            // see -
-                            if (!currentLemma.Head.Equals(SEE.Head)) {
-                                var see = new Expression(SEE, currentLemma);
-                                var seeNode = new ProofNode(see, nextDepth, current, i);
-                                newStack.Push(seeNode);
-                                exhaustive = false;
-                            }
-
-                            // knows -
-                            if (!currentLemma.Head.Equals(KNOW.Head)) {
-                                var know = new Expression(WHEN, new Expression(KNOW, currentLemma,
-                                    new Expression(GetUnusedVariable(INDIVIDUAL, currentLemma.GetVariables()))),
-                                    new Expression(new Parameter(TIME, Timestamp)));
-
-                                var knowNode = new ProofNode(know, nextDepth, current, i);
-                                newStack.Push(knowNode);
                                 exhaustive = false;
                             }
                         }

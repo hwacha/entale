@@ -45,6 +45,7 @@ public abstract class SemanticType : IComparable<SemanticType> {
     // references to the atomic types.
     public static readonly AtomicType TIME = new I();
     public static readonly AtomicType INDIVIDUAL = new E();
+    public static readonly AtomicType SOURCE = new S();
     public static readonly AtomicType TRUTH_VALUE = new T();
     public static readonly AtomicType CONFORMITY_VALUE = new C();
     public static readonly AtomicType ASSERTION = new A();
@@ -100,6 +101,20 @@ public abstract class SemanticType : IComparable<SemanticType> {
 
     public static readonly FunctionalType TENSER =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE, TIME}, TRUTH_VALUE);
+
+    // experimental
+    public static readonly FunctionalType SOURCE_FUNCTION =
+        new FunctionalType(new SemanticType[]{INDIVIDUAL, TIME}, SOURCE);
+
+    public static readonly FunctionalType SOURCE_RELATION =
+        new FunctionalType(new SemanticType[]{SOURCE, SOURCE}, SOURCE);
+
+    public static readonly FunctionalType EVIDENTIAL_PREDICATE =
+        new FunctionalType(new SemanticType[]{INDIVIDUAL, TIME, TRUTH_VALUE, SOURCE}, TRUTH_VALUE);
+
+    public static readonly FunctionalType PREDICATE_EVIDENTIAL_FUNCTION =
+        new FunctionalType(new SemanticType[]{PREDICATE, INDIVIDUAL, TIME, TRUTH_VALUE, SOURCE}, TRUTH_VALUE);
+     
 
     public abstract int CompareTo(SemanticType that);
 
@@ -347,6 +362,13 @@ public class E : AtomicType {
 public class T : AtomicType {
     public override string ToString() {
         return "t";
+    }
+}
+
+// evidential source
+public class S : AtomicType {
+    public override string ToString() {
+        return "s";
     }
 }
 

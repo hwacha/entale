@@ -21,49 +21,26 @@ public class Testing : MonoBehaviour {
         // DON'T COMMENT ABOVE THIS LINE
         MentalState.FrameTimer = FrameTimer;
 
-        var es = new SortedSet<Expression>{
-            new Expression(WHEN, new Expression(KNOW,
-                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  20))),
-                ALICE), new Expression(new Parameter(TIME, 25))),
-            new Expression(WHEN, new Expression(KNOW,
-                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  10))),
-                EVAN), new Expression(new Parameter(TIME, 28))),
-            new Expression(WHEN, new Expression(KNOW,
-                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  10))),
-                BOB), new Expression(new Parameter(TIME, 20))),
-        };
-
-        // suppose we're trying to prove when(red(self), 30)
-        var bottom = new Expression(WHEN, new Expression(KNOW,
-                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  0))),
-                new Expression(new Bottom(INDIVIDUAL))), new Expression(new Parameter(TIME, 0)));
-
-        var top = new Expression(WHEN, new Expression(KNOW,
-                new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME,  30))),
-                new Expression(new Top(INDIVIDUAL))), new Expression(new Parameter(TIME, 30)));
-
-        var timespan = es.GetViewBetween(bottom, top);
-
-        // foreach (var x in timespan) {
-        //     Debug.Log(x);
-        // }
-
         MentalState.Initialize(new Expression[]{
-            new Expression(WHEN,
-                new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 10))), BOB),
-                new Expression(new Parameter(TIME, 20))),
-
-            new Expression(WHEN,
-                new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 10))), BOB),
-                new Expression(new Parameter(TIME, 20))),
-                        new Expression(WHEN,
-            
-            new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 20))), BOB),
-                new Expression(new Parameter(TIME, 25))),
+            new Expression(EVIDENTIALIZER, RED, SELF, new Expression(new Parameter(TIME, 10)), VERUM,
+                new Expression(Expression.SOURCE, BOB, new Expression(new Parameter(TIME, 20)))),
+            new Expression(EVIDENTIALIZER, RED, SELF, new Expression(new Parameter(TIME, 30)), VERUM,
+                new Expression(VISION)),
+            new Expression(EVIDENTIALIZER, GREEN, SELF, new Expression(new Parameter(TIME, 10)),
+                VERUM, new Expression(Expression.SOURCE, BOB, new Expression(new Parameter(TIME, 20)))),
+            new Expression(EVIDENTIALIZER, GREEN, SELF, new Expression(new Parameter(TIME, 30)),
+                FALSUM, new Expression(VISION)),
         });
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 30)))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(WHEN, new Expression(NOT, new Expression(GREEN, SELF)), new Expression(new Parameter(TIME, 30)))));
+        MentalState.Timestamp = 50;
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(RED, SELF))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(RED, SELF)))));
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GREEN, SELF))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF))))));
     }
 
     public static String Verbose(Expression e) {

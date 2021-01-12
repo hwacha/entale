@@ -929,4 +929,17 @@ public class Expression : Argument, IComparable<Expression> {
 
     // heads for deictic expressions
     public static readonly Expression THIS = new Expression(new Name(INDIVIDUAL, "this"));
+
+    // source operator
+    public static readonly Expression SOURCE = new Expression(new Name(SOURCE_FUNCTION, "source"));
+    public static readonly Expression SOURCED_FROM = new Expression(new Name(SOURCE_RELATION, "sourced_from"));
+    public static readonly Expression VISION = new Expression(new Name(SemanticType.SOURCE, "vision"));
+
+    // turn ordinary predicate into a tensed, evidentialized predicate
+    public static readonly Expression EVIDENTIALIZER =
+        new Expression(new Name(PREDICATE_EVIDENTIAL_FUNCTION, "evidentializer"));
+
+    // sourced predicates
+    public static readonly Expression SOURCED_RED = new Expression(new Name(EVIDENTIAL_PREDICATE, "sred"));
+    public static readonly Expression SOURCED_GREEN = new Expression(new Name(EVIDENTIAL_PREDICATE, "sgreen"));
 }
