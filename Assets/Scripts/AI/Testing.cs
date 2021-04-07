@@ -16,20 +16,49 @@ public class Testing : MonoBehaviour {
     public MentalState MentalState;
 
     void Start() {
+        Debug.Log(SemanticType.Geach(TRUTH_VALUE, TRUTH_VALUE));
+        Debug.Log(SemanticType.Geach(INDIVIDUAL, TRUTH_VALUE));
+
+        Debug.Log(SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION));
+        Debug.Log(SemanticType.Geach(TRUTH_VALUE, TRUTH_FUNCTION));
+
+        Debug.Log(SemanticType.Geach(INDIVIDUAL, QUANTIFIER_PHRASE));
+
         FrameTimer = gameObject.GetComponent<FrameTimer>();
 
         // DON'T COMMENT ABOVE THIS LINE
         MentalState.FrameTimer = FrameTimer;
 
         MentalState.Initialize(new Expression[]{
-            new Expression(EVIDENTIALIZER, RED, SELF, new Expression(new Parameter(TIME, 10)), VERUM,
-                new Expression(Expression.SOURCE, BOB, new Expression(new Parameter(TIME, 20)))),
-            new Expression(EVIDENTIALIZER, RED, SELF, new Expression(new Parameter(TIME, 30)), VERUM,
-                new Expression(VISION)),
-            new Expression(EVIDENTIALIZER, GREEN, SELF, new Expression(new Parameter(TIME, 10)),
-                VERUM, new Expression(Expression.SOURCE, BOB, new Expression(new Parameter(TIME, 20)))),
-            new Expression(EVIDENTIALIZER, GREEN, SELF, new Expression(new Parameter(TIME, 30)),
-                FALSUM, new Expression(VISION)),
+            new Expression(EVIDENTIALIZER,
+                new Expression(RED, SELF), // the basic sentence
+                new Expression(new Parameter(TIME, 10)), // the time the sentence is true
+                TRULY, // whether the sentence is true or false
+                new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB, new Expression(new Parameter(TIME, 20)))), // source/knower
+
+            new Expression(EVIDENTIALIZER,
+                new Expression(RED, SELF),
+                new Expression(new Parameter(TIME, 30)),
+                TRULY,
+                SEE),
+
+            new Expression(EVIDENTIALIZER,
+                new Expression(GREEN, SELF),
+                new Expression(new Parameter(TIME, 10)),
+                TRULY,
+                new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB, new Expression(new Parameter(TIME, 20)))),
+
+            new Expression(EVIDENTIALIZER,
+                new Expression(GREEN, SELF),
+                new Expression(new Parameter(TIME, 30)),
+                NOT,
+                SEE),
+
+            new Expression(EVIDENTIALIZER,
+                new Expression(AT, ALICE, BOB),
+                new Expression(new Parameter(TIME, 40)),
+                TRULY,
+                SEE)
         });
 
         MentalState.Timestamp = 50;
@@ -41,6 +70,8 @@ public class Testing : MonoBehaviour {
         StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
         StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GREEN, SELF))));
         StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF))))));
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(AT, ALICE, BOB)));
     }
 
     public static String Verbose(Expression e) {

@@ -255,18 +255,17 @@ public class MentalState : MonoBehaviour {
 
                     // inertial tensed query
                     // @Note: in this iteration, direct, tensed queries
-                    // can only take place on an evidential predicate.
+                    // can only take place on an evidentialized sentence.
                     // All others go for regular containment.
-                    if (currentLemma.Head.Type.Equals(PREDICATE_EVIDENTIAL_FUNCTION)) {
-                        var valence = bottom.GetArgAsExpression(3);
-                        var negation = valence.Equals(VERUM) ? FALSUM : VERUM;
+                    if (currentLemma.Head.Type.Equals(EVIDENTIAL_FUNCTION)) {
+                        var valence = bottom.GetArgAsExpression(2);
+                        var negation = valence.Equals(TRULY) ? NOT : TRULY;
                         var zero = new Expression(
                                 new Expression(bottom.Head),
                                 bottom.GetArgAsExpression(0),
-                                bottom.GetArgAsExpression(1),
                                 new Expression(new Parameter(TIME, 0)),
-                                bottom.GetArgAsExpression(3),
-                                bottom.GetArgAsExpression(4));
+                                bottom.GetArgAsExpression(2),
+                                bottom.GetArgAsExpression(3));
 
                         // we go through the timespan of samples in reverse
                         // order. All positive samples more recent than
@@ -283,11 +282,16 @@ public class MentalState : MonoBehaviour {
                                 admissible = true;
                             }
 
-                            if (sample.GetArgAsExpression(3).Equals(negation)) {
+                            if (sample.GetArgAsExpression(2).Equals(negation)) {
                                 admissible = false;
                             }
 
                             if (admissible) {
+                                // TODO figure out a way to gather the variables
+                                // for formulas, but not in a way that makes it
+                                // so that knows(p, x) can fix the source.
+                                // (unification doesn't work on its own since
+                                // the timestamps won't be identitical)
                                 var basis = new ProofBasis();
                                 basis.AddPremise(sample);
                                 searchBases.Add(basis);
@@ -384,14 +388,22 @@ public class MentalState : MonoBehaviour {
                             newStack.Push(new ProofNode(subclause, nextDepth, current, i));
                             exhaustive = false;
                         }
-
+                        
+                        // we transform a simple expression with
+                        // negation, tense, and knowledge as adjuncts into one where
+                        // they are explicit parameters.
+                        //
+                        // This allows all knowledge sources to be adjacent in
+                        // the expression ordering, sentences and their negations
+                        // to be adjacent, and for tensed expressions to be in
+                        // chronological order
                         if (currentLemma.Head.Type.Equals(PREDICATE)) {
-                            newStack.Push(new ProofNode(new Expression(EVIDENTIALIZER,
-                                new Expression(currentLemma.Head),
-                                currentLemma.GetArgAsExpression(0),
-                                new Expression(new Parameter(TIME, Timestamp)),
-                                VERUM,
-                                new Expression(new Variable(SemanticType.SOURCE, 0))),
+                            newStack.Push(new ProofNode(
+                                new Expression(EVIDENTIALIZER,
+                                    new Expression(currentLemma),
+                                    new Expression(new Parameter(TIME, Timestamp)),
+                                    TRULY,
+                                    new Expression(new Variable(TRUTH_FUNCTION, 0))),
                                 nextDepth, current, i));
                             exhaustive = false;
                         }
@@ -411,14 +423,15 @@ public class MentalState : MonoBehaviour {
                                 newStack.Push(new ProofNode(new Expression(NOT, currentLemma), nextDepth, current, i, isAssumption: true));
                                 exhaustive = false;
                             }
-
+                            
+                            // NOT: adjunct -> parameter
                             if (subclause.Head.Type.Equals(PREDICATE)) {
-                                newStack.Push(new ProofNode(new Expression(EVIDENTIALIZER,
-                                    new Expression(subclause.Head),
-                                    subclause.GetArgAsExpression(0),
-                                    new Expression(new Parameter(TIME, Timestamp)),
-                                    FALSUM,
-                                    new Expression(new Variable(SemanticType.SOURCE, 0))),
+                                newStack.Push(new ProofNode(
+                                    new Expression(EVIDENTIALIZER,
+                                        new Expression(subclause),
+                                        new Expression(new Parameter(TIME, Timestamp)),
+                                        NOT,
+                                        new Expression(new Variable(TRUTH_FUNCTION, 0))),
                                     nextDepth, current, i));
                                 exhaustive = false;
                             }

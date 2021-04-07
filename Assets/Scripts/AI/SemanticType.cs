@@ -88,32 +88,64 @@ public abstract class SemanticType : IComparable<SemanticType> {
     public static readonly FunctionalType RELATION_2_MODIFIER =
         new FunctionalType(new SemanticType[]{RELATION_2, INDIVIDUAL, INDIVIDUAL}, TRUTH_VALUE);
 
-    public static readonly FunctionalType GEACH_TRUTH_FUNCTION =
-        new FunctionalType(new SemanticType[]{TRUTH_FUNCTION, PREDICATE, INDIVIDUAL}, TRUTH_VALUE);
-    public static readonly FunctionalType GEACH_TRUTH_FUNCTION_2 =
-        new FunctionalType(new SemanticType[]{TRUTH_FUNCTION_2, PREDICATE, PREDICATE, INDIVIDUAL}, TRUTH_VALUE);
-
-    public static readonly FunctionalType GEACH_QUANTIFIER_PHRASE =
-        new FunctionalType(new SemanticType[]{QUANTIFIER_PHRASE, RELATION_2, INDIVIDUAL}, TRUTH_VALUE);
-
     public static readonly FunctionalType PROPOSITIONAL_QUANTIFIER =
         new FunctionalType(new SemanticType[]{TRUTH_FUNCTION, TRUTH_FUNCTION}, TRUTH_VALUE);
 
     public static readonly FunctionalType TENSER =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE, TIME}, TRUTH_VALUE);
 
+    public static readonly FunctionalType TENSED_INDIVIDUAL_TRUTH_RELATION =
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL, TIME}, TRUTH_VALUE);
+
     // experimental
-    public static readonly FunctionalType SOURCE_FUNCTION =
-        new FunctionalType(new SemanticType[]{INDIVIDUAL, TIME}, SOURCE);
+    // evidentialized sentence -
+    // takes a sentence with adjunctive tense, 'know's, and 'not's
+    // and turns them into parameters
+    // 
+    // evidential(S, t, truly/not, know...)
+    // 
+    public static readonly FunctionalType EVIDENTIAL_FUNCTION =
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE, TIME, TRUTH_FUNCTION, TRUTH_FUNCTION}, TRUTH_VALUE);
+    
 
-    public static readonly FunctionalType SOURCE_RELATION =
-        new FunctionalType(new SemanticType[]{SOURCE, SOURCE}, SOURCE);
+    public static SemanticType Push(SemanticType t, SemanticType ts) {
+        if (ts is AtomicType) {
+            return new FunctionalType(new SemanticType[]{t}, (AtomicType) ts);
+        }
 
-    public static readonly FunctionalType EVIDENTIAL_PREDICATE =
-        new FunctionalType(new SemanticType[]{INDIVIDUAL, TIME, TRUTH_VALUE, SOURCE}, TRUTH_VALUE);
+        FunctionalType fts = ts as FunctionalType;
+        var numInputs = fts.GetNumArgs();
+        var newInputs = new SemanticType[numInputs + 1];
 
-    public static readonly FunctionalType PREDICATE_EVIDENTIAL_FUNCTION =
-        new FunctionalType(new SemanticType[]{PREDICATE, INDIVIDUAL, TIME, TRUTH_VALUE, SOURCE}, TRUTH_VALUE);
+        newInputs[0] = t;
+
+        for (int i = 0; i < numInputs; i++) {
+            newInputs[i + 1] = fts.GetInput(i);
+        }
+
+        return new FunctionalType(newInputs, fts.Output);
+    }
+    
+    // if the input type is i1, ..., in -> o,
+    // and the lift type is l, then
+    // the geach type is (l -> i1), ..., (l -> in), l -> o
+    public static SemanticType Geach(SemanticType lift, SemanticType input) {
+        if (input is AtomicType) {
+            return new FunctionalType(new SemanticType[]{lift}, (AtomicType) input);
+        }
+
+        FunctionalType ft = input as FunctionalType;
+        var numInputs = ft.GetNumArgs();
+        SemanticType[] newInputs = new SemanticType[numInputs + 1];
+
+        for (int i = 0; i < numInputs; i++) {
+            newInputs[i] = Push(lift, ft.GetInput(i));
+        }
+
+        newInputs[numInputs] = lift;
+
+        return new FunctionalType(newInputs, ft.Output);
+    }
      
 
     public abstract int CompareTo(SemanticType that);

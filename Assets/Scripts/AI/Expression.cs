@@ -884,6 +884,9 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression TRIED = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "tried"));
     public static readonly Expression PERCEPTUALLY_CLOSED =
         new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
+
+    // tensed ITRs
+    public static readonly Expression KNOW_TENSED = new Expression(new Name(TENSED_INDIVIDUAL_TRUTH_RELATION, "know"));
     
     // determiners
     public static readonly Expression SELECTOR = new Expression(new Name(DETERMINER, "selector"));
@@ -909,9 +912,14 @@ public class Expression : Argument, IComparable<Expression> {
     // 'shift': ABC -> CAB and 'swap': ABC -> BAC should do the trick
     public static readonly Expression CONVERSE = new Expression(new Name(RELATION_2_MODIFIER, "converse"));
     // more function words: Geach
-    public static readonly Expression GEACH_TRUTH_FUNCTION = new Expression(new Name(SemanticType.GEACH_TRUTH_FUNCTION, "geach"));
-    public static readonly Expression GEACH_TRUTH_FUNCTION_2 = new Expression(new Name(SemanticType.GEACH_TRUTH_FUNCTION_2, "geach"));
-    public static readonly Expression GEACH_QUANTIFIER_PHRASE = new Expression(new Name(SemanticType.GEACH_QUANTIFIER_PHRASE, "geach"));
+    public static readonly Expression GEACH_E_TRUTH_FUNCTION = new Expression(new Name(
+        SemanticType.Push(TRUTH_FUNCTION, SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION)), "geach"));
+    public static readonly Expression GEACH_T_TRUTH_FUNCTION = new Expression(new Name(
+        SemanticType.Push(TRUTH_FUNCTION, SemanticType.Geach(TRUTH_VALUE, TRUTH_FUNCTION)), "geach"));
+    public static readonly Expression GEACH_E_TRUTH_FUNCTION_2 = new Expression(new Name(
+        SemanticType.Push(TRUTH_FUNCTION_2, SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION_2)), "geach"));
+    public static readonly Expression GEACH_E_QUANTIFIER_PHRASE = new Expression(new Name(
+        SemanticType.Push(QUANTIFIER_PHRASE, SemanticType.Geach(INDIVIDUAL, QUANTIFIER_PHRASE)), "geach"));
 
     // question and assert functions
     public static readonly Expression ASK = new Expression(new Name(TRUTH_QUESTION_FUNCTION, "ask"));
@@ -930,16 +938,18 @@ public class Expression : Argument, IComparable<Expression> {
     // heads for deictic expressions
     public static readonly Expression THIS = new Expression(new Name(INDIVIDUAL, "this"));
 
-    // source operator
-    public static readonly Expression SOURCE = new Expression(new Name(SOURCE_FUNCTION, "source"));
-    public static readonly Expression SOURCED_FROM = new Expression(new Name(SOURCE_RELATION, "sourced_from"));
-    public static readonly Expression VISION = new Expression(new Name(SemanticType.SOURCE, "vision"));
+    // // source operator
+    // public static readonly Expression SOURCE = new Expression(new Name(SOURCE_FUNCTION, "source"));
+    // public static readonly Expression SOURCED_FROM = new Expression(new Name(SOURCE_RELATION, "sourced_from"));
+    // public static readonly Expression VISION = new Expression(new Name(SemanticType.SOURCE, "vision"));
 
-    // turn ordinary predicate into a tensed, evidentialized predicate
+    // turn basic sentence into a tensed, evidentialized sentence
+    // 
+    // TODO: replace this wiht a general-purpose type-shifter.
     public static readonly Expression EVIDENTIALIZER =
-        new Expression(new Name(PREDICATE_EVIDENTIAL_FUNCTION, "evidentializer"));
+        new Expression(new Name(EVIDENTIAL_FUNCTION, "evidentializer"));
 
-    // sourced predicates
-    public static readonly Expression SOURCED_RED = new Expression(new Name(EVIDENTIAL_PREDICATE, "sred"));
-    public static readonly Expression SOURCED_GREEN = new Expression(new Name(EVIDENTIAL_PREDICATE, "sgreen"));
+    // // sourced predicates
+    // public static readonly Expression SOURCED_RED = new Expression(new Name(EVIDENTIAL_PREDICATE, "sred"));
+    // public static readonly Expression SOURCED_GREEN = new Expression(new Name(EVIDENTIAL_PREDICATE, "sgreen"));
 }
