@@ -282,7 +282,13 @@ public class MentalState : MonoBehaviour {
                                 admissible = true;
                             }
 
-                            if (sample.GetArgAsExpression(2).Equals(negation)) {
+                            // pattern match the evidential parameter.
+                            var evidentialDoesNotMatch =
+                                currentLemma.GetArgAsExpression(3).
+                                    GetMatches(sample.GetArgAsExpression(3)).Count == 0;
+
+                            if (sample.GetArgAsExpression(2).Equals(negation) ||
+                                evidentialDoesNotMatch) {
                                 admissible = false;
                             }
 
@@ -397,15 +403,33 @@ public class MentalState : MonoBehaviour {
                         // the expression ordering, sentences and their negations
                         // to be adjacent, and for tensed expressions to be in
                         // chronological order
-                        if (currentLemma.Head.Type.Equals(PREDICATE)) {
-                            newStack.Push(new ProofNode(
-                                new Expression(EVIDENTIALIZER,
-                                    new Expression(currentLemma),
-                                    new Expression(new Parameter(TIME, Timestamp)),
-                                    TRULY,
-                                    new Expression(new Variable(TRUTH_FUNCTION, 0))),
-                                nextDepth, current, i));
-                            exhaustive = false;
+                        // 
+                        // TODO: make a general evidentialize() method that takes
+                        // a simple sentence and gives its evidentialized form.
+                        if (!currentLemma.Head.Type.Equals(EVIDENTIALIZER.Head.Type)) {
+                            // here we're checking if there's a factive
+                            // evidential, e.g. knows or sees
+                            if (currentLemma.Head.Equals(SEE.Head)) {
+                                newStack.Push(new ProofNode(
+                                    new Expression(EVIDENTIALIZER,
+                                        new Expression(currentLemma.GetArgAsExpression(0)),
+                                        new Expression(new Parameter(TIME, Timestamp)),
+                                        TRULY,
+                                        SEE),
+                                    nextDepth, current, i));
+                                exhaustive = false;
+                            } else {
+                                // if not, we just put the whole sentence into the
+                                // evidentializer.
+                                newStack.Push(new ProofNode(
+                                    new Expression(EVIDENTIALIZER,
+                                        new Expression(currentLemma),
+                                        new Expression(new Parameter(TIME, Timestamp)),
+                                        TRULY,
+                                        new Expression(new Variable(TRUTH_FUNCTION, 0))),
+                                    nextDepth, current, i));
+                                exhaustive = false;
+                            }
                         }
 
 
@@ -425,7 +449,7 @@ public class MentalState : MonoBehaviour {
                             }
                             
                             // NOT: adjunct -> parameter
-                            if (subclause.Head.Type.Equals(PREDICATE)) {
+                            if (!subclause.Head.Type.Equals(EVIDENTIALIZER.Head.Type)) {
                                 newStack.Push(new ProofNode(
                                     new Expression(EVIDENTIALIZER,
                                         new Expression(subclause),

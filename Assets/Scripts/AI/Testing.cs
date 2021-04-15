@@ -72,6 +72,8 @@ public class Testing : MonoBehaviour {
         StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF))))));
 
         StartCoroutine(LogBasesStream(MentalState, new Expression(AT, ALICE, BOB)));
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(SEE, new Expression(RED, SELF))));
     }
 
     public static String Verbose(Expression e) {
