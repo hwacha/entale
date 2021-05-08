@@ -258,6 +258,7 @@ public class MentalState : MonoBehaviour {
                     // can only take place on an evidentialized sentence.
                     // All others go for regular containment.
                     if (currentLemma.Head.Type.Equals(EVIDENTIAL_FUNCTION)) {
+                        Debug.Log(currentLemma);
                         var valence = bottom.GetArgAsExpression(2);
                         var negation = valence.Equals(TRULY) ? NOT : TRULY;
                         var zero = new Expression(
@@ -272,24 +273,54 @@ public class MentalState : MonoBehaviour {
                         // the most recent negative sample
                         // entail the target sentence.
                         var timespan = KnowledgeBase.GetViewBetween(zero, top);
-                        Expression currentSubject = null;
+                        Expression currentContent = null;
                         var admissible = true;
                         foreach (var sample in timespan.Reverse()) {
-                            var sampleSubject = sample.GetArgAsExpression(0);
-                            if (currentSubject == null ||
-                               !currentSubject.Equals(sampleSubject)) {
-                                currentSubject = sampleSubject;
+
+                            var sampleContent = sample.GetArgAsExpression(0);
+
+                            if (currentContent == null ||
+                               !currentContent.Equals(sampleContent)) {
+                                currentContent = sampleContent;
                                 admissible = true;
                             }
 
-                            // pattern match the evidential parameter.
-                            var evidentialDoesNotMatch =
-                                currentLemma.GetArgAsExpression(3).
-                                    GetMatches(sample.GetArgAsExpression(3)).Count == 0;
+                            var detensedCurrentLemma = new Expression(
+                                new Expression(currentLemma.Head),
+                                currentLemma.GetArgAsExpression(0),
+                                new Expression(GetUnusedVariable(TIME, currentLemma.GetVariables())),
+                                currentLemma.GetArgAsExpression(2),
+                                currentLemma.GetArgAsExpression(3));
 
-                            if (sample.GetArgAsExpression(2).Equals(negation) ||
-                                evidentialDoesNotMatch) {
+                            // pattern match the evidential parameter.
+                            // 
+                            // TODO figure out how match against the geached evidential
+                            // parameters. Not working yet.
+                            var evidentialDoesNotMatch =
+                                detensedCurrentLemma.GetArgAsExpression(3)
+                                    .GetMatches(sample.GetArgAsExpression(3)).Count == 0;
+
+                            // if we do match the pattern, then the content
+                            // and mode of evidence both match with contraries.
+                            // 
+                            // None of the evidence before this point is admissible.
+                            // 
+                            // @Note is the right for when it comes
+                            // to evidence from other subjects?
+                            // 
+                            if (sample.GetArgAsExpression(2).Equals(negation) &&
+                                !evidentialDoesNotMatch) {
                                 admissible = false;
+                            }
+
+                            // Here, the evidential doesn't match, so we skip over it.
+                            // This is for when we want to know not just P but whether
+                            // a given subject X knows P.
+                            // 
+                            // Earlier evidence is still admissible
+                            // if we pass over it, though.
+                            if (evidentialDoesNotMatch) {
+                                continue;
                             }
 
                             if (admissible) {
@@ -316,6 +347,8 @@ public class MentalState : MonoBehaviour {
 
                     // these are our base cases.
                     if (currentLemma.GetVariables().Count == 0) {
+
+                        // I can say anything.
                         if (currentLemma.Head.Equals(ABLE.Head) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
                             currentLemma.GetArgAsExpression(0).Head.Equals(SAY.Head) &&
@@ -325,6 +358,7 @@ public class MentalState : MonoBehaviour {
                             searchBases.Add(basis);
                         }
 
+                        // I can go anywhere.
                         if (currentLemma.Head.Equals(ABLE.Head) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
                             currentLemma.GetArgAsExpression(0).Head.Equals(AT.Head) &&
@@ -406,7 +440,77 @@ public class MentalState : MonoBehaviour {
                         // 
                         // TODO: make a general evidentialize() method that takes
                         // a simple sentence and gives its evidentialized form.
-                        if (!currentLemma.Head.Type.Equals(EVIDENTIALIZER.Head.Type)) {
+                        if (currentLemma.Head.Type.Equals(EVIDENTIALIZER.Head.Type)) {
+                            var content = currentLemma.GetArgAsExpression(0);
+
+                            // here, we're flipping the parity of the evidential
+                            // and trimming off 'not's from the content sentence
+                            if (content.Head.Equals(NOT.Head)) {
+                                var parity = currentLemma.GetArgAsExpression(2);
+                                var negation = parity.Equals(TRULY) ? NOT : TRULY;
+
+                                var negatedEvidential = new Expression(EVIDENTIALIZER,
+                                    content.GetArgAsExpression(0),
+                                    currentLemma.GetArgAsExpression(1),
+                                    negation,
+                                    currentLemma.GetArgAsExpression(3));
+
+                                newStack.Push(new ProofNode(negatedEvidential, nextDepth, current, i));
+                                exhaustive = false;
+                            }
+
+                            // Here, we trim off a factive evidential/factive from the content,
+                            // geach the current evidential, and apply the trimmed evidential
+                            // to the geached evidential
+                            // 
+                            // @note instead of checking each word that happens to be factive,
+                            // should we instead have a distinct type for them?
+                            // 
+                            // @note @note we could do this with the order of arguments between
+                            // subject and content. For the factives, the content could come first,
+                            // and for the non-factives, the subject could come first.
+                            if (content.Head.Equals(SEE.Head) && currentLemma.GetArgAsExpression(2).Equals(TRULY)) {
+                                // note that the parity of the evidential must be
+                                // positive to trim the factive evidential off.
+                                var subContent = content.GetArgAsExpression(0);
+
+                                var geachedEvidential =
+                                    new Expression(GEACH_T_TRUTH_FUNCTION,
+                                            currentLemma.GetArgAsExpression(3));
+
+                                newStack.Push(new ProofNode(
+                                    new Expression(EVIDENTIALIZER, subContent,
+                                    currentLemma.GetArgAsExpression(1),
+                                    currentLemma.GetArgAsExpression(2),
+                                    new Expression(geachedEvidential,
+                                        new Expression(SEE,
+                                            new Empty(TRUTH_VALUE),
+                                            content.GetArgAsExpression(1)))),
+                                nextDepth, current, i));
+                                exhaustive = false;
+                            }
+
+                            if (content.Head.Equals(KNOW.Head) && currentLemma.GetArgAsExpression(2).Equals(TRULY)) {
+                                var subContent = content.GetArgAsExpression(0);
+
+                                var geachedEvidential =
+                                    new Expression(GEACH_T_TRUTH_FUNCTION,
+                                            currentLemma.GetArgAsExpression(3));
+
+                                newStack.Push(new ProofNode(
+                                    new Expression(EVIDENTIALIZER, subContent,
+                                        currentLemma.GetArgAsExpression(1),
+                                        currentLemma.GetArgAsExpression(2),
+                                        new Expression(geachedEvidential,
+                                            new Expression(KNOW_TENSED,
+                                                new Empty(TRUTH_VALUE),
+                                                content.GetArgAsExpression(1),
+                                                new Expression(GetUnusedVariable(TIME,
+                                                    currentLemma.GetVariables()))))),
+                                nextDepth, current, i));
+                                exhaustive = false;
+                            }
+                        } else {
                             // here we're checking if there's a factive
                             // evidential, e.g. knows or sees
                             if (currentLemma.Head.Equals(SEE.Head)) {
@@ -415,8 +519,24 @@ public class MentalState : MonoBehaviour {
                                         new Expression(currentLemma.GetArgAsExpression(0)),
                                         new Expression(new Parameter(TIME, Timestamp)),
                                         TRULY,
-                                        SEE),
+                                        new Expression(SEE, new Empty(TRUTH_VALUE),
+                                            currentLemma.GetArgAsExpression(1))),
                                     nextDepth, current, i));
+                                exhaustive = false;
+                            } else if (currentLemma.Head.Equals(KNOW.Head)) {
+                                var evidentializedExpression =
+                                    new Expression(EVIDENTIALIZER,
+                                            new Expression(currentLemma.GetArgAsExpression(0)),
+                                            new Expression(new Parameter(TIME, Timestamp)),
+                                            TRULY,
+                                            new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE),
+                                                currentLemma.GetArgAsExpression(1),
+                                                // TODO: change this to be a timestamp as well,
+                                                // and change evidential search to do a whole-expression
+                                                // replacement of the timestamp.
+                                                new Expression(GetUnusedVariable(TIME, currentLemma.GetVariables()))));
+
+                                newStack.Push(new ProofNode(evidentializedExpression, nextDepth, current, i));
                                 exhaustive = false;
                             } else {
                                 // if not, we just put the whole sentence into the
@@ -431,7 +551,6 @@ public class MentalState : MonoBehaviour {
                                 exhaustive = false;
                             }
                         }
-
 
                         // double negation +
                         if (currentLemma.Head.Equals(NOT.Head)) {
@@ -694,7 +813,9 @@ public class MentalState : MonoBehaviour {
 
         var timeParam = new Expression(new Parameter(TIME, Timestamp));
 
-        var percept = new Expression(SEE, new Expression(WHEN, new Expression(characteristic, param), timeParam));
+        var percept = new Expression(SEE,
+            new Expression(WHEN, new Expression(characteristic, param), timeParam),
+            SELF);
 
         // we need to queue this up so that it doesn't cause a
         // concurrent modification problem.
@@ -704,12 +825,18 @@ public class MentalState : MonoBehaviour {
         return param;
     }
 
+    private IEnumerator AddToKnowledgeBase(Expression knowledge) {
+        // TODO: add a reduction step which reduces
+        // and evidentializes the sentence to be added
+        KnowledgeBase.Add(knowledge);
+        yield return null;
+    }
+
     // a direct assertion.
     // @TODO add an inference rule to cover knowledge from
     // assertion. Now is a simple fix.
     public IEnumerator ReceiveAssertion(Expression content, Expression speaker) {
-        var timeParam = new Expression(new Parameter(TIME, Timestamp));
-        KnowledgeBase.Add(new Expression(KNOW, new Expression(WHEN, content, timeParam)));
+        KnowledgeBase.Add(new Expression(KNOW, content, speaker));
         // TODO check to see if this is inconsistent
         // with the current knowledge base
         yield return null;

@@ -16,13 +16,13 @@ public class Testing : MonoBehaviour {
     public MentalState MentalState;
 
     void Start() {
-        Debug.Log(SemanticType.Geach(TRUTH_VALUE, TRUTH_VALUE));
-        Debug.Log(SemanticType.Geach(INDIVIDUAL, TRUTH_VALUE));
+        // Debug.Log(SemanticType.Geach(TRUTH_VALUE, TRUTH_VALUE));
+        // Debug.Log(SemanticType.Geach(INDIVIDUAL, TRUTH_VALUE));
 
-        Debug.Log(SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION));
-        Debug.Log(SemanticType.Geach(TRUTH_VALUE, TRUTH_FUNCTION));
+        // Debug.Log(SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION));
+        // Debug.Log(SemanticType.Geach(TRUTH_VALUE, TRUTH_FUNCTION));
 
-        Debug.Log(SemanticType.Geach(INDIVIDUAL, QUANTIFIER_PHRASE));
+        // Debug.Log(SemanticType.Geach(INDIVIDUAL, QUANTIFIER_PHRASE));
 
         FrameTimer = gameObject.GetComponent<FrameTimer>();
 
@@ -40,7 +40,7 @@ public class Testing : MonoBehaviour {
                 new Expression(RED, SELF),
                 new Expression(new Parameter(TIME, 30)),
                 TRULY,
-                SEE),
+                new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
 
             new Expression(EVIDENTIALIZER,
                 new Expression(GREEN, SELF),
@@ -52,28 +52,69 @@ public class Testing : MonoBehaviour {
                 new Expression(GREEN, SELF),
                 new Expression(new Parameter(TIME, 30)),
                 NOT,
-                SEE),
+                new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
 
             new Expression(EVIDENTIALIZER,
                 new Expression(AT, ALICE, BOB),
                 new Expression(new Parameter(TIME, 40)),
                 TRULY,
-                SEE)
+                new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
+
+            new Expression(EVIDENTIALIZER,
+                new Expression(BLUE, SELF),
+                new Expression(new Parameter(TIME, 35)),
+                TRULY,
+                new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
+
+            new Expression(EVIDENTIALIZER,
+                new Expression(AT, SELF, ALICE),
+                new Expression(new Parameter(TIME, 37)),
+                TRULY,
+                new Expression(GEACH_T_TRUTH_FUNCTION,
+                    new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB,
+                        new Expression(new Parameter(TIME, 39))),
+                    new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), ALICE,
+                        new Expression(new Parameter(TIME, 38))))),
         });
 
         MentalState.Timestamp = 50;
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(RED, SELF))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(RED, SELF)))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(RED, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(RED, SELF)))));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GREEN, SELF))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF))))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GREEN, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF))))));
+        
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(AT, ALICE, BOB)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(AT, ALICE, BOB)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(SEE, new Expression(RED, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SEE, new Expression(RED, SELF), SELF)));
+
+        // check MentalState.cs #429
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(KNOW,
+        //         new Expression(RED, SELF), BOB)));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME, RED, BLUE)));
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(AT, SELF, ALICE)));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW, new Expression(AT, SELF, ALICE), BOB)));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW, new Expression(AT, SELF, ALICE), ALICE)));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW,
+                new Expression(KNOW,
+                    new Expression(AT, SELF, ALICE),
+                    ALICE),
+                BOB)));
     }
 
     public static String Verbose(Expression e) {

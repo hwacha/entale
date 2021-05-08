@@ -97,13 +97,22 @@ public class Variable : Atom {
         ID = id;
     }
 
-    public override string ToString() {
-        return "{" + ID + "}";
+    public override bool Equals(Object o) {
+        if (!(o is Variable)) {
+            return false;
+        }
+        Variable that = o as Variable;
+        
+        return ID == that.ID && Type == that.Type;
     }
 
     public override int GetHashCode() {
         return 23 * Type.GetHashCode() * (int) ID;
-    } 
+    }
+
+    public override string ToString() {
+        return "{" + ID + "}";
+    }
 }
 
 // A symbol that can be publicly
@@ -114,12 +123,22 @@ public class Name : Constant {
         ID = id;
     }
 
-    public override string ToString() {
-        return ID;
+    public override bool Equals(Object o) {
+        if (!(o is Name)) {
+            return false;
+        }
+
+        Name that = o as Name;
+
+        return Type.Equals(that.Type) && ID.Equals(that.ID);
     }
 
     public override int GetHashCode() {
         return 29 * Type.GetHashCode() * ID.GetHashCode();
+    }
+
+    public override string ToString() {
+        return ID;
     }
 }
 
@@ -131,17 +150,33 @@ public class Parameter : Constant {
         ID = id;
     }
 
-    public override string ToString() {
-        return "$" + ID;
+    public override bool Equals(Object o) {
+        if (!(o is Parameter)) {
+            return false;
+        }
+
+        Parameter that = o as Parameter;
+
+        return ID == that.ID && Type.Equals(that.Type);
     }
 
     public override int GetHashCode() {
         return 31 * Type.GetHashCode() * (int) ID;
     }
+
+    public override string ToString() {
+        return "$" + ID;
+    }
+
+    
 }
 
 public class Bottom : Bound {
     public Bottom(SemanticType type) : base(type) {}
+
+    public override bool Equals(Object o) {
+        return o is Bottom;
+    }
 
     public override string ToString() {
         return "\u22A5";
@@ -151,16 +186,13 @@ public class Bottom : Bound {
 public class Top : Bound {
     public Top(SemanticType type) : base(type) {}
 
+    public override bool Equals(Object o) {
+        return o is Top;
+    }
+
     public override string ToString() {
         return "\u22A4";
     }
-}
-
-// @note used as a placeholder in
-// the expression trie without
-// another interpretation.
-public class Blank : Atom {
-    public Blank(SemanticType type) : base(type) {}
 }
 
 // a wrapper for what can occur in the
@@ -851,7 +883,6 @@ public class Expression : Argument, IComparable<Expression> {
     // the question of whether "A" is closed,
     // so you either believe A or ~A
     public static readonly Expression CLOSED = new Expression(new Name(TRUTH_FUNCTION, "closed"));
-    public static readonly Expression SEE = new Expression(new Name(TRUTH_FUNCTION, "see"));
     public static readonly Expression GOOD = new Expression(new Name(TRUTH_FUNCTION, "good"));
 
     // higher-order variables
@@ -877,6 +908,7 @@ public class Expression : Argument, IComparable<Expression> {
     // individual-truth relations
     public static readonly Expression SAY = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "say"));
     public static readonly Expression KNOW = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
+    public static readonly Expression SEE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "see"));
     public static readonly Expression BELIEVE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "believe"));
     public static readonly Expression ABLE    = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
     public static readonly Expression PERCEIVE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceive"));

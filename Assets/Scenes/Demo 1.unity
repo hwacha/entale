@@ -1951,6 +1951,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   FrameTimer: {fileID: 529820789}
+  Timestamp: 0
 --- !u!114 &529820788
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5257,6 +5258,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   FrameTimer: {fileID: 1217974165}
+  Timestamp: 0
 --- !u!1 &1222231357
 GameObject:
   m_ObjectHideFlags: 0
@@ -5833,6 +5835,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   FrameTimer: {fileID: 1360699762}
+  Timestamp: 0
 --- !u!114 &1360699762
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11953,6 +11956,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   FrameTimer: {fileID: 1995144152}
+  Timestamp: 0
 --- !u!114 &1995144152
 MonoBehaviour:
   m_ObjectHideFlags: 0
