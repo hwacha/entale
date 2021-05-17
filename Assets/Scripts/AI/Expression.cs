@@ -92,8 +92,8 @@ public abstract class Constant : Atom {
 // A variable. Can be replaced by
 // different values in a substitution.
 public class Variable : Atom {
-    public readonly uint ID;
-    public Variable(SemanticType type, uint id) : base(type) {
+    public readonly int ID;
+    public Variable(SemanticType type, int id) : base(type) {
         ID = id;
     }
 
@@ -145,8 +145,8 @@ public class Name : Constant {
 // A parameter. A private symbol the
 // mental state can privately assign.
 public class Parameter : Constant {
-    public readonly uint ID;
-    public Parameter(SemanticType type, uint id) : base(type) {
+    public readonly int ID;
+    public Parameter(SemanticType type, int id) : base(type) {
         ID = id;
     }
 

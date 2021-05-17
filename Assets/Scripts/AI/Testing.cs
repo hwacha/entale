@@ -66,15 +66,28 @@ public class Testing : MonoBehaviour {
                 TRULY,
                 new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
 
+            // new Expression(EVIDENTIALIZER,
+            //     new Expression(AT, SELF, ALICE),
+            //     new Expression(new Parameter(TIME, 37)),
+            //     TRULY,
+            //     new Expression(GEACH_T_TRUTH_FUNCTION,
+            //         new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB,
+            //             new Expression(new Parameter(TIME, 39))),
+            //         new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), ALICE,
+            //             new Expression(new Parameter(TIME, 38))))),
+
             new Expression(EVIDENTIALIZER,
                 new Expression(AT, SELF, ALICE),
                 new Expression(new Parameter(TIME, 37)),
                 TRULY,
                 new Expression(GEACH_T_TRUTH_FUNCTION,
-                    new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB,
-                        new Expression(new Parameter(TIME, 39))),
-                    new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), ALICE,
-                        new Expression(new Parameter(TIME, 38))))),
+                    new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), CHARLIE,
+                        new Expression(new Parameter(TIME, 40))),
+                    new Expression(GEACH_T_TRUTH_FUNCTION,
+                        new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB,
+                            new Expression(new Parameter(TIME, 39))),
+                        new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), ALICE,
+                            new Expression(new Parameter(TIME, 38)))))),
         });
 
         MentalState.Timestamp = 50;
@@ -101,13 +114,13 @@ public class Testing : MonoBehaviour {
         // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(SOME, RED, BLUE)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(AT, SELF, ALICE)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(AT, SELF, ALICE)));
 
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(KNOW, new Expression(AT, SELF, ALICE), BOB)));
 
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(KNOW, new Expression(AT, SELF, ALICE), ALICE)));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(KNOW, new Expression(AT, SELF, ALICE), ALICE)));
 
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(KNOW,
@@ -115,7 +128,86 @@ public class Testing : MonoBehaviour {
                     new Expression(AT, SELF, ALICE),
                     ALICE),
                 BOB)));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW,
+                new Expression(KNOW,
+                    new Expression(AT, SELF, ALICE),
+                    ALICE),
+                CHARLIE)));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW,
+                new Expression(KNOW,
+                    new Expression(AT, SELF, ALICE),
+                    BOB),
+                CHARLIE)));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW,
+                new Expression(KNOW,
+                    new Expression(AT, SELF, ALICE),
+                    BOB),
+                ALICE)));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW,
+                new Expression(KNOW,
+                    new Expression(AT, SELF, ALICE),
+                    CHARLIE),
+                BOB)));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW,
+                new Expression(KNOW,
+                    new Expression(AT, SELF, ALICE),
+                    CHARLIE),
+                ALICE)));
+
+
+        // StartCoroutine(TestEvidentialContains(MentalState,
+        //     new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), SELF, new Expression(new Variable(TIME, 0))),
+        //     new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), SELF, new Expression(new Parameter(TIME, 7)))));
+
+        // StartCoroutine(TestEvidentialContains(MentalState,
+        //     new Expression(KNOW, new Empty(TRUTH_VALUE), BOB),
+        //     new Expression(GEACH_T_TRUTH_FUNCTION, new Expression(KNOW,
+        //         new Empty(TRUTH_VALUE), BOB),
+        //         new Expression(KNOW, new Empty(TRUTH_VALUE), ALICE))));
+
+        // StartCoroutine(TestEvidentialContains(MentalState,
+        //     new Expression(KNOW, new Empty(TRUTH_VALUE), ALICE),
+        //     new Expression(GEACH_T_TRUTH_FUNCTION, new Expression(KNOW,
+        //         new Empty(TRUTH_VALUE), BOB),
+        //         new Expression(KNOW, new Empty(TRUTH_VALUE), ALICE))));
+
+        // StartCoroutine(TestEvidentialContains(MentalState,
+        //     new Expression(GEACH_T_TRUTH_FUNCTION, new Expression(KNOW,
+        //         new Empty(TRUTH_VALUE), ALICE),
+        //         new Expression(KNOW, new Empty(TRUTH_VALUE), BOB)),
+        //     new Expression(GEACH_T_TRUTH_FUNCTION, new Expression(KNOW,
+        //         new Empty(TRUTH_VALUE), BOB),
+        //         new Expression(KNOW, new Empty(TRUTH_VALUE), ALICE))));
     }
+
+    public static IEnumerator TestEvidentialContains(MentalState m, Expression query, Expression knowledge) {
+        var match = new Container<bool>(false);
+        var done = new Container<bool>(false);
+
+        m.StartCoroutine(m.EvidentialContains(query, knowledge, match, done));
+
+        while (!done.Item) {
+            yield return null;
+        }
+
+        if (match.Item) {
+            Debug.Log(query + " matches " + knowledge);
+        } else {
+            Debug.Log(query + " does not match " + knowledge);
+        }
+
+        yield break;
+    } 
 
     public static String Verbose(Expression e) {
         return e.ToString() + " : " + e.Type.ToString() + " #" + e.Depth;

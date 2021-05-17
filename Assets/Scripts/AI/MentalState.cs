@@ -41,8 +41,8 @@ public class MentalState : MonoBehaviour {
 
     public FrameTimer FrameTimer;
 
-    protected uint ParameterID;
-    public uint Timestamp = 0; // public for testing purposes
+    protected int ParameterID;
+    public int Timestamp = 0; // public for testing purposes
 
     private SortedSet<Expression> KnowledgeBase;
 
@@ -99,7 +99,7 @@ public class MentalState : MonoBehaviour {
     }
 
     // gets a parameter that's unused in the mental state
-    public uint GetNextParameterID() {
+    public int GetNextParameterID() {
         var param = ParameterID;
         ParameterID++;
         return param;
@@ -121,6 +121,72 @@ public class MentalState : MonoBehaviour {
             }
         }
         return new Expression(new Expression(newHead), newArgs);
+    }
+
+    // helper funtion for StreamBases().
+    // checks two geached, complex evidentials against one another.
+    // 
+    // if, for example, we have
+    // knows(knows(p, a), b) being checked against knows(knows(knows(p, a), b), c),
+    // we want this to return true (along with any other subsequence of a, b, c).
+    public IEnumerator EvidentialContains(Expression query, Expression knowledge,
+        Container<bool> match,
+        Container<bool> done) {
+
+        // Debug.Log("query: " + query + ", knowledge: " + knowledge);
+
+        var currentQuery = query;
+        var currentKnowledge = knowledge;
+
+        while (true) {
+            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+                yield return null;
+            }
+
+            // Debug.Log("query: " + currentQuery + ", knowledge: " + currentKnowledge);
+
+            // this means the knowledge evidential is the last
+            // level before the content.
+            // 
+            // In this case, the only way for the query to match
+            // is to equal the knowledge.
+            if (!currentKnowledge.Head.Equals(GEACH_T_TRUTH_FUNCTION.Head)) {
+                match.Item = currentQuery.GetMatches(currentKnowledge).Count > 0;
+                done.Item = true;
+                yield break;
+            }
+
+            var topLevelKnowledge = currentKnowledge.GetArgAsExpression(0);
+
+            bool isQueryDeep = currentQuery.Head.Equals(GEACH_T_TRUTH_FUNCTION.Head);
+
+            var topLevelQuery = isQueryDeep ? currentQuery.GetArgAsExpression(0) : currentQuery;
+
+            bool topLevelMatch = topLevelQuery.GetMatches(topLevelKnowledge).Count > 0;
+
+            // another base case:
+            // no more query levels, so if we
+            // matched, we're good. Keep going
+            // if we didn't match.
+            if (!isQueryDeep && topLevelMatch) {
+                match.Item = true;
+                done.Item = true;
+                yield break;
+            }
+
+            // we peel off a query level if we matched.
+            if (topLevelMatch) {
+                currentQuery = currentQuery.GetArgAsExpression(1);    
+            }
+
+            // we peel of a knowledge level, regardless.
+            currentKnowledge = currentKnowledge.GetArgAsExpression(1);
+        }
+
+        // we shouldn't ever get here,
+        // but just exit out if we do.
+        done.Item = true;
+        yield break;
     }
 
     private class ProofNode {
@@ -258,7 +324,7 @@ public class MentalState : MonoBehaviour {
                     // can only take place on an evidentialized sentence.
                     // All others go for regular containment.
                     if (currentLemma.Head.Type.Equals(EVIDENTIAL_FUNCTION)) {
-                        Debug.Log(currentLemma);
+                        // Debug.Log(currentLemma);
                         var valence = bottom.GetArgAsExpression(2);
                         var negation = valence.Equals(TRULY) ? NOT : TRULY;
                         var zero = new Expression(
@@ -296,20 +362,29 @@ public class MentalState : MonoBehaviour {
                             // 
                             // TODO figure out how match against the geached evidential
                             // parameters. Not working yet.
-                            var evidentialDoesNotMatch =
-                                detensedCurrentLemma.GetArgAsExpression(3)
-                                    .GetMatches(sample.GetArgAsExpression(3)).Count == 0;
+                            var evidentialContainsMatch = new Container<bool>(false);
+                            var evidentialContainsDone = new Container<bool>(false);
+
+                            StartCoroutine(EvidentialContains(
+                                query: detensedCurrentLemma.GetArgAsExpression(3),
+                                knowledge: sample.GetArgAsExpression(3),
+                                match: evidentialContainsMatch,
+                                done: evidentialContainsDone));
+
+                            while (!evidentialContainsDone.Item) {
+                                yield return null;
+                            }
 
                             // if we do match the pattern, then the content
                             // and mode of evidence both match with contraries.
                             // 
                             // None of the evidence before this point is admissible.
                             // 
-                            // @Note is the right for when it comes
+                            // @Note is this right for when it comes
                             // to evidence from other subjects?
                             // 
                             if (sample.GetArgAsExpression(2).Equals(negation) &&
-                                !evidentialDoesNotMatch) {
+                                evidentialContainsMatch.Item) {
                                 admissible = false;
                             }
 
@@ -319,7 +394,7 @@ public class MentalState : MonoBehaviour {
                             // 
                             // Earlier evidence is still admissible
                             // if we pass over it, though.
-                            if (evidentialDoesNotMatch) {
+                            if (!evidentialContainsMatch.Item) {
                                 continue;
                             }
 
