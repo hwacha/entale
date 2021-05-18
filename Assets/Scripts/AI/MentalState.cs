@@ -958,20 +958,79 @@ public class MentalState : MonoBehaviour {
     }
 
     private IEnumerator AddToKnowledgeBase(Expression knowledge) {
+        var assertionTime = Timestamp;
         // TODO: add a reduction step which reduces
         // and evidentializes the sentence to be added
         KnowledgeBase.Add(knowledge);
-        yield return null;
+
+        Expression cur = knowledge;
+        bool parity = true;
+        Expression evidential = null;
+
+        // we turn this statement into an evidentialized form.
+        // 
+        // TODO: make this smarter, so it doesn't mess up
+        // sentences like not(knows, p, x) or
+        // knows(~~p, x) and stuff of the sort.
+        while (true) {
+            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+                yield return null;
+            }
+
+            if (cur.Head.Equals(NOT.Head)) {
+                cur = cur.GetArgAsExpression(0);
+                parity = !parity;
+            } else if (cur.Head.Equals(KNOW.Head)) {
+                cur = cur.GetArgAsExpression(0);
+                var wrapper = new Expression(KNOW_TENSED,
+                        new Empty(TRUTH_VALUE),
+                        cur.GetArgAsExpression(1),
+                        new Expression(new Parameter(TIME, assertionTime)));
+
+                if (evidential == null) {
+                    evidential = wrapper;
+                } else {
+                    evidential = new Expression(GEACH_T_TRUTH_FUNCTION, evidential, wrapper);
+                }
+            } else if (cur.Head.Equals(SEE.Head)) {
+                cur = cur.GetArgAsExpression(0);
+                var wrapper = new Expression(SEE,
+                    new Empty(TRUTH_VALUE),
+                    cur.GetArgAsExpression(1));
+
+                if (evidential == null) {
+                    evidential = wrapper;
+                } else {
+                    evidential = new Expression(GEACH_T_TRUTH_FUNCTION, evidential, wrapper);
+                }
+            } else {
+                break;
+            }
+        }
+
+        Expression evidentializedExpression = new Expression(EVIDENTIALIZER,
+            cur,
+            new Expression(new Parameter(TIME, assertionTime)),
+            (parity ? TRULY : NOT),
+            evidential);
+
+        // For testing purposes
+        Debug.Log(evidentializedExpression);
+        // end
+
+        KnowledgeBase.Add(evidentializedExpression);
+
+        yield break;
     }
 
     // a direct assertion.
     // @TODO add an inference rule to cover knowledge from
     // assertion. Now is a simple fix.
     public IEnumerator ReceiveAssertion(Expression content, Expression speaker) {
-        KnowledgeBase.Add(new Expression(KNOW, content, speaker));
+        StartCoroutine(AddToKnowledgeBase(new Expression(KNOW, content, speaker)));
         // TODO check to see if this is inconsistent
         // with the current knowledge base
-        yield return null;
+        yield break;
     }
 
     public IEnumerator ReceiveRequest(Expression content, Expression speaker) {
@@ -982,8 +1041,7 @@ public class MentalState : MonoBehaviour {
         // Right now, we literally have this as S knows that p is good,
         // but this feels somehow not aesthetically pleasing to me. I'll
         // try it out for now.
-        KnowledgeBase.Add(new Expression(KNOW, new Expression(GOOD, content), speaker));
-
+        StartCoroutine(AddToKnowledgeBase(new Expression(KNOW, new Expression(GOOD, content), speaker)));
         yield break;
     }
 

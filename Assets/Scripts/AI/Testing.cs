@@ -102,12 +102,12 @@ public class Testing : MonoBehaviour {
         // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(RED, SELF))));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(RED, SELF)))));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GREEN, SELF))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, new Expression(GREEN, SELF))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, new Expression(NOT, new Expression(GREEN, SELF)))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(FUTURE, new Expression(GREEN, SELF))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(FUTURE, new Expression(NOT, new Expression(GREEN, SELF)))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GREEN, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, new Expression(GREEN, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, new Expression(NOT, new Expression(GREEN, SELF)))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(FUTURE, new Expression(GREEN, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(FUTURE, new Expression(NOT, new Expression(GREEN, SELF)))));
         
         // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF))))));
         
