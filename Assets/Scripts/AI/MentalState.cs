@@ -129,7 +129,9 @@ public class MentalState : MonoBehaviour {
     // if, for example, we have
     // knows(knows(p, a), b) being checked against knows(knows(knows(p, a), b), c),
     // we want this to return true (along with any other subsequence of a, b, c).
-    public IEnumerator EvidentialContains(Expression query, Expression knowledge,
+    private IEnumerator EvidentialContains(
+        Expression query,
+        Expression knowledge,
         Container<bool> match,
         Container<bool> done) {
 
@@ -156,10 +158,15 @@ public class MentalState : MonoBehaviour {
                 yield break;
             }
 
+            // the knowledge clause at the top level of the knowledge-base evidential.
             var topLevelKnowledge = currentKnowledge.GetArgAsExpression(0);
 
+            // does the query evidential have more than one clause left?
             bool isQueryDeep = currentQuery.Head.Equals(GEACH_T_TRUTH_FUNCTION.Head);
 
+            // we check either the whole sentence,
+            // if this is the last clause,
+            // or just the top-level clause.
             var topLevelQuery = isQueryDeep ? currentQuery.GetArgAsExpression(0) : currentQuery;
 
             bool topLevelMatch = topLevelQuery.GetMatches(topLevelKnowledge).Count > 0;
@@ -189,6 +196,14 @@ public class MentalState : MonoBehaviour {
         yield break;
     }
 
+    // this should just be temporary,
+    // as the tensed query seems untenable.
+    private enum Tense {
+        Present,
+        Past,
+        Future
+    }
+
     private class ProofNode {
         #region Parameters
         public readonly Expression Lemma;
@@ -198,6 +213,7 @@ public class MentalState : MonoBehaviour {
         public readonly ProofNode OlderSibling;
         public readonly Expression Supplement;
         public readonly bool IsAssumption;
+        public readonly Tense Tense;
         #endregion
 
         #region Variables
@@ -211,7 +227,8 @@ public class MentalState : MonoBehaviour {
             ProofNode olderSibling = null,
             Expression supplement = null,
             bool hasYoungerSibling = false,
-            bool isAssumption = false) {
+            bool isAssumption = false,
+            Tense tense = Tense.Present) {
             Lemma = lemma;
             Depth = depth;
             Parent = parent;
@@ -219,6 +236,7 @@ public class MentalState : MonoBehaviour {
             OlderSibling = olderSibling;
             Supplement = supplement;
             IsAssumption = isAssumption;
+            Tense = tense;
 
             YoungerSiblingBases = new List<ProofBasis>();
             if (!hasYoungerSibling) {
@@ -302,31 +320,32 @@ public class MentalState : MonoBehaviour {
                     // querying the knowledge base.
                     var searchBases = new ProofBases();
 
-                    // Satisfiers():
-                    // first, we get the domain to search through.
-                    // this is going to correspond to all sentences
-                    // that are structural candidates for matching
-                    // the formula, given the structure of the formula's
-                    // variables and semantic types.
-                    var variables = currentLemma.GetVariables();
-                    var bottomSubstitution = new Substitution();
-                    var topSubstitution = new Substitution();
-                    foreach (Variable v in variables) {
-                        bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
-                        topSubstitution.Add(v, new Expression(new Top(v.Type)));
-                    }
-
-                    var bottom = currentLemma.Substitute(bottomSubstitution);
-                    var top = currentLemma.Substitute(topSubstitution);
-
                     // inertial tensed query
                     // @Note: in this iteration, direct, tensed queries
                     // can only take place on an evidentialized sentence.
                     // All others go for regular containment.
                     if (currentLemma.Head.Type.Equals(EVIDENTIAL_FUNCTION)) {
-                        // Debug.Log(currentLemma);
+                        // Satisfiers():
+                        // first, we get the domain to search through.
+                        // this is going to correspond to all sentences
+                        // that are structural candidates for matching
+                        // the formula, given the structure of the formula's
+                        // variables and semantic types.
+                        var variables = currentLemma.GetVariables();
+                        var bottomSubstitution = new Substitution();
+                        var topSubstitution = new Substitution();
+                        foreach (Variable v in variables) {
+                            bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
+                            topSubstitution.Add(v, new Expression(new Top(v.Type)));
+                        }
+                        var bottom = currentLemma.Substitute(bottomSubstitution);
+                        var top = currentLemma.Substitute(topSubstitution);
+
+                        
+
                         var valence = bottom.GetArgAsExpression(2);
                         var negation = valence.Equals(TRULY) ? NOT : TRULY;
+                        
                         var zero = new Expression(
                                 new Expression(bottom.Head),
                                 bottom.GetArgAsExpression(0),
@@ -334,21 +353,45 @@ public class MentalState : MonoBehaviour {
                                 bottom.GetArgAsExpression(2),
                                 bottom.GetArgAsExpression(3));
 
+                        var tHorizon = new Expression(
+                            new Expression(top.Head),
+                            top.GetArgAsExpression(0),
+                            new Expression(new Top(TIME)),
+                            top.GetArgAsExpression(2),
+                            top.GetArgAsExpression(3));
+
+                        SortedSet<Expression> timespan;
+                        IEnumerable<Expression> iter;
+
+                        if (current.Tense == Tense.Present || current.Tense == Tense.Past) {
+                            timespan = KnowledgeBase.GetViewBetween(zero, top);
+                            iter = timespan.Reverse();
+                        } else {
+                            // future tense
+                            timespan = KnowledgeBase.GetViewBetween(bottom, tHorizon);
+                            iter = timespan;
+                        }
+
+                        Expression currentContent = null;
+                        var admissible = true;
+
                         // we go through the timespan of samples in reverse
                         // order. All positive samples more recent than
                         // the most recent negative sample
-                        // entail the target sentence.
-                        var timespan = KnowledgeBase.GetViewBetween(zero, top);
-                        Expression currentContent = null;
-                        var admissible = true;
-                        foreach (var sample in timespan.Reverse()) {
-
+                        // entail the target sentence (in present tense).
+                        // 
+                        // For past tense, any positive sample does.
+                        foreach (var sample in iter) {
                             var sampleContent = sample.GetArgAsExpression(0);
 
                             if (currentContent == null ||
                                !currentContent.Equals(sampleContent)) {
                                 currentContent = sampleContent;
                                 admissible = true;
+                            }
+
+                            if (!admissible) {
+                                continue;
                             }
 
                             var detensedCurrentLemma = new Expression(
@@ -385,7 +428,10 @@ public class MentalState : MonoBehaviour {
                             // 
                             if (sample.GetArgAsExpression(2).Equals(negation) &&
                                 evidentialContainsMatch.Item) {
-                                admissible = false;
+                                if (current.Tense == Tense.Present) {
+                                    admissible = false;
+                                }
+                                continue;
                             }
 
                             // Here, the evidential doesn't match, so we skip over it.
@@ -398,16 +444,14 @@ public class MentalState : MonoBehaviour {
                                 continue;
                             }
 
-                            if (admissible) {
-                                // TODO figure out a way to gather the variables
-                                // for formulas, but not in a way that makes it
-                                // so that knows(p, x) can fix the source.
-                                // (unification doesn't work on its own since
-                                // the timestamps won't be identitical)
-                                var basis = new ProofBasis();
-                                basis.AddPremise(sample);
-                                searchBases.Add(basis);
-                            }
+                            // TODO figure out a way to gather the variables
+                            // for formulas, but not in a way that makes it
+                            // so that knows(p, x) can fix the source.
+                            // (unification doesn't work on its own since
+                            // the timestamps won't be identitical)
+                            var basis = new ProofBasis();
+                            basis.AddPremise(sample);
+                            searchBases.Add(basis);
                         }
                     }
 
@@ -500,7 +544,7 @@ public class MentalState : MonoBehaviour {
                         // truly +
                         if (currentLemma.Head.Equals(TRULY.Head)) {
                             var subclause = currentLemma.GetArgAsExpression(0);
-                            newStack.Push(new ProofNode(subclause, nextDepth, current, i));
+                            newStack.Push(new ProofNode(subclause, nextDepth, current, i, tense: current.Tense));
                             exhaustive = false;
                         }
                         
@@ -530,7 +574,7 @@ public class MentalState : MonoBehaviour {
                                     negation,
                                     currentLemma.GetArgAsExpression(3));
 
-                                newStack.Push(new ProofNode(negatedEvidential, nextDepth, current, i));
+                                newStack.Push(new ProofNode(negatedEvidential, nextDepth, current, i, tense: current.Tense));
                                 exhaustive = false;
                             }
 
@@ -561,7 +605,7 @@ public class MentalState : MonoBehaviour {
                                         new Expression(SEE,
                                             new Empty(TRUTH_VALUE),
                                             content.GetArgAsExpression(1)))),
-                                nextDepth, current, i));
+                                nextDepth, current, i, tense: current.Tense));
                                 exhaustive = false;
                             }
 
@@ -582,7 +626,7 @@ public class MentalState : MonoBehaviour {
                                                 content.GetArgAsExpression(1),
                                                 new Expression(GetUnusedVariable(TIME,
                                                     currentLemma.GetVariables()))))),
-                                nextDepth, current, i));
+                                nextDepth, current, i, tense: current.Tense));
                                 exhaustive = false;
                             }
                         } else {
@@ -596,7 +640,7 @@ public class MentalState : MonoBehaviour {
                                         TRULY,
                                         new Expression(SEE, new Empty(TRUTH_VALUE),
                                             currentLemma.GetArgAsExpression(1))),
-                                    nextDepth, current, i));
+                                    nextDepth, current, i, tense: current.Tense));
                                 exhaustive = false;
                             } else if (currentLemma.Head.Equals(KNOW.Head)) {
                                 var evidentializedExpression =
@@ -611,7 +655,7 @@ public class MentalState : MonoBehaviour {
                                                 // replacement of the timestamp.
                                                 new Expression(GetUnusedVariable(TIME, currentLemma.GetVariables()))));
 
-                                newStack.Push(new ProofNode(evidentializedExpression, nextDepth, current, i));
+                                newStack.Push(new ProofNode(evidentializedExpression, nextDepth, current, i, tense: current.Tense));
                                 exhaustive = false;
                             } else {
                                 // if not, we just put the whole sentence into the
@@ -622,7 +666,7 @@ public class MentalState : MonoBehaviour {
                                         new Expression(new Parameter(TIME, Timestamp)),
                                         TRULY,
                                         new Expression(new Variable(TRUTH_FUNCTION, 0))),
-                                    nextDepth, current, i));
+                                    nextDepth, current, i, tense: current.Tense));
                                 exhaustive = false;
                             }
                         }
@@ -632,13 +676,14 @@ public class MentalState : MonoBehaviour {
                             var subclause = currentLemma.GetArgAsExpression(0);
                             if (subclause.Head.Equals(NOT.Head)) {
                                 var subsubclause = subclause.GetArgAsExpression(0);
-                                newStack.Push(new ProofNode(subsubclause, nextDepth, current, i));
+                                newStack.Push(new ProofNode(subsubclause, nextDepth, current, i, tense: current.Tense));
                                 exhaustive = false;
                             }
 
                             // nonidentity assumption
                             if (subclause.Head.Equals(IDENTITY.Head)) {
-                                newStack.Push(new ProofNode(new Expression(NOT, currentLemma), nextDepth, current, i, isAssumption: true));
+                                newStack.Push(new ProofNode(new Expression(NOT, currentLemma),
+                                    nextDepth, current, i, isAssumption: true, tense: current.Tense));
                                 exhaustive = false;
                             }
                             
@@ -650,7 +695,7 @@ public class MentalState : MonoBehaviour {
                                         new Expression(new Parameter(TIME, Timestamp)),
                                         NOT,
                                         new Expression(new Variable(TRUTH_FUNCTION, 0))),
-                                    nextDepth, current, i));
+                                    nextDepth, current, i, tense: current.Tense));
                                 exhaustive = false;
                             }
                         }
@@ -659,8 +704,8 @@ public class MentalState : MonoBehaviour {
                         if (currentLemma.Head.Equals(OR.Head)) {
                             var disjunctA = currentLemma.GetArgAsExpression(0);
                             var disjunctB = currentLemma.GetArgAsExpression(1);
-                            newStack.Push(new ProofNode(disjunctA, nextDepth, current, i));
-                            newStack.Push(new ProofNode(disjunctB, nextDepth, current, i));
+                            newStack.Push(new ProofNode(disjunctA, nextDepth, current, i, tense: current.Tense));
+                            newStack.Push(new ProofNode(disjunctB, nextDepth, current, i, tense: current.Tense));
                             exhaustive = false;
                         }
 
@@ -669,8 +714,8 @@ public class MentalState : MonoBehaviour {
                             var conjunctA = currentLemma.GetArgAsExpression(0);
                             var conjunctB = currentLemma.GetArgAsExpression(1);
 
-                            var bNode = new ProofNode(conjunctB, nextDepth, current, i, hasYoungerSibling: true);
-                            var aNode = new ProofNode(conjunctA, nextDepth, current, i, bNode);
+                            var bNode = new ProofNode(conjunctB, nextDepth, current, i, hasYoungerSibling: true, tense: current.Tense);
+                            var aNode = new ProofNode(conjunctA, nextDepth, current, i, bNode, tense: current.Tense);
 
                             newStack.Push(aNode);
                             newStack.Push(bNode);
@@ -687,12 +732,24 @@ public class MentalState : MonoBehaviour {
                             var fx = new Expression(f, x);
                             var gx = new Expression(g, x);
 
-                            var gxNode = new ProofNode(gx, nextDepth, current, i, hasYoungerSibling: true);
-                            var fxNode = new ProofNode(fx, nextDepth, current, i, gxNode);
+                            var gxNode = new ProofNode(gx, nextDepth, current, i, hasYoungerSibling: true, tense: current.Tense);
+                            var fxNode = new ProofNode(fx, nextDepth, current, i, gxNode, tense: current.Tense);
 
                             newStack.Push(fxNode);
                             newStack.Push(gxNode);
                             exhaustive = false;
+                        }
+
+                        // past +
+                        if (currentLemma.Head.Equals(PAST.Head)) {
+                            var subclause = currentLemma.GetArgAsExpression(0);
+                            newStack.Push(new ProofNode(subclause, nextDepth, current, i, tense: Tense.Past));
+                        }
+
+                        // future +
+                        if (currentLemma.Head.Equals(FUTURE.Head)) {
+                            var subclause = currentLemma.GetArgAsExpression(0);
+                            newStack.Push(new ProofNode(subclause, nextDepth, current, i, tense: Tense.Future));
                         }
 
                         if (currentLemma.Depth <= this.MaxDepth) {
