@@ -30,73 +30,180 @@ public class Testing : MonoBehaviour {
         MentalState.FrameTimer = FrameTimer;
 
         MentalState.Initialize(new Expression[]{
-            new Expression(EVIDENTIALIZER,
-                new Expression(RED, SELF), // the basic sentence
-                new Expression(new Parameter(TIME, 10)), // the time the sentence is true
-                TRULY, // whether the sentence is true or false
-                new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB, new Expression(new Parameter(TIME, 20)))), // source/knower
+            new Expression(WHEN,
+                new Expression(KNOW,
+                    new Expression(WHEN,
+                        new Expression(RED, SELF),
+                        new Expression(new Parameter(TIME, 10))),
+                    BOB),
+                new Expression(new Parameter(TIME, 20))),
 
-            new Expression(EVIDENTIALIZER,
-                new Expression(RED, SELF),
-                new Expression(new Parameter(TIME, 30)),
-                TRULY,
-                new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
+            new Expression(SEE,
+                    new Expression(WHEN,
+                        new Expression(RED, SELF),
+                        new Expression(new Parameter(TIME, 30))),
+                    SELF),
 
-            new Expression(EVIDENTIALIZER,
-                new Expression(GREEN, SELF),
-                new Expression(new Parameter(TIME, 10)),
-                TRULY,
-                new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB, new Expression(new Parameter(TIME, 20)))),
+            new Expression(WHEN,
+                new Expression(KNOW,
+                    new Expression(WHEN,
+                        new Expression(GREEN, SELF),
+                        new Expression(new Parameter(TIME, 10))),
+                    BOB),
+                new Expression(new Parameter(TIME, 20))),
 
-            new Expression(EVIDENTIALIZER,
-                new Expression(GREEN, SELF),
-                new Expression(new Parameter(TIME, 30)),
-                NOT,
-                new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
+            new Expression(SEE,
+                new Expression(NOT,
+                    new Expression(WHEN,
+                        new Expression(GREEN, SELF),
+                        new Expression(new Parameter(TIME, 30)))),
+                SELF),
 
-            new Expression(EVIDENTIALIZER,
-                new Expression(GREEN, SELF),
-                new Expression(new Parameter(TIME, 75)),
-                TRULY,
-                new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
+            new Expression(SEE,
+                new Expression(WHEN,
+                    new Expression(GREEN, SELF),
+                    new Expression(new Parameter(TIME, 75))),
+                SELF),
 
-            new Expression(EVIDENTIALIZER,
-                new Expression(AT, ALICE, BOB),
-                new Expression(new Parameter(TIME, 40)),
-                TRULY,
-                new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
+            new Expression(SEE,
+                new Expression(WHEN,
+                    new Expression(AT, ALICE, BOB),
+                    new Expression(new Parameter(TIME, 40))),
+                SELF),
 
-            new Expression(EVIDENTIALIZER,
-                new Expression(BLUE, SELF),
-                new Expression(new Parameter(TIME, 35)),
-                TRULY,
-                new Expression(SEE, new Empty(TRUTH_VALUE), SELF)),
+            new Expression(SEE,
+                new Expression(WHEN,
+                    new Expression(BLUE, SELF),
+                    new Expression(new Parameter(TIME, 35))),
+                SELF),
 
-            new Expression(EVIDENTIALIZER,
-                new Expression(AT, SELF, ALICE),
-                new Expression(new Parameter(TIME, 37)),
-                TRULY,
-                new Expression(GEACH_T_TRUTH_FUNCTION,
-                    new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB,
+            new Expression(WHEN,
+                new Expression(KNOW,
+                    new Expression(WHEN,
+                        new Expression(KNOW,
+                            new Expression(WHEN,
+                                new Expression(AT, SELF, ALICE),
+                                new Expression(new Parameter(TIME, 37))),
+                            ALICE),
+                        new Expression(new Parameter(TIME, 38))),
+                    BOB),
+                new Expression(new Parameter(TIME, 39))),
+
+            new Expression(WHEN,
+                new Expression(KNOW,
+                    new Expression(WHEN,
+                        new Expression(KNOW,
+                            new Expression(WHEN,
+                                new Expression(KNOW,
+                                    new Expression(WHEN,
+                                        new Expression(AT, SELF, ALICE),
+                                        new Expression(new Parameter(TIME, 37))),
+                                    ALICE),
+                                new Expression(new Parameter(TIME, 38))),
+                            BOB),
                         new Expression(new Parameter(TIME, 39))),
-                    new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), ALICE,
-                        new Expression(new Parameter(TIME, 38))))),
-
-            new Expression(EVIDENTIALIZER,
-                new Expression(AT, SELF, ALICE),
-                new Expression(new Parameter(TIME, 37)),
-                TRULY,
-                new Expression(GEACH_T_TRUTH_FUNCTION,
-                    new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), CHARLIE,
-                        new Expression(new Parameter(TIME, 40))),
-                    new Expression(GEACH_T_TRUTH_FUNCTION,
-                        new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), BOB,
-                            new Expression(new Parameter(TIME, 39))),
-                        new Expression(KNOW_TENSED, new Empty(TRUTH_VALUE), ALICE,
-                            new Expression(new Parameter(TIME, 38)))))),
+                    CHARLIE),
+                new Expression(new Parameter(TIME, 40))),
         });
 
+        // // testing custom ordering for evidentials, negations, tense, etc.
+        // SortedSet<Expression> sequence = new SortedSet<Expression>{
+        //     new Expression(RED, SELF),
+        //     new Expression(GREEN, SELF),
+        //     new Expression(BLUE, SELF),
+        //     new Expression(NOT, new Expression(RED, SELF)),
+        //     new Expression(NOT, new Expression(GREEN, SELF)),
+        //     new Expression(NOT, new Expression(BLUE, SELF)),
+        //     new Expression(NOT, new Expression(NOT, new Expression(RED, SELF))),
+        //     new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF))),
+        //     new Expression(NOT, new Expression(NOT, new Expression(BLUE, SELF))),
+        //     new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 0))),
+        //     new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 1))),
+        //     new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 0))),
+        //     new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 1))),
+        //     new Expression(WHEN, new Expression(BLUE, SELF), new Expression(new Parameter(TIME, 0))),
+        //     new Expression(WHEN, new Expression(BLUE, SELF), new Expression(new Parameter(TIME, 1))),
+        //     new Expression(NOT, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 0)))),
+        //     new Expression(NOT, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 1)))),
+        //     new Expression(NOT, new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 0)))),
+        //     new Expression(NOT, new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 1)))),
+        //     new Expression(NOT, new Expression(WHEN, new Expression(BLUE, SELF), new Expression(new Parameter(TIME, 0)))),
+        //     new Expression(NOT, new Expression(WHEN, new Expression(BLUE, SELF), new Expression(new Parameter(TIME, 1)))),
+        //     new Expression(KNOW, new Expression(RED, SELF), BOB),
+        //     new Expression(KNOW, new Expression(GREEN, SELF), BOB),
+        //     new Expression(KNOW, new Expression(BLUE, SELF), BOB),
+        //     new Expression(KNOW, new Expression(RED, SELF), ALICE),
+        //     new Expression(KNOW, new Expression(GREEN, SELF), ALICE),
+        //     new Expression(KNOW, new Expression(BLUE, SELF), ALICE),
+        //     new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF),
+        //         new Expression(new Parameter(TIME, 0))), BOB),
+        //     new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF),
+        //         new Expression(new Parameter(TIME, 0))), BOB),
+        //     new Expression(KNOW, new Expression(WHEN, new Expression(BLUE, SELF),
+        //         new Expression(new Parameter(TIME, 0))), BOB),
+        //     new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF),
+        //         new Expression(new Parameter(TIME, 0))), ALICE),
+        //     new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF),
+        //         new Expression(new Parameter(TIME, 0))), ALICE),
+        //     new Expression(KNOW, new Expression(WHEN, new Expression(BLUE, SELF),
+        //         new Expression(new Parameter(TIME, 0))), ALICE),
+        //     new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF),
+        //         new Expression(new Parameter(TIME, 0))), BOB), new Expression(new Parameter(TIME, 1))),
+        //     new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF),
+        //         new Expression(new Parameter(TIME, 0))), BOB), new Expression(new Parameter(TIME, 1))),
+        //     new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(BLUE, SELF),
+        //         new Expression(new Parameter(TIME, 0))), BOB), new Expression(new Parameter(TIME, 1))),
+        //     new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF),
+        //         new Expression(new Parameter(TIME, 0))), ALICE), new Expression(new Parameter(TIME, 1))),
+        //     new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF),
+        //         new Expression(new Parameter(TIME, 0))), ALICE), new Expression(new Parameter(TIME, 1))),
+        //     new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(BLUE, SELF),
+        //         new Expression(new Parameter(TIME, 0))), ALICE), new Expression(new Parameter(TIME, 1))),
+        // };
+
+        // var sort = sequence.GetViewBetween(
+        //     new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Bottom(TIME))), BOB),
+        //     new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Top(TIME))), BOB)
+        // );
+
+        // foreach (var e in sort) {
+        //     Debug.Log(e);
+        // }
+
+        // var r = new Expression(WHEN, new Expression(RED, SELF),
+        //         new Expression(new Parameter(TIME, 0)));
+
+        // var k = new Expression(WHEN, new Expression(KNOW, r, BOB), new Expression(new Parameter(TIME, 1)));
+
+        // var bot = new Expression(WHEN, new Expression(RED, SELF), new Expression(new Bottom(TIME)));
+
+        // var top = new Expression(WHEN, new Expression(RED, SELF), new Expression(new Top(TIME)));
+
+        // Debug.Log(k + " compared to " + bot + " : " + k.CompareTo(bot));
+        // Debug.Log(k + " compared to " + top + " : " + k.CompareTo(top));
+
         MentalState.Timestamp = 50;
+
+        // var aliceIsRed = new Expression(RED, ALICE);
+        // MentalState.StartCoroutine(MentalState.AddToKnowledgeBase(aliceIsRed));
+
+        // var bobKnowsAliceIsRed = new Expression(KNOW, aliceIsRed, BOB);
+        // MentalState.StartCoroutine(MentalState.AddToKnowledgeBase(bobKnowsAliceIsRed));
+
+        // var charlieKnowsBobKnowsAliceIsRed = new Expression(KNOW, bobKnowsAliceIsRed, CHARLIE);
+        // MentalState.StartCoroutine(MentalState.AddToKnowledgeBase(charlieKnowsBobKnowsAliceIsRed));
+
+        // var iSeeAliceIsRed = new Expression(SEE, aliceIsRed, SELF);
+        // MentalState.StartCoroutine(MentalState.AddToKnowledgeBase(iSeeAliceIsRed));
+
+        // var aliceIsntRed = new Expression(NOT, aliceIsRed);
+        // MentalState.StartCoroutine(MentalState.AddToKnowledgeBase(aliceIsntRed));
+
+        // var bobKnowsAliceIsntRed = new Expression(KNOW, aliceIsntRed, BOB);
+        // MentalState.StartCoroutine(MentalState.AddToKnowledgeBase(bobKnowsAliceIsntRed));
+
+        // var bobDoesntKnowAliceIsRed = new Expression(NOT, new Expression(KNOW, aliceIsRed, BOB));
+        // MentalState.StartCoroutine(MentalState.AddToKnowledgeBase(bobDoesntKnowAliceIsRed));
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(RED, SELF))));
@@ -105,7 +212,7 @@ public class Testing : MonoBehaviour {
         // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GREEN, SELF))));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, new Expression(GREEN, SELF))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, new Expression(NOT, new Expression(GREEN, SELF)))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, new Expression(NOT,  new Expression(GREEN, SELF)))));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(FUTURE, new Expression(GREEN, SELF))));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(FUTURE, new Expression(NOT, new Expression(GREEN, SELF)))));
         
@@ -140,12 +247,12 @@ public class Testing : MonoBehaviour {
         //             ALICE),
         //         BOB)));
 
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(KNOW,
-        //         new Expression(KNOW,
-        //             new Expression(AT, SELF, ALICE),
-        //             ALICE),
-        //         CHARLIE)));
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW,
+                new Expression(KNOW,
+                    new Expression(AT, SELF, ALICE),
+                    ALICE),
+                CHARLIE)));
 
         // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(KNOW,

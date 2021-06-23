@@ -777,6 +777,186 @@ public class Expression : Argument, IComparable<Expression> {
             return -1;
         }
 
+        if (Type.Equals(Head.Type) && Head is Bottom &&
+            that.Type.Equals(that.Head.Type) && that.Head is Bottom) {
+            return 0;
+        }
+        if (Type.Equals(Head.Type) && Head is Bottom) {
+            return -1;
+        }
+        if (that.Type.Equals(that.Head.Type) && that.Head is Bottom) {
+            return 1;
+        }
+
+        // BEGIN CUSTOM-ORDERING FOR EVIDENTIALS, etc.
+        
+        // we check the depth to tell which to recur on.
+        // @Note This _shouldn't_ cause problems if dealing
+        // with reduced expressions.
+        int thisDepth = this.Depth;
+        int thatDepth = that.Depth;
+        
+        // EVIDENTIALS
+        bool thisKnow = this.Head.Equals(KNOW.Head);
+        bool thatKnow = that.Head.Equals(KNOW.Head);
+
+        if (thisKnow && thatKnow && thisDepth == thatDepth) {
+            var thisContent = this.GetArgAsExpression(0);
+            var thatContent = that.GetArgAsExpression(0);
+
+            int contentComparison = thisContent.CompareTo(thatContent);
+
+            if (contentComparison != 0) {
+                return contentComparison;
+            }
+
+            var thisKnower = this.GetArgAsExpression(1);
+            var thatKnower = that.GetArgAsExpression(1);
+
+            int knowerComparison = thisKnower.CompareTo(thatKnower);
+
+            return knowerComparison;
+        }
+        if (thisKnow && !thatKnow ||
+            thisKnow && thatKnow && thisDepth > thatDepth) {
+            var content = this.GetArgAsExpression(0);
+            int comparison = content.CompareTo(that);
+            if (comparison == 0) {
+                return 1;
+            }
+            return comparison;
+        }
+        if (!thisKnow && thatKnow ||
+            thisKnow && thatKnow && thisDepth < thatDepth) {
+            var content = that.GetArgAsExpression(0);
+            int comparison = this.CompareTo(content);
+            if (comparison == 0) {
+                return -1;
+            }
+            return comparison;
+        }
+
+        bool thisSee = this.Head.Equals(SEE.Head);
+        bool thatSee = that.Head.Equals(SEE.Head);
+
+        if (thisSee && thatSee && thisDepth == thatDepth) {
+            var thisContent = this.GetArgAsExpression(0);
+            var thatContent = that.GetArgAsExpression(0);
+
+            int contentComparison = thisContent.CompareTo(thatContent);
+
+            if (contentComparison != 0) {
+                return contentComparison;
+            }
+
+            var thisSeer = this.GetArgAsExpression(1);
+            var thatSeer = that.GetArgAsExpression(1);
+
+            int knowerComparison = thisSeer.CompareTo(thatSeer);
+
+            return knowerComparison;
+        }
+        if (thisSee && !thatSee ||
+            thisSee && thatSee && thisDepth > thatDepth) {
+            var content = this.GetArgAsExpression(0);
+            int comparison = content.CompareTo(that);
+            if (comparison == 0) {
+                return 1;
+            }
+            return comparison;
+        }
+        if (!thisSee && thatSee ||
+            thisSee && thatSee && thisDepth < thatDepth) {
+            var content = that.GetArgAsExpression(0);
+            int comparison = this.CompareTo(content);
+            if (comparison == 0) {
+                return -1;
+            }
+            return comparison;
+        }
+
+        // NEGATION
+        bool thisNot = this.Head.Equals(NOT.Head);
+        bool thatNot = that.Head.Equals(NOT.Head);
+
+        if (thisNot && thatNot && thisDepth == thatDepth) {
+            var thisSubclause = this.GetArgAsExpression(0);
+            var thatSubclause = that.GetArgAsExpression(0);
+
+            int comparison = thisSubclause.CompareTo(thatSubclause);
+            return comparison;
+        }
+
+        if (thisNot && !thatNot ||
+            thisNot && thatNot && thisDepth > thatDepth) {
+            var subclause = this.GetArgAsExpression(0);
+            int comparison = subclause.CompareTo(that);
+            if (comparison == 0) {
+                return 1;
+            }
+            return comparison;
+        }
+
+        if (!thisNot && thatNot ||
+            thisNot && thatNot && thisDepth < thatDepth) {
+            var subclause = that.GetArgAsExpression(0);
+            int comparison = this.CompareTo(subclause);
+            if (comparison == 0) {
+                return -1;
+            }
+            return comparison;
+        }
+
+        // TIME
+        // @Note this depends on the order of not/when
+        // e.g. we get the right ordering for not(when(A, t))
+        // but not for when(not(A), t)
+        // 
+        // We could check for more cases in the ordering,
+        // introduce subtyping to place restriction on
+        // which arguments the expressions accept,
+        // or (as we currently do) maintain the working
+        // order as an invariant.
+        bool thisWhen = this.Head.Equals(WHEN.Head);
+        bool thatWhen = that.Head.Equals(WHEN.Head);
+
+        if (thisWhen && thatWhen && thisDepth == thatDepth) {
+            var thisContent = this.GetArgAsExpression(0);
+            var thatContent = that.GetArgAsExpression(0);
+
+            int contentComparison = thisContent.CompareTo(thatContent);
+
+            if (contentComparison != 0) {
+                return contentComparison;
+            }
+
+            var thisTime = this.GetArgAsExpression(1);
+            var thatTime = that.GetArgAsExpression(1);
+
+            int timeComparison = thisTime.CompareTo(thatTime);
+
+            return timeComparison;
+        }
+        if (thisWhen && !thatWhen ||
+            thisWhen && thatWhen && thisDepth > thatDepth) {
+            var content = this.GetArgAsExpression(0);
+            int comparison = content.CompareTo(that);
+            if (comparison == 0) {
+                return 1;
+            }
+            return comparison;
+        }
+        if (!thisWhen && thatWhen ||
+            thisWhen && thatWhen && thisDepth < thatDepth) {
+            var content = that.GetArgAsExpression(0);
+            int comparison = this.CompareTo(content);
+            if (comparison == 0) {
+                return -1;
+            }
+            return comparison;
+        }
+        // END
+
         var headTypeComparison = this.Head.Type.CompareTo(that.Head.Type);
         if (headTypeComparison < 0) {
             return -1;
