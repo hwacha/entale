@@ -246,6 +246,36 @@ public class Testing : MonoBehaviour {
         //             new Expression(AT, SELF, ALICE),
         //             ALICE),
         //         BOB)));
+        
+        // var selfIsRed = new Expression(RED, SELF);
+        // var aliceKnowsSelfIsRed = new Expression(KNOW, selfIsRed, ALICE);
+
+        // StartCoroutine(TestEvidentialContains(MentalState, aliceKnowsSelfIsRed, selfIsRed));
+        // StartCoroutine(TestEvidentialContains(MentalState, selfIsRed, aliceKnowsSelfIsRed));
+
+        // var bobKnowsAliceKnowsSelfIsRed = new Expression(KNOW, aliceKnowsSelfIsRed, BOB);
+
+        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceKnowsSelfIsRed, aliceKnowsSelfIsRed));
+        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceKnowsSelfIsRed, selfIsRed));
+        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceKnowsSelfIsRed, new Expression(GREEN, SELF)));
+
+        // var charlieKnows = new Expression(KNOW, bobKnowsAliceKnowsSelfIsRed, CHARLIE);
+
+        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, bobKnowsAliceKnowsSelfIsRed));
+        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, aliceKnowsSelfIsRed));
+        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, selfIsRed));
+
+        // var bobKnowsSelfIsRed = new Expression(KNOW, selfIsRed, BOB);
+
+        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, bobKnowsSelfIsRed));
+
+        // var aliceKnowsBobKnowsSelfIsRed = new Expression(KNOW, bobKnowsSelfIsRed, ALICE);
+
+        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, aliceKnowsBobKnowsSelfIsRed));
+
+        // var charlieKnowsAliceKnowsSelfIsRed = new Expression(KNOW, aliceKnowsSelfIsRed, CHARLIE);
+
+        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, charlieKnowsAliceKnowsSelfIsRed));
 
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(KNOW,
@@ -281,6 +311,20 @@ public class Testing : MonoBehaviour {
         //             new Expression(AT, SELF, ALICE),
         //             CHARLIE),
         //         ALICE)));
+    }
+
+    public static IEnumerator TestEvidentialContains(MentalState m, Expression evidential, Expression content) {
+        var answer = new Container<bool>(false);
+        var done = new Container<bool>(false);
+
+        m.StartCoroutine(m.EvidentialContains(evidential, content, answer, done));
+
+        while (!done.Item) {
+            yield return null;
+        }
+
+        Log(evidential + (answer.Item ? " contains " : " does not contain ") + content);
+
     }
 
     public static String Verbose(Expression e) {

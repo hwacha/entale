@@ -112,8 +112,76 @@ public class MentalState : MonoBehaviour {
     // knows(knows(p, a), b) being checked against knows(knows(knows(p, a), b), c),
     // we want this to return true (along with any other subsequence of a, b, c).
     // 
-    private IEnumerator EvidentialContains() {
+    public IEnumerator EvidentialContains(
+        Expression evidential,
+        Expression content,
+        Container<bool> answer,
+        Container<bool> done) {
         // TODO 6/23
+        
+        Expression currentEvidential = evidential;
+        Expression currentContent = content;
+
+        while (true) {
+            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+                yield return null;
+            }
+
+            // we just want to skip over tense.
+            // 
+            // TODO: we should screen for tense-appriopriateness
+            // somewhere here, because we want the timestamp
+            // checks to be tense-appropriate for the content.
+            // 
+            // Currently, this will give the wrong results for
+            // tensed KNOW claims.
+            if (currentEvidential.Head.Equals(WHEN.Head)) {
+                currentEvidential = currentEvidential.GetArgAsExpression(0);
+                continue;
+            }
+            if (currentContent.Head.Equals(WHEN.Head)) {
+                currentContent = currentContent.GetArgAsExpression(0);
+                continue;
+            }
+
+            // we have an evidential on the left side.
+            if (currentEvidential.Head.Equals(KNOW.Head) ||
+                currentEvidential.Head.Equals(SEE.Head)) {
+                // the right side is a matching evidential.
+                // recur on both sides.
+                if (currentEvidential.Head.Equals(currentContent.Head) &&
+                    currentEvidential.GetArgAsExpression(1).Equals(currentContent.GetArgAsExpression(1))) {
+                    currentEvidential = currentEvidential.GetArgAsExpression(0);
+                    currentContent = currentContent.GetArgAsExpression(0);
+                    continue;
+                } else {
+                    // on mismatch, recur only on the left side.
+                    currentEvidential = currentEvidential.GetArgAsExpression(0);
+                    continue;
+                }
+            }
+
+            // if the left side isn't an evidential,
+            // then we need the expressions to match
+            // up to parity (negation)
+            // 
+            // @Note this code will not work for
+            // negations of evidentials
+            // 
+            // TODO fix for wide-scope negtations
+            if (currentEvidential.Head.Equals(NOT.Head)) {
+                currentEvidential = currentEvidential.GetArgAsExpression(0);
+                continue;
+            }
+            if (currentContent.Head.Equals(NOT.Head)) {
+                currentContent = currentContent.GetArgAsExpression(0);
+                continue;
+            }
+            answer.Item = currentEvidential.Equals(currentContent);
+            break;
+        }
+
+        done.Item = true;
         yield break;
     }
 
@@ -336,7 +404,6 @@ public class MentalState : MonoBehaviour {
                         IEnumerable<Expression> iter;
 
                         if (current.Tense == Tense.Present || current.Tense == Tense.Past) {
-                            Debug.Log(zero + " | " + top);
                             timespan = KnowledgeBase.GetViewBetween(zero, top);
                             iter = timespan.Reverse();
                         } else {
@@ -369,23 +436,27 @@ public class MentalState : MonoBehaviour {
                                 continue;
                             }
 
-                            // @Note this may be very wrong.
-                            // And even if it isn't, it isn't
-                            // good to count on it being right.
+                            // here, we see if the evidential lines up with our
+                            // expectations.
                             // 
-                            // Update: it is, in fact, very wrong.
-                            // Need to reimplement EvidentialContains()
-                            int lemmaDepthMinusNot = currentLemma.Depth;
-                            if (currentLemma.Head.Equals(NOT.Head)) {
-                                --lemmaDepthMinusNot;
+                            // @Note: once we soup up the tense checks in
+                            // evidential contains, we can eliminate the
+                            // checks we do in the above code
+                            // as they will be redundant/slightly inaccurate.
+                            var evidentialContains = new Container<bool>(false);
+                            var ecDone = new Container<bool>(false);
+
+                            
+
+                            StartCoroutine(EvidentialContains(sample, currentLemma, evidentialContains, ecDone));
+
+                            while (!ecDone.Item) {
+                                yield return null;
                             }
 
-                            int sampleDepthMinusNot = sample.Depth;
-                            if (sample.Head.Equals(NOT.Head)) {
-                                --sampleDepthMinusNot;
-                            }
+                            Debug.Log(sample + (evidentialContains.Item ? " contains " : " does not contain ") + currentLemma);
 
-                            if (lemmaDepthMinusNot <= sampleDepthMinusNot) {
+                            if (evidentialContains.Item) {
                                 // we have a match!
                                 if (current.Parity == sampleParity) {
                                     var basis = new ProofBasis();
