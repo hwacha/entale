@@ -122,9 +122,60 @@ public class MentalState : MonoBehaviour {
         Expression currentEvidential = evidential;
         Expression currentContent = content;
 
+        bool encounteredNegativeInEvidential = false;
+
         while (true) {
             if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                 yield return null;
+            }
+
+            // if the left side isn't an evidential,
+            // then we need the expressions to match
+            // up to parity (negation)
+            // 
+            // @Note this code will not work for
+            // negations of evidentials
+            // 
+            // TODO fix for wide-scope negtations
+            
+            bool evidentialNot = currentEvidential.Head.Equals(NOT.Head);
+            bool contentNot = currentContent.Head.Equals(NOT.Head);
+
+            // we encounter a negative on both sides.
+            if (evidentialNot && contentNot) {
+                encounteredNegativeInEvidential = true;
+                currentEvidential = currentEvidential.GetArgAsExpression(0);
+                currentContent = currentContent.GetArgAsExpression(0);
+                continue;
+            }
+
+            // we encounter a negative in the evidential.
+            if (evidentialNot) {
+                // here, we still want to fail if we encounter a mismatch.
+                if (encounteredNegativeInEvidential) {
+                    answer.Item = false;
+                    break;
+                // we can peel of the negative if we were still
+                // in a positive evidential up to this point.
+                } else {
+                    encounteredNegativeInEvidential = true;
+                    currentEvidential = currentEvidential.GetArgAsExpression(0);    
+                    continue;
+                }              
+            }
+
+            // we encounter a negative in the content.
+            if (contentNot) {
+                // if we've encountered a negative in
+                // the evidential, then we want to fail here.
+                if (encounteredNegativeInEvidential) {
+                    answer.Item = false;
+                    break;
+                // otherwise, we carry on as normal.
+                } else {
+                    currentContent = currentContent.GetArgAsExpression(0);
+                    continue;
+                }
             }
 
             // we just want to skip over tense.
@@ -154,29 +205,26 @@ public class MentalState : MonoBehaviour {
                     currentEvidential = currentEvidential.GetArgAsExpression(0);
                     currentContent = currentContent.GetArgAsExpression(0);
                     continue;
-                } else {
-                    // on mismatch, recur only on the left side.
+                // negative evidential w/ mismatch.
+                // this should return false, because
+                // we need the rest of the expression to
+                // match once we encounter a negative
+                // on the evidential side.
+                // 
+                // @Note this is true for an 'entails P'
+                // reading of 'knows P'. If we change to a
+                // 'presupposes P' account of 'knows P',
+                // this will have to change.
+                } else if (encounteredNegativeInEvidential) {
+                    answer.Item = false;
+                    break;
+                // on positive mismatch, recur only on the left side.
+                } else {    
                     currentEvidential = currentEvidential.GetArgAsExpression(0);
                     continue;
                 }
             }
 
-            // if the left side isn't an evidential,
-            // then we need the expressions to match
-            // up to parity (negation)
-            // 
-            // @Note this code will not work for
-            // negations of evidentials
-            // 
-            // TODO fix for wide-scope negtations
-            if (currentEvidential.Head.Equals(NOT.Head)) {
-                currentEvidential = currentEvidential.GetArgAsExpression(0);
-                continue;
-            }
-            if (currentContent.Head.Equals(NOT.Head)) {
-                currentContent = currentContent.GetArgAsExpression(0);
-                continue;
-            }
             answer.Item = currentEvidential.Equals(currentContent);
             break;
         }

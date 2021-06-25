@@ -62,7 +62,9 @@ public class RadialMenu : MonoBehaviour {
             },
             [TRUTH_FUNCTION] = new HashSet<Name>(){
                 TRULY.Head as Name,
-                NOT.Head as Name
+                NOT.Head as Name,
+                PAST.Head as Name,
+                FUTURE.Head as Name
             },
             // [TRUTH_FUNCTION_2] = new HashSet<Name>(){
             //     AND.Head as Name,
