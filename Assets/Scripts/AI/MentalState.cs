@@ -115,35 +115,47 @@ public class MentalState : MonoBehaviour {
     public IEnumerator EvidentialContains(
         Expression evidential,
         Expression content,
+        Tense tense,
         Container<bool> answer,
+        Container<bool> parityAligned,
         Container<bool> done) {
         // TODO 6/23
         
         Expression currentEvidential = evidential;
         Expression currentContent = content;
 
+        int currentEvidentialTimestamp = Timestamp;
+        int currentContentTimestamp = Timestamp;
+
         bool encounteredNegativeInEvidential = false;
+
+        int evidentialParity = 0;
+        bool evidentialParityLock = false;
+
+        bool contentParity = true;
+        bool contentParityLock = false;
 
         while (true) {
             if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                 yield return null;
             }
 
-            // if the left side isn't an evidential,
-            // then we need the expressions to match
-            // up to parity (negation)
-            // 
-            // @Note this code will not work for
-            // negations of evidentials
-            // 
-            // TODO fix for wide-scope negtations
-            
             bool evidentialNot = currentEvidential.Head.Equals(NOT.Head);
             bool contentNot = currentContent.Head.Equals(NOT.Head);
 
             // we encounter a negative on both sides.
             if (evidentialNot && contentNot) {
                 encounteredNegativeInEvidential = true;
+
+                if (!evidentialParityLock) {
+                    evidentialParity = 3;
+                }
+
+                if (!contentParityLock) {
+                    contentParity = false;
+                }
+                contentParityLock = true;
+
                 currentEvidential = currentEvidential.GetArgAsExpression(0);
                 currentContent = currentContent.GetArgAsExpression(0);
                 continue;
@@ -158,7 +170,14 @@ public class MentalState : MonoBehaviour {
                 // we can peel of the negative if we were still
                 // in a positive evidential up to this point.
                 } else {
+                    // TODO: soup up the logic
+                    // to handle double+ negation.
                     encounteredNegativeInEvidential = true;
+
+                    if (!evidentialParityLock) {
+                        evidentialParity = 3;
+                    }
+
                     currentEvidential = currentEvidential.GetArgAsExpression(0);    
                     continue;
                 }              
@@ -173,6 +192,11 @@ public class MentalState : MonoBehaviour {
                     break;
                 // otherwise, we carry on as normal.
                 } else {
+                    if (!contentParityLock) {
+                        contentParity = false;
+                    }
+                    contentParityLock = true;
+
                     currentContent = currentContent.GetArgAsExpression(0);
                     continue;
                 }
@@ -187,12 +211,28 @@ public class MentalState : MonoBehaviour {
             // Currently, this will give the wrong results for
             // tensed KNOW claims.
             if (currentEvidential.Head.Equals(WHEN.Head)) {
+                // @Note this assumes the timestamp will be a parameter.
+                currentEvidentialTimestamp = (currentEvidential.GetArgAsExpression(1).Head as Parameter).ID;
+                if (evidentialParity > 0 && !evidentialParityLock) {
+                    evidentialParity--;
+                }
                 currentEvidential = currentEvidential.GetArgAsExpression(0);
                 continue;
             }
             if (currentContent.Head.Equals(WHEN.Head)) {
+                // @Note this assumes the timestamp will be a parameter.
+                currentContentTimestamp = (currentContent.GetArgAsExpression(1).Head as Parameter).ID;
                 currentContent = currentContent.GetArgAsExpression(0);
                 continue;
+            }
+
+            // when we match against the evidentials, we ensure
+            // that the tense is properly aligned as well.
+            bool tenseAligned = false;
+            if (tense == Tense.Future) {
+                tenseAligned = currentEvidentialTimestamp > currentContentTimestamp;
+            } else {
+                tenseAligned = currentEvidentialTimestamp < currentContentTimestamp;
             }
 
             // we have an evidential on the left side.
@@ -201,7 +241,12 @@ public class MentalState : MonoBehaviour {
                 // the right side is a matching evidential.
                 // recur on both sides.
                 if (currentEvidential.Head.Equals(currentContent.Head) &&
-                    currentEvidential.GetArgAsExpression(1).Equals(currentContent.GetArgAsExpression(1))) {
+                    // currentEvidential.GetArgAsExpression(1).Equals(currentContent.GetArgAsExpression(1)) &&
+                    currentContent.GetArgAsExpression(1).GetMatches(currentEvidential.GetArgAsExpression(1)).Count > 0 &&
+                    tenseAligned) {
+                    evidentialParityLock = true;
+                    contentParityLock = true;
+
                     currentEvidential = currentEvidential.GetArgAsExpression(0);
                     currentContent = currentContent.GetArgAsExpression(0);
                     continue;
@@ -219,13 +264,20 @@ public class MentalState : MonoBehaviour {
                     answer.Item = false;
                     break;
                 // on positive mismatch, recur only on the left side.
-                } else {    
+                } else {
+                    if (evidentialParity > 0 && !evidentialParityLock) {
+                        evidentialParity--;
+                    }
                     currentEvidential = currentEvidential.GetArgAsExpression(0);
                     continue;
                 }
             }
 
-            answer.Item = currentEvidential.Equals(currentContent);
+            // we've reached a 'dead end' - nothing to peel off -
+            // so we see if the rest of the expression matches up,
+            // and that our timestamps are aligned according to the given tense.
+            answer.Item = currentContent.GetMatches(currentEvidential).Count > 0 && tenseAligned;
+            parityAligned.Item = (evidentialParity == 0) == contentParity;
             break;
         }
 
@@ -263,16 +315,14 @@ public class MentalState : MonoBehaviour {
     }
 
     private static Expression GetContent(Expression e) {
-        if (e.Head.Equals(KNOW.Head) ||
-            e.Head.Equals(SEE.Head) ||
-            e.Head.Equals(WHEN.Head)) {
-            return GetContent(e.GetArgAsExpression(0));
+        var cur = e;
+        while (cur.Head.Equals(KNOW.Head) ||
+            cur.Head.Equals(SEE.Head) ||
+            cur.Head.Equals(WHEN.Head) ||
+            cur.Head.Equals(NOT.Head)) {
+            cur = cur.GetArgAsExpression(0);
         }
-
-        if (e.Head.Equals(NOT.Head)) {
-            return new Expression(NOT, GetContent(e.GetArgAsExpression(0)));
-        }
-        return e;
+        return cur;
     }
 
     private static Expression GetContentTimeBounds(Expression e, HashSet<Variable> variables) {
@@ -301,7 +351,7 @@ public class MentalState : MonoBehaviour {
 
     // this should just be temporary,
     // as the tensed query seems untenable.
-    private enum Tense {
+    public enum Tense {
         Present,
         Past,
         Future
@@ -440,22 +490,30 @@ public class MentalState : MonoBehaviour {
                         var bottom = boundedCurrentLemma.Substitute(bottomSubstitution);
                         var top = boundedCurrentLemma.Substitute(topSubstitution);
 
-                        var zero = new Expression(WHEN,
+                        var beginning = new Expression(WHEN,
                             bottom.GetArgAsExpression(0),
                             new Expression(new Bottom(TIME)));
 
-                        var tHorizon = new Expression(WHEN,
+                        var end = new Expression(WHEN,
                             top.GetArgAsExpression(0),
                             new Expression(new Top(TIME)));
+
+                        var past_present = new Expression(WHEN,
+                            top.GetArgAsExpression(0),
+                            new Expression(new Parameter(TIME, Timestamp)));
+
+                        var future_present = new Expression(WHEN,
+                            bottom.GetArgAsExpression(0),
+                            new Expression(new Parameter(TIME, Timestamp)));
 
                         SortedSet<Expression> timespan;
                         IEnumerable<Expression> iter;
 
                         if (current.Tense == Tense.Present || current.Tense == Tense.Past) {
-                            timespan = KnowledgeBase.GetViewBetween(zero, top);
+                            timespan = KnowledgeBase.GetViewBetween(beginning, past_present);
                             iter = timespan.Reverse();
                         } else {
-                            timespan = KnowledgeBase.GetViewBetween(bottom, tHorizon);
+                            timespan = KnowledgeBase.GetViewBetween(future_present, end);
                             iter = timespan;
                         }
 
@@ -463,55 +521,53 @@ public class MentalState : MonoBehaviour {
                         Expression currentContent = null;
 
                         foreach (var sample in iter) {
+                            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+                                yield return null;
+                            }
                             // @Note we assume as an invariant that
                             // each sample we encounter is tensed.
+                            
+                            // here, we check if we can reset the
+                            // admissibility of a sample because
+                            // its content is different
+                            // e.g. when matching against a formula
                             var sampleContent = GetContent(sample);
-                            bool sampleParity = true;
-
-                            // sentences will be of the form not(when(A, t))
-                            if (sampleContent.Head.Equals(NOT.Head)) {
-                                sampleContent = sampleContent.GetArgAsExpression(0);
-                                sampleParity = false;
-                            }
-
                             if (currentContent == null ||
-                               !currentContent.Equals(sampleContent)) {
-                                currentContent = sampleContent;
+                                !currentContent.Equals(sampleContent)) {
                                 admissible = true;
+                                currentContent = sampleContent;
                             }
 
                             if (!admissible) {
                                 continue;
                             }
-
-                            // here, we see if the evidential lines up with our
-                            // expectations.
-                            // 
-                            // @Note: once we soup up the tense checks in
-                            // evidential contains, we can eliminate the
-                            // checks we do in the above code
-                            // as they will be redundant/slightly inaccurate.
+                            
+                            // here, we see if the evidential
+                            // lines up with our expectations.
                             var evidentialContains = new Container<bool>(false);
+                            var parityAligned = new Container<bool>(true);
                             var ecDone = new Container<bool>(false);
 
-                            
-
-                            StartCoroutine(EvidentialContains(sample, currentLemma, evidentialContains, ecDone));
+                            StartCoroutine(EvidentialContains(
+                                sample,
+                                currentLemma,
+                                current.Tense,
+                                evidentialContains,
+                                parityAligned,
+                                ecDone));
 
                             while (!ecDone.Item) {
                                 yield return null;
                             }
 
-                            Debug.Log(sample + (evidentialContains.Item ? " contains " : " does not contain ") + currentLemma);
-
                             if (evidentialContains.Item) {
                                 // we have a match!
-                                if (current.Parity == sampleParity) {
+                                if (parityAligned.Item) {
                                     var basis = new ProofBasis();
                                     basis.AddPremise(sample);
                                     searchBases.Add(basis);
-                                    // this means the sample we're looking at
-                                    // contradicts the query.
+                                // this means the sample we're looking at
+                                // contradicts the query.
                                 } else if (current.Tense == Tense.Present) {
                                     admissible = false;
                                 }
@@ -595,9 +651,6 @@ public class MentalState : MonoBehaviour {
                     //
 
                     bool exhaustive = false;
-
-                    // TODO add expansion rules to turn predicates into
-                    // evidential predicates.
 
                     // we only check against inference rules if
                     // our search bound hasn't been reached.
@@ -838,8 +891,8 @@ public class MentalState : MonoBehaviour {
                                     }
                                 }
 
-                                // we form the product of our meet basis
-                                // and child bases.
+                                // we form the product of our
+                                // meet basis and child bases.
                                 foreach (var joinBasis in joinBases) {
                                     var productBasis = new ProofBasis(meetBasis, joinBasis);
                                     productBases.Add(productBasis);

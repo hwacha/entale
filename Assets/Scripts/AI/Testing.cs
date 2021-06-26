@@ -39,10 +39,16 @@ public class Testing : MonoBehaviour {
                 new Expression(new Parameter(TIME, 20))),
 
             new Expression(SEE,
-                    new Expression(WHEN,
-                        new Expression(RED, SELF),
-                        new Expression(new Parameter(TIME, 30))),
-                    SELF),
+                new Expression(WHEN,
+                    new Expression(RED, SELF),
+                    new Expression(new Parameter(TIME, 30))),
+                SELF),
+
+            new Expression(SEE,
+                new Expression(WHEN,
+                    new Expression(RED, SELF),
+                    new Expression(new Parameter(TIME, 75))),
+                SELF),
 
             new Expression(WHEN,
                 new Expression(KNOW,
@@ -104,6 +110,24 @@ public class Testing : MonoBehaviour {
                         new Expression(new Parameter(TIME, 39))),
                     CHARLIE),
                 new Expression(new Parameter(TIME, 40))),
+
+            // for testing admissibility for present tense
+            new Expression(WHEN,
+                new Expression(KNOW,
+                    new Expression(WHEN,
+                        new Expression(TOMATO, SELF),
+                        new Expression(new Parameter(TIME, 27))),
+                    BOB),
+                new Expression(new Parameter(TIME, 28))),
+
+            new Expression(NOT,
+                new Expression(WHEN,
+                    new Expression(KNOW,
+                        new Expression(WHEN,
+                            new Expression(TOMATO, SELF),
+                            new Expression(new Parameter(TIME, 27))),
+                        BOB),
+                    new Expression(new Parameter(TIME, 30)))),
         });
 
         // // testing custom ordering for evidentials, negations, tense, etc.
@@ -166,7 +190,7 @@ public class Testing : MonoBehaviour {
         //     new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Top(TIME))), BOB)
         // );
 
-        // foreach (var e in sort) {
+        // foreach (var e in sequence) {
         //     Debug.Log(e);
         // }
 
@@ -310,7 +334,7 @@ public class Testing : MonoBehaviour {
         var bobKnowsAliceDoesntKnowSelfIsntRed = new Expression(KNOW, aliceDoesntKnowSelfIsntRed, BOB);
 
         // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceKnowsSelfIsRed, bobKnowsAliceDoesntKnowSelfIsntRed, true));
-        StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceDoesntKnowSelfIsntRed, bobKnowsAliceKnowsSelfIsRed, false));
+        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceDoesntKnowSelfIsntRed, bobKnowsAliceKnowsSelfIsRed, false));
 
         // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(KNOW,
@@ -346,13 +370,34 @@ public class Testing : MonoBehaviour {
         //             new Expression(AT, SELF, ALICE),
         //             CHARLIE),
         //         ALICE)));
+        
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, new Expression(RED, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(FUTURE, new Expression(RED, SELF))));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(FUTURE,
+        //         new Expression(KNOW,
+        //             new Expression(RED, SELF),
+        //             BOB))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(PAST, new Expression(KNOW, new Expression(TOMATO, SELF), BOB))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW, new Expression(TOMATO, SELF), BOB)));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(FUTURE, new Expression(KNOW, new Expression(TOMATO, SELF), BOB))));
+
     }
 
     public static IEnumerator TestEvidentialContains(MentalState m, Expression evidential, Expression content, bool expect) {
         var answer = new Container<bool>(false);
+        var parityAligned = new Container<bool>(true);
         var done = new Container<bool>(false);
 
-        m.StartCoroutine(m.EvidentialContains(evidential, content, answer, done));
+        m.StartCoroutine(m.EvidentialContains(evidential, content, MentalState.Tense.Present, answer, parityAligned, done));
 
         while (!done.Item) {
             yield return null;
