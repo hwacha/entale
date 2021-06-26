@@ -115,7 +115,6 @@ public class MentalState : MonoBehaviour {
     public IEnumerator EvidentialContains(
         Expression evidential,
         Expression content,
-        Tense tense,
         Container<bool> answer,
         Container<bool> parityAligned,
         Container<bool> done) {
@@ -125,7 +124,7 @@ public class MentalState : MonoBehaviour {
         Expression currentContent = content;
 
         int currentEvidentialTimestamp = Timestamp;
-        int currentContentTimestamp = Timestamp;
+        Tense currentContentTense = Tense.Present;
 
         bool encounteredNegativeInEvidential = false;
 
@@ -219,9 +218,21 @@ public class MentalState : MonoBehaviour {
                 currentEvidential = currentEvidential.GetArgAsExpression(0);
                 continue;
             }
-            if (currentContent.Head.Equals(WHEN.Head)) {
+            if (currentContent.HeadedBy(PAST)) {
                 // @Note this assumes the timestamp will be a parameter.
-                currentContentTimestamp = (currentContent.GetArgAsExpression(1).Head as Parameter).ID;
+                currentContentTense = Tense.Past;
+                currentContent = currentContent.GetArgAsExpression(0);
+                continue;
+            }
+            if (currentContent.HeadedBy(PRESENT)) {
+                // @Note this assumes the timestamp will be a parameter.
+                currentContentTense = Tense.Present;
+                currentContent = currentContent.GetArgAsExpression(0);
+                continue;
+            }
+            if (currentContent.HeadedBy(FUTURE)) {
+                // @Note this assumes the timestamp will be a parameter.
+                currentContentTense = Tense.Future;
                 currentContent = currentContent.GetArgAsExpression(0);
                 continue;
             }
@@ -229,10 +240,10 @@ public class MentalState : MonoBehaviour {
             // when we match against the evidentials, we ensure
             // that the tense is properly aligned as well.
             bool tenseAligned = false;
-            if (tense == Tense.Future) {
-                tenseAligned = currentEvidentialTimestamp > currentContentTimestamp;
+            if (currentContentTense == Tense.Future) {
+                tenseAligned = currentEvidentialTimestamp > Timestamp;
             } else {
-                tenseAligned = currentEvidentialTimestamp < currentContentTimestamp;
+                tenseAligned = currentEvidentialTimestamp < Timestamp;
             }
 
             // we have an evidential on the left side.
@@ -285,33 +296,56 @@ public class MentalState : MonoBehaviour {
         yield break;
     }
 
-    private Expression Tensify(Expression e) {
-        if (e.Head.Type.Equals(PREDICATE) ||
-            e.Head.Type.Equals(RELATION_2)) {
-            return new Expression(WHEN, e, new Expression(new Parameter(TIME, Timestamp)));
+    private static Expression Tensify(Expression e, bool lockTense = false) {
+        if (!e.Type.Equals(TRUTH_VALUE)) {
+            return e;
         }
-        if (e.Head.Equals(NOT.Head)) {
-            return new Expression(NOT, Tensify(e.GetArgAsExpression(0)));
+
+        if (e.HeadedBy(PAST, PRESENT, FUTURE, NOT)) {
+            return new Expression(new Expression(e.Head), Tensify(e.GetArgAsExpression(0), true));
         }
-        if (e.Head.Equals(PAST.Head)) {
-            return new Expression(PAST, Tensify(e.GetArgAsExpression(0)));
+
+        if (e.HeadedBy(AND, OR, IF)) {
+            return new Expression(new Expression(e.Head),
+                Tensify(e.GetArgAsExpression(0)),
+                Tensify(e.GetArgAsExpression(1)));
         }
-        if (e.Head.Equals(FUTURE.Head)) {
-            return new Expression(FUTURE, Tensify(e.GetArgAsExpression(0)));
+
+        Argument[] tensedArgs = new Argument[e.NumArgs];
+        for (int i = 0; i < e.NumArgs; i++) {
+            var arg = e.GetArg(i);
+            if (arg is Empty) {
+                tensedArgs[i] = arg;
+            } else {
+                tensedArgs[i] = Tensify(arg as Expression);
+            }
         }
-        if (e.Head.Equals(KNOW.Head)) {
+        var content = new Expression(new Expression(e.Head), tensedArgs);
+
+        // @Note we may want to implement 'sticky tense' in which
+        // we would keep the tense the same for subclauses until
+        // stated otherwise. This may be most intuitive.
+        return lockTense ? content : new Expression(PRESENT, content);
+    }
+
+    private static Expression Timeify(Expression e) {
+        if (e.HeadedBy(PAST, PRESENT, FUTURE)) {
+            var timeifiedArg = Timeify(e.GetArgAsExpression(0));
             return new Expression(WHEN,
-                new Expression(KNOW,
-                    Tensify(e.GetArgAsExpression(0)),
-                    e.GetArgAsExpression(1)),
-                new Expression(new Parameter(TIME, Timestamp)));
+                timeifiedArg,
+                new Expression(GetUnusedVariable(TIME, timeifiedArg.GetVariables())));
         }
-        if (e.Head.Equals(SEE.Head)) {
-                new Expression(SEE,
-                    Tensify(e.GetArgAsExpression(0)),
-                    e.GetArgAsExpression(1));
+
+        Argument[] timeifiedArgs = new Argument[e.NumArgs];
+        for (int i = 0; i < e.NumArgs; i++) {
+            var arg = e.GetArg(i);
+            if (arg is Empty) {
+                timeifiedArgs[i] = arg;
+            } else {
+                timeifiedArgs[i] = Timeify(arg as Expression);
+            }
         }
-        return e;
+        return new Expression(new Expression(e.Head), timeifiedArgs);
     }
 
     private static Expression GetContent(Expression e) {
@@ -323,30 +357,6 @@ public class MentalState : MonoBehaviour {
             cur = cur.GetArgAsExpression(0);
         }
         return cur;
-    }
-
-    private static Expression GetContentTimeBounds(Expression e, HashSet<Variable> variables) {
-        if (e.Head.Equals(KNOW.Head) ||
-            e.Head.Equals(SEE.Head)) {
-            return new Expression(new Expression(e.Head),
-                GetContentTimeBounds(e.GetArgAsExpression(0), variables),
-                e.GetArgAsExpression(1));
-        }
-
-        if (e.Head.Equals(NOT.Head)) {
-            return new Expression(NOT, GetContentTimeBounds(e.GetArgAsExpression(0), variables));
-        }
-
-        if (e.Head.Equals(WHEN.Head)) {
-            if (e.GetArgAsExpression(0).Head.Equals(KNOW.Head) ||
-                e.GetArgAsExpression(0).Head.Equals(SEE.Head)) {
-                return new Expression(WHEN, GetContentTimeBounds(e.GetArgAsExpression(0), variables), e.GetArgAsExpression(1));
-            } else {
-                return new Expression(WHEN, e.GetArgAsExpression(0), new Expression(GetUnusedVariable(TIME, variables)));
-            }
-        }
-
-        return e;
     }
 
     // this should just be temporary,
@@ -478,8 +488,8 @@ public class MentalState : MonoBehaviour {
 
                     // inertial tensed query
                     // (TAKE 2)
-                    if (currentLemma.Head.Equals(WHEN.Head)) {
-                        var boundedCurrentLemma = GetContentTimeBounds(currentLemma, currentLemma.GetVariables());
+                    if (currentLemma.HeadedBy(PAST, PRESENT, FUTURE)) {
+                        var boundedCurrentLemma = Timeify(currentLemma);
                         var variables = boundedCurrentLemma.GetVariables();
                         var bottomSubstitution = new Substitution();
                         var topSubstitution = new Substitution();
@@ -509,7 +519,12 @@ public class MentalState : MonoBehaviour {
                         SortedSet<Expression> timespan;
                         IEnumerable<Expression> iter;
 
-                        if (current.Tense == Tense.Present || current.Tense == Tense.Past) {
+                        // Debug.Log(beginning);
+                        // Debug.Log(past_present);
+                        // Debug.Log(future_present);
+                        // Debug.Log(end);
+
+                        if (currentLemma.HeadedBy(PAST, PRESENT)) {
                             timespan = KnowledgeBase.GetViewBetween(beginning, past_present);
                             iter = timespan.Reverse();
                         } else {
@@ -551,7 +566,6 @@ public class MentalState : MonoBehaviour {
                             StartCoroutine(EvidentialContains(
                                 sample,
                                 currentLemma,
-                                current.Tense,
                                 evidentialContains,
                                 parityAligned,
                                 ecDone));
@@ -568,7 +582,7 @@ public class MentalState : MonoBehaviour {
                                     searchBases.Add(basis);
                                 // this means the sample we're looking at
                                 // contradicts the query.
-                                } else if (current.Tense == Tense.Present) {
+                                } else if (currentLemma.HeadedBy(PRESENT)) {
                                     admissible = false;
                                 }
                             }

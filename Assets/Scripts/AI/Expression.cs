@@ -361,6 +361,15 @@ public class Expression : Argument, IComparable<Expression> {
         return (Expression) Args[i];
     }
 
+    public bool HeadedBy(params Expression[] exprs) {
+        for (int i = 0; i < exprs.Length; i++) {
+            if (Head.Equals(exprs[i].Head)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // returns true if x occurs in this expression
     public bool HasOccurenceOf(Variable x) {
         if (Head.Equals(x)) {
@@ -1066,6 +1075,7 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression GOOD   = new Expression(new Name(TRUTH_FUNCTION, "good"));
     // tense operators
     public static readonly Expression PAST   = new Expression(new Name(TRUTH_FUNCTION, "past"));
+    public static readonly Expression PRESENT   = new Expression(new Name(TRUTH_FUNCTION, "present"));
     public static readonly Expression FUTURE = new Expression(new Name(TRUTH_FUNCTION, "future"));
 
 

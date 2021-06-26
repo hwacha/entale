@@ -128,6 +128,22 @@ public class Testing : MonoBehaviour {
                             new Expression(new Parameter(TIME, 27))),
                         BOB),
                     new Expression(new Parameter(TIME, 30)))),
+
+            new Expression(WHEN,
+                new Expression(KNOW,
+                    new Expression(WHEN,
+                        new Expression(TOMATO, SELF),
+                        new Expression(new Parameter(TIME, 27))),
+                    BOB),
+                new Expression(new Parameter(TIME, 60))),
+
+            new Expression(WHEN,
+                new Expression(KNOW,
+                    new Expression(WHEN,
+                        new Expression(TOMATO, SELF),
+                        new Expression(new Parameter(TIME, 70))),
+                    BOB),
+                new Expression(new Parameter(TIME, 80))),
         });
 
         // // testing custom ordering for evidentials, negations, tense, etc.
@@ -387,8 +403,19 @@ public class Testing : MonoBehaviour {
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(KNOW, new Expression(TOMATO, SELF), BOB)));
 
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(FUTURE, new Expression(KNOW, new Expression(TOMATO, SELF), BOB))));
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(FUTURE,
+                new Expression(KNOW,
+                    new Expression(PAST,
+                        new Expression(TOMATO, SELF)),
+                    BOB))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(FUTURE,
+                new Expression(KNOW,
+                    new Expression(FUTURE,
+                        new Expression(TOMATO, SELF)),
+                    BOB))));
 
     }
 
@@ -397,7 +424,7 @@ public class Testing : MonoBehaviour {
         var parityAligned = new Container<bool>(true);
         var done = new Container<bool>(false);
 
-        m.StartCoroutine(m.EvidentialContains(evidential, content, MentalState.Tense.Present, answer, parityAligned, done));
+        m.StartCoroutine(m.EvidentialContains(evidential, content, answer, parityAligned, done));
 
         while (!done.Item) {
             yield return null;
