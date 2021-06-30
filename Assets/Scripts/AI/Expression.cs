@@ -806,10 +806,10 @@ public class Expression : Argument, IComparable<Expression> {
         int thatDepth = that.Depth;
         
         // EVIDENTIALS
-        bool thisKnow = this.Head.Equals(KNOW.Head);
-        bool thatKnow = that.Head.Equals(KNOW.Head);
+        bool thisIsEvidential = this.HeadedBy(KNOW, SEE, MAKE);
+        bool thatIsEvidential = that.HeadedBy(KNOW, SEE, MAKE);
 
-        if (thisKnow && thatKnow && thisDepth == thatDepth) {
+        if (thisIsEvidential && thatIsEvidential && thisDepth == thatDepth) {
             var thisContent = this.GetArgAsExpression(0);
             var thatContent = that.GetArgAsExpression(0);
 
@@ -819,15 +819,21 @@ public class Expression : Argument, IComparable<Expression> {
                 return contentComparison;
             }
 
-            var thisKnower = this.GetArgAsExpression(1);
-            var thatKnower = that.GetArgAsExpression(1);
+            int evidentialHeadComparison = this.Head.CompareTo(that.Head);
 
-            int knowerComparison = thisKnower.CompareTo(thatKnower);
+            if (evidentialHeadComparison != 0) {
+                return evidentialHeadComparison;
+            }
 
-            return knowerComparison;
+            var thisSubject = this.GetArgAsExpression(1);
+            var thatSubject = that.GetArgAsExpression(1);
+
+            int subjectComparison = thisSubject.CompareTo(thatSubject);
+
+            return subjectComparison;
         }
-        if (thisKnow && !thatKnow ||
-            thisKnow && thatKnow && thisDepth > thatDepth) {
+        if (thisIsEvidential && !thatIsEvidential ||
+            thisIsEvidential && thatIsEvidential && thisDepth > thatDepth) {
             var content = this.GetArgAsExpression(0);
             int comparison = content.CompareTo(that);
             if (comparison == 0) {
@@ -835,47 +841,8 @@ public class Expression : Argument, IComparable<Expression> {
             }
             return comparison;
         }
-        if (!thisKnow && thatKnow ||
-            thisKnow && thatKnow && thisDepth < thatDepth) {
-            var content = that.GetArgAsExpression(0);
-            int comparison = this.CompareTo(content);
-            if (comparison == 0) {
-                return -1;
-            }
-            return comparison;
-        }
-
-        bool thisSee = this.Head.Equals(SEE.Head);
-        bool thatSee = that.Head.Equals(SEE.Head);
-
-        if (thisSee && thatSee && thisDepth == thatDepth) {
-            var thisContent = this.GetArgAsExpression(0);
-            var thatContent = that.GetArgAsExpression(0);
-
-            int contentComparison = thisContent.CompareTo(thatContent);
-
-            if (contentComparison != 0) {
-                return contentComparison;
-            }
-
-            var thisSeer = this.GetArgAsExpression(1);
-            var thatSeer = that.GetArgAsExpression(1);
-
-            int knowerComparison = thisSeer.CompareTo(thatSeer);
-
-            return knowerComparison;
-        }
-        if (thisSee && !thatSee ||
-            thisSee && thatSee && thisDepth > thatDepth) {
-            var content = this.GetArgAsExpression(0);
-            int comparison = content.CompareTo(that);
-            if (comparison == 0) {
-                return 1;
-            }
-            return comparison;
-        }
-        if (!thisSee && thatSee ||
-            thisSee && thatSee && thisDepth < thatDepth) {
+        if (!thisIsEvidential && thatIsEvidential ||
+            thisIsEvidential && thatIsEvidential && thisDepth < thatDepth) {
             var content = that.GetArgAsExpression(0);
             int comparison = this.CompareTo(content);
             if (comparison == 0) {
@@ -885,8 +852,8 @@ public class Expression : Argument, IComparable<Expression> {
         }
 
         // NEGATION
-        bool thisNot = this.Head.Equals(NOT.Head);
-        bool thatNot = that.Head.Equals(NOT.Head);
+        bool thisNot = this.HeadedBy(NOT);
+        bool thatNot = that.HeadedBy(NOT);
 
         if (thisNot && thatNot && thisDepth == thatDepth) {
             var thisSubclause = this.GetArgAsExpression(0);
@@ -926,8 +893,8 @@ public class Expression : Argument, IComparable<Expression> {
         // which arguments the expressions accept,
         // or (as we currently do) maintain the working
         // order as an invariant.
-        bool thisWhen = this.Head.Equals(WHEN.Head);
-        bool thatWhen = that.Head.Equals(WHEN.Head);
+        bool thisWhen = this.HeadedBy(WHEN, BEFORE, AFTER);
+        bool thatWhen = that.HeadedBy(WHEN, BEFORE, AFTER);
 
         if (thisWhen && thatWhen && thisDepth == thatDepth) {
             var thisContent = this.GetArgAsExpression(0);
@@ -944,8 +911,21 @@ public class Expression : Argument, IComparable<Expression> {
 
             int timeComparison = thisTime.CompareTo(thatTime);
 
+            if (timeComparison == 0) {
+                if (this.HeadedBy(AFTER) && that.HeadedBy(WHEN, BEFORE) ||
+                    this.HeadedBy(AFTER, WHEN) && that.HeadedBy(BEFORE)) {
+                    return 1;
+                }
+                if (this.HeadedBy(BEFORE) && that.HeadedBy(WHEN, AFTER) ||
+                    this.HeadedBy(BEFORE, WHEN) && that.HeadedBy(AFTER)) {
+                    return -1;
+                }
+                return 0;
+            }
+
             return timeComparison;
         }
+
         if (thisWhen && !thatWhen ||
             thisWhen && thatWhen && thisDepth > thatDepth) {
             var content = this.GetArgAsExpression(0);
@@ -1074,9 +1054,9 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression CLOSED = new Expression(new Name(TRUTH_FUNCTION, "closed"));
     public static readonly Expression GOOD   = new Expression(new Name(TRUTH_FUNCTION, "good"));
     // tense operators
-    public static readonly Expression PAST   = new Expression(new Name(TRUTH_FUNCTION, "past"));
-    public static readonly Expression PRESENT   = new Expression(new Name(TRUTH_FUNCTION, "present"));
-    public static readonly Expression FUTURE = new Expression(new Name(TRUTH_FUNCTION, "future"));
+    public static readonly Expression PAST    = new Expression(new Name(TRUTH_FUNCTION, "past"));
+    public static readonly Expression PRESENT = new Expression(new Name(TRUTH_FUNCTION, "present"));
+    public static readonly Expression FUTURE  = new Expression(new Name(TRUTH_FUNCTION, "future"));
 
 
     // higher-order variables
@@ -1103,6 +1083,7 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression SAY       = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "say"));
     public static readonly Expression KNOW      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
     public static readonly Expression SEE       = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "see"));
+    public static readonly Expression MAKE      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "make"));
     public static readonly Expression BELIEVE   = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "believe"));
     public static readonly Expression ABLE      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
     public static readonly Expression PERCEIVE  = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceive"));
@@ -1118,7 +1099,9 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression SELECTOR = new Expression(new Name(DETERMINER, "selector"));
 
     // tensers
-    public static readonly Expression WHEN = new Expression(new Name(TENSER, "when"));
+    public static readonly Expression WHEN   = new Expression(new Name(TENSER, "when"));
+    public static readonly Expression BEFORE = new Expression(new Name(TENSER, "before"));
+    public static readonly Expression AFTER  = new Expression(new Name(TENSER, "after"));
 
     // quantifiers
     public static readonly Expression SOME = new Expression(new Name(QUANTIFIER, "some"));

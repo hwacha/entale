@@ -46,15 +46,13 @@ public class Actuator : MonoBehaviour {
     public IEnumerator RespondTo(Expression utterance, Expression speaker) {
         if (utterance.Type.Equals(ASSERTION)) {
             if (utterance.Head.Equals(ASSERT.Head)) {
-                Agent.MentalState.StartCoroutine(
                 Agent.MentalState.ReceiveAssertion(
                     utterance.GetArgAsExpression(0),
-                    speaker));
+                    speaker);
             }
             if (utterance.Head.Equals(DENY.Head)) {
-                Agent.MentalState.StartCoroutine(
                 Agent.MentalState.ReceiveAssertion(
-                    new Expression(NOT, utterance.GetArgAsExpression(0)), speaker));
+                    new Expression(NOT, utterance.GetArgAsExpression(0)), speaker);
             }
             yield break;
         }
@@ -112,8 +110,7 @@ public class Actuator : MonoBehaviour {
 
                 if (!proofs.IsEmpty()) {
                     StartCoroutine(Say(ACCEPT, 5));
-                    Agent.MentalState.StartCoroutine(
-                        Agent.MentalState.ReceiveRequest(content, speaker));
+                    Agent.MentalState.ReceiveRequest(content, speaker);
                 } else {
                     StartCoroutine(Say(REFUSE, 5));
                 }

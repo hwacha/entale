@@ -79,7 +79,7 @@ public class MentalState : MonoBehaviour {
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
             if (!initialKnowledge[i].Type.Equals(TRUTH_VALUE)) {
-                throw new ArgumentException("MentalState(): expected sentences for base.");
+                throw new ArgumentException("MentalState(): expected sentences for base: " + initialKnowledge[i]);
             }
 
             KnowledgeBase.Add(initialKnowledge[i]);
@@ -124,6 +124,7 @@ public class MentalState : MonoBehaviour {
         Expression currentContent = content;
 
         int currentEvidentialTimestamp = Timestamp;
+        Tense currentEvidentialTense = Tense.Present;
         Tense currentContentTense = Tense.Present;
 
         bool encounteredNegativeInEvidential = false;
@@ -139,8 +140,8 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
-            bool evidentialNot = currentEvidential.Head.Equals(NOT.Head);
-            bool contentNot = currentContent.Head.Equals(NOT.Head);
+            bool evidentialNot = currentEvidential.HeadedBy(NOT);
+            bool contentNot = currentContent.HeadedBy(NOT);
 
             // we encounter a negative on both sides.
             if (evidentialNot && contentNot) {
@@ -209,8 +210,16 @@ public class MentalState : MonoBehaviour {
             // 
             // Currently, this will give the wrong results for
             // tensed KNOW claims.
-            if (currentEvidential.Head.Equals(WHEN.Head)) {
+            if (currentEvidential.HeadedBy(WHEN, BEFORE, AFTER)) {
+                if (currentEvidential.HeadedBy(WHEN)) {
+                    currentEvidentialTense = Tense.Present;
+                } else if (currentEvidential.HeadedBy(BEFORE)) {
+                    currentEvidentialTense = Tense.Past;
+                } else if (currentEvidential.HeadedBy(AFTER)) {
+                    currentEvidentialTense = Tense.Future;
+                }
                 // @Note this assumes the timestamp will be a parameter.
+                Debug.Log(currentEvidential);
                 currentEvidentialTimestamp = (currentEvidential.GetArgAsExpression(1).Head as Parameter).ID;
                 if (evidentialParity > 0 && !evidentialParityLock) {
                     evidentialParity--;
@@ -241,17 +250,24 @@ public class MentalState : MonoBehaviour {
             // that the tense is properly aligned as well.
             bool tenseAligned = false;
             if (currentContentTense == Tense.Future) {
-                tenseAligned = currentEvidentialTimestamp > Timestamp;
+                if (currentEvidentialTense == Tense.Present) {
+                    tenseAligned = currentEvidentialTimestamp > Timestamp;    
+                } else if (currentEvidentialTense == Tense.Future) {
+                    tenseAligned = currentEvidentialTimestamp >= Timestamp;
+                }
             } else {
-                tenseAligned = currentEvidentialTimestamp < Timestamp;
+                if (currentEvidentialTense == Tense.Present) {
+                    tenseAligned = currentEvidentialTimestamp < Timestamp;
+                } else if (currentEvidentialTense == Tense.Past) {
+                    tenseAligned = currentEvidentialTimestamp <= Timestamp;
+                }
             }
 
             // we have an evidential on the left side.
-            if (currentEvidential.Head.Equals(KNOW.Head) ||
-                currentEvidential.Head.Equals(SEE.Head)) {
+            if (currentEvidential.HeadedBy(KNOW, SEE, MAKE)) {
                 // the right side is a matching evidential.
                 // recur on both sides.
-                if (currentEvidential.Head.Equals(currentContent.Head) &&
+                if (currentEvidential.HeadedBy(currentContent) &&
                     // currentEvidential.GetArgAsExpression(1).Equals(currentContent.GetArgAsExpression(1)) &&
                     currentContent.GetArgAsExpression(1).GetMatches(currentEvidential.GetArgAsExpression(1)).Count > 0 &&
                     tenseAligned) {
@@ -296,6 +312,29 @@ public class MentalState : MonoBehaviour {
         yield break;
     }
 
+    private static Expression Reduce(Expression e) {
+        if (e.HeadedBy(TRULY)) {
+            return Reduce(e);
+        }
+        if (e.HeadedBy(NOT)) {
+            var subclause = e.GetArgAsExpression(0);
+            if (subclause.HeadedBy(NOT)) {
+                return Reduce(subclause.GetArgAsExpression(0));
+            }
+        }
+
+        var reducedArgs = new Argument[e.NumArgs];
+        for (int i = 0; i < e.NumArgs; i++) {
+            if (e.GetArg(i) is Empty) {
+                reducedArgs[i] = e.GetArg(i);
+            } else {
+                reducedArgs[i] = Reduce(e.GetArgAsExpression(i));
+            }
+        }
+
+        return new Expression(new Expression(e.Head), reducedArgs);
+    }
+
     private static Expression Tensify(Expression e, bool lockTense = false) {
         if (!e.Type.Equals(TRUTH_VALUE)) {
             return e;
@@ -331,8 +370,15 @@ public class MentalState : MonoBehaviour {
     private static Expression Timeify(Expression e) {
         if (e.HeadedBy(PAST, PRESENT, FUTURE)) {
             var timeifiedArg = Timeify(e.GetArgAsExpression(0));
-            return new Expression(WHEN,
-                timeifiedArg,
+
+            var head = WHEN;
+            if (e.HeadedBy(PAST)) {
+                head = BEFORE;
+            }
+            if (e.HeadedBy(FUTURE)) {
+                head = AFTER;
+            }
+            return new Expression(head, timeifiedArg,
                 new Expression(GetUnusedVariable(TIME, timeifiedArg.GetVariables())));
         }
 
@@ -348,12 +394,37 @@ public class MentalState : MonoBehaviour {
         return new Expression(new Expression(e.Head), timeifiedArgs);
     }
 
+    private Expression AddCurrentTimestamp(Expression e) {
+        if (e.HeadedBy(PAST, PRESENT, FUTURE)) {
+            var timestampedArg = AddCurrentTimestamp(e.GetArgAsExpression(0));
+
+            var head = WHEN;
+            if (e.HeadedBy(PAST)) {
+                head = BEFORE;
+            }
+            if (e.HeadedBy(FUTURE)) {
+                head = AFTER;
+            }
+            return new Expression(head,
+                timestampedArg,
+                new Expression(new Parameter(TIME, Timestamp)));
+        }
+
+        Argument[] timestampedArgs = new Argument[e.NumArgs];
+        for (int i = 0; i < e.NumArgs; i++) {
+            var arg = e.GetArg(i);
+            if (arg is Empty) {
+                timestampedArgs[i] = arg;
+            } else {
+                timestampedArgs[i] = AddCurrentTimestamp(arg as Expression);
+            }
+        }
+        return new Expression(new Expression(e.Head), timestampedArgs);
+    }
+
     private static Expression GetContent(Expression e) {
         var cur = e;
-        while (cur.Head.Equals(KNOW.Head) ||
-            cur.Head.Equals(SEE.Head) ||
-            cur.Head.Equals(WHEN.Head) ||
-            cur.Head.Equals(NOT.Head)) {
+        while (cur.HeadedBy(KNOW, SEE, MAKE, WHEN, NOT)) {
             cur = cur.GetArgAsExpression(0);
         }
         return cur;
@@ -487,7 +558,6 @@ public class MentalState : MonoBehaviour {
                     var searchBases = new ProofBases();
 
                     // inertial tensed query
-                    // (TAKE 2)
                     if (currentLemma.HeadedBy(PAST, PRESENT, FUTURE)) {
                         var boundedCurrentLemma = Timeify(currentLemma);
                         var variables = boundedCurrentLemma.GetVariables();
@@ -508,27 +578,22 @@ public class MentalState : MonoBehaviour {
                             top.GetArgAsExpression(0),
                             new Expression(new Top(TIME)));
 
-                        var past_present = new Expression(WHEN,
+                        var pastPresent = new Expression(WHEN,
                             top.GetArgAsExpression(0),
                             new Expression(new Parameter(TIME, Timestamp)));
 
-                        var future_present = new Expression(WHEN,
+                        var futurePresent = new Expression(WHEN,
                             bottom.GetArgAsExpression(0),
                             new Expression(new Parameter(TIME, Timestamp)));
 
                         SortedSet<Expression> timespan;
                         IEnumerable<Expression> iter;
 
-                        // Debug.Log(beginning);
-                        // Debug.Log(past_present);
-                        // Debug.Log(future_present);
-                        // Debug.Log(end);
-
                         if (currentLemma.HeadedBy(PAST, PRESENT)) {
-                            timespan = KnowledgeBase.GetViewBetween(beginning, past_present);
+                            timespan = KnowledgeBase.GetViewBetween(beginning, pastPresent);
                             iter = timespan.Reverse();
                         } else {
-                            timespan = KnowledgeBase.GetViewBetween(future_present, end);
+                            timespan = KnowledgeBase.GetViewBetween(futurePresent, end);
                             iter = timespan;
                         }
 
@@ -603,9 +668,9 @@ public class MentalState : MonoBehaviour {
                     if (currentLemma.GetVariables().Count == 0) {
 
                         // I can say anything.
-                        if (currentLemma.Head.Equals(ABLE.Head) &&
+                        if (currentLemma.HeadedBy(ABLE) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
-                            currentLemma.GetArgAsExpression(0).Head.Equals(SAY.Head) &&
+                            currentLemma.GetArgAsExpression(0).HeadedBy(SAY) &&
                             currentLemma.GetArgAsExpression(0).GetArgAsExpression(1).Equals(SELF)) {
                             var basis = new ProofBasis();
                             basis.AddPremise(currentLemma);
@@ -613,9 +678,9 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // I can go anywhere.
-                        if (currentLemma.Head.Equals(ABLE.Head) &&
+                        if (currentLemma.HeadedBy(ABLE) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
-                            currentLemma.GetArgAsExpression(0).Head.Equals(AT.Head) &&
+                            currentLemma.GetArgAsExpression(0).HeadedBy(AT) &&
                             currentLemma.GetArgAsExpression(0).GetArgAsExpression(0).Equals(SELF)) {
                             var basis = new ProofBasis();
                             basis.AddPremise(currentLemma);
@@ -624,7 +689,7 @@ public class MentalState : MonoBehaviour {
 
                         // if a and b are within 5 meters of each other,
                         // then at(a, b).
-                        if (currentLemma.Head.Equals(AT.Head)) {
+                        if (currentLemma.HeadedBy(AT)) {
                             var a = currentLemma.GetArgAsExpression(0);
                             var b = currentLemma.GetArgAsExpression(1);
 
@@ -646,6 +711,15 @@ public class MentalState : MonoBehaviour {
                                 }
                             }
                         }
+                    }
+
+                    var newTense = Tense.Present;
+
+                    // if any of the following rules apply to sentence
+                    // forms that also take tense,
+                    // we shave off the tense here.
+                    if (currentLemma.HeadedBy(PAST, PRESENT, FUTURE)) {
+                        currentLemma = currentLemma.GetArgAsExpression(0);
                     }
 
                     //
@@ -676,68 +750,64 @@ public class MentalState : MonoBehaviour {
                         var newStack = new Stack<ProofNode>();
 
                         // truly +
-                        if (currentLemma.Head.Equals(TRULY.Head)) {
+                        if (currentLemma.HeadedBy(TRULY)) {
                             var subclause = currentLemma.GetArgAsExpression(0);
                             newStack.Push(new ProofNode(
                                 subclause,
                                 nextDepth,
                                 current,
                                 i,
-                                tense: current.Tense,
                                 parity: current.Parity));
                             exhaustive = false;
                         }
 
                         // double negation +
-                        if (currentLemma.Head.Equals(NOT.Head)) {
+                        if (currentLemma.HeadedBy(NOT)) {
                             var subclause = currentLemma.GetArgAsExpression(0);
-                            if (subclause.Head.Equals(NOT.Head)) {
+                            if (subclause.HeadedBy(NOT)) {
                                 var subsubclause = subclause.GetArgAsExpression(0);
                                 newStack.Push(new ProofNode(subsubclause,
                                     nextDepth, current, i,
-                                    tense: current.Tense,
                                     parity: current.Parity));
                                 exhaustive = false;
                             } else {
                                 newStack.Push(new ProofNode(
                                     subclause, nextDepth, current, i,
-                                    tense: current.Tense,
                                     parity: !current.Parity));
                                 exhaustive = false;
                             }
 
                             // nonidentity assumption
-                            if (subclause.Head.Equals(IDENTITY.Head)) {
-                                newStack.Push(new ProofNode(new Expression(NOT, currentLemma),
+                            if (subclause.HeadedBy(IDENTITY)) {
+                                newStack.Push(new ProofNode(subclause,
                                     nextDepth, current, i,
                                     isAssumption: true,
-                                    tense: current.Tense,
                                     parity: current.Parity));
                                 exhaustive = false;
                             }
                         }
 
                         // or +
-                        if (currentLemma.Head.Equals(OR.Head)) {
+                        if (currentLemma.HeadedBy(OR)) {
                             var disjunctA = currentLemma.GetArgAsExpression(0);
                             var disjunctB = currentLemma.GetArgAsExpression(1);
                             newStack.Push(new ProofNode(disjunctA, nextDepth, current, i,
-                                tense: current.Tense, parity: current.Parity));
+                                parity: current.Parity));
                             newStack.Push(new ProofNode(disjunctB, nextDepth, current, i,
-                                tense: current.Tense, parity: current.Parity));
+                                parity: current.Parity));
                             exhaustive = false;
                         }
 
                         // and +
-                        if (currentLemma.Head.Equals(AND.Head)) {
+                        if (currentLemma.HeadedBy(AND)) {
                             var conjunctA = currentLemma.GetArgAsExpression(0);
                             var conjunctB = currentLemma.GetArgAsExpression(1);
 
                             var bNode = new ProofNode(conjunctB, nextDepth, current, i,
                                 hasYoungerSibling: true,
-                                tense: current.Tense, parity: current.Parity);
+                                parity: current.Parity);
                             var aNode = new ProofNode(conjunctA, nextDepth, current, i, bNode,
-                                tense: current.Tense, parity: current.Parity);
+                                parity: current.Parity);
 
                             newStack.Push(aNode);
                             newStack.Push(bNode);
@@ -745,7 +815,7 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // some +
-                        if (currentLemma.Head.Equals(SOME.Head)) {
+                        if (currentLemma.HeadedBy(SOME)) {
                             var f = currentLemma.GetArgAsExpression(0);
                             var g = currentLemma.GetArgAsExpression(1);
 
@@ -756,28 +826,22 @@ public class MentalState : MonoBehaviour {
 
                             var gxNode = new ProofNode(gx, nextDepth, current, i,
                                 hasYoungerSibling: true,
-                                tense: current.Tense, parity: current.Parity);
+                                parity: current.Parity);
                             var fxNode = new ProofNode(fx, nextDepth, current, i, gxNode,
-                                tense: current.Tense, parity: current.Parity);
+                                parity: current.Parity);
 
                             newStack.Push(fxNode);
                             newStack.Push(gxNode);
                             exhaustive = false;
                         }
 
-                        // past +
-                        if (currentLemma.Head.Equals(PAST.Head)) {
-                            var subclause = currentLemma.GetArgAsExpression(0);
-                            newStack.Push(new ProofNode(subclause, nextDepth, current, i,
-                                tense: Tense.Past, parity: current.Parity));
-                            exhaustive = false;
-                        }
-
-                        // future +
-                        if (currentLemma.Head.Equals(FUTURE.Head)) {
-                            var subclause = currentLemma.GetArgAsExpression(0);
-                            newStack.Push(new ProofNode(subclause, nextDepth, current, i,
-                                tense: Tense.Future, parity: current.Parity));
+                        // M |- P => M |- know(P, self)
+                        if (currentLemma.HeadedBy(KNOW) && currentLemma.GetArgAsExpression(1).Equals(SELF)) {
+                            newStack.Push(new ProofNode(
+                                currentLemma.GetArgAsExpression(0),
+                                nextDepth, current, i,
+                                isAssumption: !current.Parity,
+                                parity: current.Parity));
                             exhaustive = false;
                         }
 
@@ -789,7 +853,6 @@ public class MentalState : MonoBehaviour {
 
                                 var ableNode = new ProofNode(able, nextDepth, current, i,
                                     supplement: will,
-                                    tense: current.Tense,
                                     parity: current.Parity);
 
                                 newStack.Push(ableNode);
@@ -878,7 +941,8 @@ public class MentalState : MonoBehaviour {
                                 // we can safely assume the content of
                                 // this assumption node
                                 var assumptionBasis = new ProofBasis();
-                                assumptionBasis.AddPremise(mergeLemma.GetArgAsExpression(0));
+                                assumptionBasis.AddPremise(
+                                    new Expression(NOT, new Expression(KNOW, mergeLemma, SELF)));
 
                                 var productBasis = new ProofBasis(meetBasis, assumptionBasis);
                                 productBases.Add(productBasis);
@@ -950,14 +1014,12 @@ public class MentalState : MonoBehaviour {
     }
 
     // the characteristic should be a predicate
-    // NOTE: (or formula with one free variable, TODO)
+    // (or formula with one free variable, TODO)
     // that captures its mode of presentation
     // 
-    // returns true if the object represented already
-    // is found within the model, false otherwise.
+    // a percept with the given characteristic is asserted.
     // 
-    // either way, a percept with
-    // the given characteristic is asserted.
+    // Returns the new parameter used.
     public Expression ConstructPercept(Expression characteristic, Vector3 location) {
         Debug.Assert(characteristic.Type.Equals(PREDICATE));
 
@@ -975,104 +1037,38 @@ public class MentalState : MonoBehaviour {
             Locations.Add(param, new Vector3(location.x, location.y, location.z));
         }
 
-        var timeParam = new Expression(new Parameter(TIME, Timestamp));
-
-        var percept = new Expression(SEE,
-            new Expression(WHEN, new Expression(characteristic, param), timeParam),
-            SELF);
+        var percept = new Expression(SEE, new Expression(characteristic, param), SELF);
 
         // we need to queue this up so that it doesn't cause a
         // concurrent modification problem.
         
-        KnowledgeBase.Add(percept);
+        AddToKnowledgeBase(percept);
 
         return param;
     }
 
     // @Note: this should be private ultimately.
     // public for testing purposes.
-    public IEnumerator AddToKnowledgeBase(Expression knowledge) {
-        var assertionTime = Timestamp;
-        Expression cur = knowledge;
-        bool parity = true;
-        Expression evidential = null;
-
-        // we turn this statement into an evidentialized form.
-        // 
-        // TODO: make this smarter, so it doesn't mess up
-        // sentences like not(knows(p, x)) or
-        // knows(~~p, x) and stuff of the sort.
-        while (true) {
-            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                yield return null;
-            }
-
-            if (cur.Head.Equals(NOT.Head)) {
-                cur = cur.GetArgAsExpression(0);
-                parity = !parity;
-            } else if (parity && cur.Head.Equals(KNOW.Head)) {             
-                var wrapper = new Expression(KNOW_TENSED,
-                        new Empty(TRUTH_VALUE),
-                        cur.GetArgAsExpression(1),
-                        new Expression(new Parameter(TIME, assertionTime)));
-                cur = cur.GetArgAsExpression(0);
-
-                if (evidential == null) {
-                    evidential = wrapper;
-                } else {
-                    evidential = new Expression(GEACH_T_TRUTH_FUNCTION, evidential, wrapper);
-                }
-            } else if (parity && cur.Head.Equals(SEE.Head)) {
-                var wrapper = new Expression(SEE,
-                    new Empty(TRUTH_VALUE),
-                    cur.GetArgAsExpression(1));
-                cur = cur.GetArgAsExpression(0);
-
-                if (evidential == null) {
-                    evidential = wrapper;
-                } else {
-                    evidential = new Expression(GEACH_T_TRUTH_FUNCTION, evidential, wrapper);
-                }
-            } else {
-                break;
-            }
+    public bool AddToKnowledgeBase(Expression knowledge) {
+        var modifiedFormKnowledge = AddCurrentTimestamp(Tensify(Reduce(knowledge)));
+        if (KnowledgeBase.Contains(modifiedFormKnowledge)) {
+            return false;
         }
-
-        // if there's no evidential given,
-        // then the default is know(S, self)
-        if (evidential == null) {
-            evidential = new Expression(KNOW_TENSED,
-                new Empty(TRUTH_VALUE),
-                SELF,
-                new Expression(new Parameter(TIME, assertionTime)));
-        }
-
-        Expression evidentializedExpression = new Expression(EVIDENTIALIZER,
-            cur,
-            new Expression(new Parameter(TIME, assertionTime)),
-            (parity ? TRULY : NOT),
-            evidential);
-
-        // For testing purposes
-        Debug.Log(evidentializedExpression);
-        // end
-
-        KnowledgeBase.Add(evidentializedExpression);
-
-        yield break;
+        Debug.Log("Adding " + modifiedFormKnowledge);
+        KnowledgeBase.Add(modifiedFormKnowledge);
+        return true;
     }
 
     // a direct assertion.
     // @TODO add an inference rule to cover knowledge from
     // assertion. Now is a simple fix.
-    public IEnumerator ReceiveAssertion(Expression content, Expression speaker) {
-        StartCoroutine(AddToKnowledgeBase(new Expression(KNOW, content, speaker)));
+    public bool ReceiveAssertion(Expression content, Expression speaker) {
+        return AddToKnowledgeBase(new Expression(KNOW, content, speaker));
         // TODO check to see if this is inconsistent
         // with the current knowledge base
-        yield break;
     }
 
-    public IEnumerator ReceiveRequest(Expression content, Expression speaker) {
+    public bool ReceiveRequest(Expression content, Expression speaker) {
         // the proposition we add here, we want to be the equivalent to
         // knowledge in certain ways. So, for example, knows(p, S) -> p
         // in the same way that X(p, S) -> good(p).
@@ -1080,8 +1076,7 @@ public class MentalState : MonoBehaviour {
         // Right now, we literally have this as S knows that p is good,
         // but this feels somehow not aesthetically pleasing to me. I'll
         // try it out for now.
-        StartCoroutine(AddToKnowledgeBase(new Expression(KNOW, new Expression(GOOD, content), speaker)));
-        yield break;
+        return AddToKnowledgeBase(new Expression(KNOW, new Expression(GOOD, content), speaker));
     }
 
     public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
@@ -1143,4 +1138,5 @@ public class MentalState : MonoBehaviour {
         yield break;
     }
 }
+
 
