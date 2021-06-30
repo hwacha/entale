@@ -806,10 +806,10 @@ public class Expression : Argument, IComparable<Expression> {
         int thatDepth = that.Depth;
         
         // EVIDENTIALS
-        bool thisIsEvidential = this.HeadedBy(KNOW, SEE, MAKE);
-        bool thatIsEvidential = that.HeadedBy(KNOW, SEE, MAKE);
+        bool thisIsFactive = this.HeadedBy(KNOW, SEE, MAKE);
+        bool thatIsFactive = that.HeadedBy(KNOW, SEE, MAKE);
 
-        if (thisIsEvidential && thatIsEvidential && thisDepth == thatDepth) {
+        if (thisIsFactive && thatIsFactive && thisDepth == thatDepth) {
             var thisContent = this.GetArgAsExpression(0);
             var thatContent = that.GetArgAsExpression(0);
 
@@ -819,10 +819,10 @@ public class Expression : Argument, IComparable<Expression> {
                 return contentComparison;
             }
 
-            int evidentialHeadComparison = this.Head.CompareTo(that.Head);
+            int factiveHeadComparison = this.Head.CompareTo(that.Head);
 
-            if (evidentialHeadComparison != 0) {
-                return evidentialHeadComparison;
+            if (factiveHeadComparison != 0) {
+                return factiveHeadComparison;
             }
 
             var thisSubject = this.GetArgAsExpression(1);
@@ -832,8 +832,8 @@ public class Expression : Argument, IComparable<Expression> {
 
             return subjectComparison;
         }
-        if (thisIsEvidential && !thatIsEvidential ||
-            thisIsEvidential && thatIsEvidential && thisDepth > thatDepth) {
+        if (thisIsFactive && !thatIsFactive ||
+            thisIsFactive && thatIsFactive && thisDepth > thatDepth) {
             var content = this.GetArgAsExpression(0);
             int comparison = content.CompareTo(that);
             if (comparison == 0) {
@@ -841,8 +841,8 @@ public class Expression : Argument, IComparable<Expression> {
             }
             return comparison;
         }
-        if (!thisIsEvidential && thatIsEvidential ||
-            thisIsEvidential && thatIsEvidential && thisDepth < thatDepth) {
+        if (!thisIsFactive && thatIsFactive ||
+            thisIsFactive && thatIsFactive && thisDepth < thatDepth) {
             var content = that.GetArgAsExpression(0);
             int comparison = this.CompareTo(content);
             if (comparison == 0) {
@@ -1149,12 +1149,6 @@ public class Expression : Argument, IComparable<Expression> {
 
     // heads for deictic expressions
     public static readonly Expression THIS = new Expression(new Name(INDIVIDUAL, "this"));
-
-    // turn basic sentence into a tensed, evidentialized sentence
-    // 
-    // TODO: replace this wiht a general-purpose type-shifter.
-    public static readonly Expression EVIDENTIALIZER =
-        new Expression(new Name(EVIDENTIAL_FUNCTION, "evidentializer"));
 
     // // sourced predicates
     // public static readonly Expression SOURCED_RED = new Expression(new Name(EVIDENTIAL_PREDICATE, "sred"));

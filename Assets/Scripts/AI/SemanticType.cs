@@ -95,18 +95,7 @@ public abstract class SemanticType : IComparable<SemanticType> {
         new FunctionalType(new SemanticType[]{TRUTH_VALUE, TIME}, TRUTH_VALUE);
 
     public static readonly FunctionalType TENSED_INDIVIDUAL_TRUTH_RELATION =
-        new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL, TIME}, TRUTH_VALUE);
-
-    // experimental
-    // evidentialized sentence -
-    // takes a sentence with adjunctive tense, 'know's, and 'not's
-    // and turns them into parameters
-    // 
-    // evidential(S, t, truly/not, know...)
-    // 
-    public static readonly FunctionalType EVIDENTIAL_FUNCTION =
-        new FunctionalType(new SemanticType[]{TRUTH_VALUE, TIME, TRUTH_FUNCTION, TRUTH_FUNCTION}, TRUTH_VALUE);
-    
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL, TIME}, TRUTH_VALUE);    
 
     public static SemanticType Push(SemanticType t, SemanticType ts) {
         if (ts is AtomicType) {
@@ -397,7 +386,7 @@ public class T : AtomicType {
     }
 }
 
-// evidential source
+// factive source
 public class S : AtomicType {
     public override string ToString() {
         return "s";

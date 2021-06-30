@@ -155,7 +155,7 @@ public class Testing : MonoBehaviour {
 
         });
 
-        // testing custom ordering for evidentials, negations, tense, etc.
+        // testing custom ordering for factives, negations, tense, etc.
         SortedSet<Expression> sequence = new SortedSet<Expression>{
             // new Expression(RED, SELF),
             // new Expression(GREEN, SELF),
@@ -299,67 +299,67 @@ public class Testing : MonoBehaviour {
         var selfIsRed = new Expression(RED, SELF);
         var aliceKnowsSelfIsRed = new Expression(KNOW, selfIsRed, ALICE);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, aliceKnowsSelfIsRed, selfIsRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, selfIsRed, aliceKnowsSelfIsRed, false));
+        // StartCoroutine(TestFactiveContains(MentalState, aliceKnowsSelfIsRed, selfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, selfIsRed, aliceKnowsSelfIsRed, false));
 
         var bobKnowsAliceKnowsSelfIsRed = new Expression(KNOW, aliceKnowsSelfIsRed, BOB);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceKnowsSelfIsRed, aliceKnowsSelfIsRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceKnowsSelfIsRed, selfIsRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceKnowsSelfIsRed, new Expression(GREEN, SELF), false));
+        // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceKnowsSelfIsRed, aliceKnowsSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceKnowsSelfIsRed, selfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceKnowsSelfIsRed, new Expression(GREEN, SELF), false));
 
         var charlieKnows = new Expression(KNOW, bobKnowsAliceKnowsSelfIsRed, CHARLIE);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, bobKnowsAliceKnowsSelfIsRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, aliceKnowsSelfIsRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, selfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, bobKnowsAliceKnowsSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, aliceKnowsSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, selfIsRed, true));
 
         var bobKnowsSelfIsRed = new Expression(KNOW, selfIsRed, BOB);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, bobKnowsSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, bobKnowsSelfIsRed, true));
 
         var aliceKnowsBobKnowsSelfIsRed = new Expression(KNOW, bobKnowsSelfIsRed, ALICE);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, aliceKnowsBobKnowsSelfIsRed, false));
+        // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, aliceKnowsBobKnowsSelfIsRed, false));
 
         var charlieKnowsAliceKnowsSelfIsRed = new Expression(KNOW, aliceKnowsSelfIsRed, CHARLIE);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, charlieKnows, charlieKnowsAliceKnowsSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, charlieKnowsAliceKnowsSelfIsRed, true));
         
         var selfIsntRed = new Expression(NOT, selfIsRed);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, selfIsRed, selfIsntRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, selfIsntRed, selfIsRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, aliceKnowsSelfIsRed, selfIsntRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, selfIsRed, selfIsntRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, selfIsntRed, selfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, aliceKnowsSelfIsRed, selfIsntRed, true));
 
         var aliceDoesntKnowSelfIsRed = new Expression(NOT, aliceKnowsSelfIsRed);
         var aliceKnowsSelfIsntRed = new Expression(KNOW, selfIsntRed, ALICE);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, aliceDoesntKnowSelfIsRed, selfIsRed, false));
-        // StartCoroutine(TestEvidentialContains(MentalState, aliceDoesntKnowSelfIsRed, selfIsRed, false));
+        // StartCoroutine(TestFactiveContains(MentalState, aliceDoesntKnowSelfIsRed, selfIsRed, false));
+        // StartCoroutine(TestFactiveContains(MentalState, aliceDoesntKnowSelfIsRed, selfIsRed, false));
 
-        // StartCoroutine(TestEvidentialContains(MentalState, aliceDoesntKnowSelfIsRed, aliceKnowsSelfIsRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, aliceKnowsSelfIsRed, aliceDoesntKnowSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, aliceDoesntKnowSelfIsRed, aliceKnowsSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, aliceKnowsSelfIsRed, aliceDoesntKnowSelfIsRed, true));
         
-        // StartCoroutine(TestEvidentialContains(MentalState, aliceDoesntKnowSelfIsRed, aliceKnowsSelfIsntRed, false));
+        // StartCoroutine(TestFactiveContains(MentalState, aliceDoesntKnowSelfIsRed, aliceKnowsSelfIsntRed, false));
 
         var bobDoesntKnowAliceKnowsSelfIsRed = new Expression(NOT, bobKnowsAliceKnowsSelfIsRed);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, bobDoesntKnowAliceKnowsSelfIsRed, selfIsRed, false));
-        // StartCoroutine(TestEvidentialContains(MentalState, bobDoesntKnowAliceKnowsSelfIsRed, aliceKnowsSelfIsRed, false));
-        // StartCoroutine(TestEvidentialContains(MentalState, bobDoesntKnowAliceKnowsSelfIsRed, bobKnowsAliceKnowsSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, bobDoesntKnowAliceKnowsSelfIsRed, selfIsRed, false));
+        // StartCoroutine(TestFactiveContains(MentalState, bobDoesntKnowAliceKnowsSelfIsRed, aliceKnowsSelfIsRed, false));
+        // StartCoroutine(TestFactiveContains(MentalState, bobDoesntKnowAliceKnowsSelfIsRed, bobKnowsAliceKnowsSelfIsRed, true));
 
         var bobKnowsAliceDoesntKnowSelfIsRed = new Expression(KNOW, aliceDoesntKnowSelfIsRed, BOB);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceDoesntKnowSelfIsRed, aliceDoesntKnowSelfIsRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceDoesntKnowSelfIsRed, aliceKnowsSelfIsRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceDoesntKnowSelfIsRed, aliceKnowsSelfIsntRed, false));
+        // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceDoesntKnowSelfIsRed, aliceDoesntKnowSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceDoesntKnowSelfIsRed, aliceKnowsSelfIsRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceDoesntKnowSelfIsRed, aliceKnowsSelfIsntRed, false));
 
         var aliceDoesntKnowSelfIsntRed = new Expression(NOT, aliceKnowsSelfIsntRed);
         var bobKnowsAliceDoesntKnowSelfIsntRed = new Expression(KNOW, aliceDoesntKnowSelfIsntRed, BOB);
 
-        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceKnowsSelfIsRed, bobKnowsAliceDoesntKnowSelfIsntRed, true));
-        // StartCoroutine(TestEvidentialContains(MentalState, bobKnowsAliceDoesntKnowSelfIsntRed, bobKnowsAliceKnowsSelfIsRed, false));
+        // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceKnowsSelfIsRed, bobKnowsAliceDoesntKnowSelfIsntRed, true));
+        // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceDoesntKnowSelfIsntRed, bobKnowsAliceKnowsSelfIsRed, false));
 
         // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(KNOW,
@@ -454,19 +454,19 @@ public class Testing : MonoBehaviour {
         //             SELF))));
     }
 
-    public static IEnumerator TestEvidentialContains(MentalState m, Expression evidential, Expression content, bool expect) {
+    public static IEnumerator TestFactiveContains(MentalState m, Expression factive, Expression content, bool expect) {
         var answer = new Container<bool>(false);
         var parityAligned = new Container<bool>(true);
         var done = new Container<bool>(false);
 
-        m.StartCoroutine(m.EvidentialContains(evidential, content, answer, parityAligned, done));
+        m.StartCoroutine(m.FactiveContains(factive, content, answer, parityAligned, done));
 
         while (!done.Item) {
             yield return null;
         }
 
         Log((answer.Item == expect ? "SUCCESS: " : "FAILURE: ") +
-            evidential +
+            factive +
             (answer.Item ? " contains " : " does not contain ") +
             content);
     }

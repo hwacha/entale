@@ -106,31 +106,31 @@ public class MentalState : MonoBehaviour {
     }
 
     // helper funtion for StreamBases().
-    // checks two geached, complex evidentials against one another.
+    // checks two geached, complex factives against one another.
     // 
     // if, for example, we have
     // knows(knows(p, a), b) being checked against knows(knows(knows(p, a), b), c),
     // we want this to return true (along with any other subsequence of a, b, c).
     // 
-    public IEnumerator EvidentialContains(
-        Expression evidential,
+    public IEnumerator FactiveContains(
+        Expression factive,
         Expression content,
         Container<bool> answer,
         Container<bool> parityAligned,
         Container<bool> done) {
         // TODO 6/23
         
-        Expression currentEvidential = evidential;
+        Expression currentFactive = factive;
         Expression currentContent = content;
 
-        int currentEvidentialTimestamp = Timestamp;
-        Tense currentEvidentialTense = Tense.Present;
+        int currentFactiveTimestamp = Timestamp;
+        Tense currentFactiveTense = Tense.Present;
         Tense currentContentTense = Tense.Present;
 
-        bool encounteredNegativeInEvidential = false;
+        bool encounteredNegativeInFactive = false;
 
-        int evidentialParity = 0;
-        bool evidentialParityLock = false;
+        int factiveParity = 0;
+        bool factiveParityLock = false;
 
         bool contentParity = true;
         bool contentParityLock = false;
@@ -140,15 +140,15 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
-            bool evidentialNot = currentEvidential.HeadedBy(NOT);
+            bool factiveNot = currentFactive.HeadedBy(NOT);
             bool contentNot = currentContent.HeadedBy(NOT);
 
             // we encounter a negative on both sides.
-            if (evidentialNot && contentNot) {
-                encounteredNegativeInEvidential = true;
+            if (factiveNot && contentNot) {
+                encounteredNegativeInFactive = true;
 
-                if (!evidentialParityLock) {
-                    evidentialParity = 3;
+                if (!factiveParityLock) {
+                    factiveParity = 3;
                 }
 
                 if (!contentParityLock) {
@@ -156,29 +156,29 @@ public class MentalState : MonoBehaviour {
                 }
                 contentParityLock = true;
 
-                currentEvidential = currentEvidential.GetArgAsExpression(0);
+                currentFactive = currentFactive.GetArgAsExpression(0);
                 currentContent = currentContent.GetArgAsExpression(0);
                 continue;
             }
 
-            // we encounter a negative in the evidential.
-            if (evidentialNot) {
+            // we encounter a negative in the factive.
+            if (factiveNot) {
                 // here, we still want to fail if we encounter a mismatch.
-                if (encounteredNegativeInEvidential) {
+                if (encounteredNegativeInFactive) {
                     answer.Item = false;
                     break;
                 // we can peel of the negative if we were still
-                // in a positive evidential up to this point.
+                // in a positive factive up to this point.
                 } else {
                     // TODO: soup up the logic
                     // to handle double+ negation.
-                    encounteredNegativeInEvidential = true;
+                    encounteredNegativeInFactive = true;
 
-                    if (!evidentialParityLock) {
-                        evidentialParity = 3;
+                    if (!factiveParityLock) {
+                        factiveParity = 3;
                     }
 
-                    currentEvidential = currentEvidential.GetArgAsExpression(0);    
+                    currentFactive = currentFactive.GetArgAsExpression(0);    
                     continue;
                 }              
             }
@@ -186,8 +186,8 @@ public class MentalState : MonoBehaviour {
             // we encounter a negative in the content.
             if (contentNot) {
                 // if we've encountered a negative in
-                // the evidential, then we want to fail here.
-                if (encounteredNegativeInEvidential) {
+                // the factive, then we want to fail here.
+                if (encounteredNegativeInFactive) {
                     answer.Item = false;
                     break;
                 // otherwise, we carry on as normal.
@@ -210,21 +210,21 @@ public class MentalState : MonoBehaviour {
             // 
             // Currently, this will give the wrong results for
             // tensed KNOW claims.
-            if (currentEvidential.HeadedBy(WHEN, BEFORE, AFTER)) {
-                if (currentEvidential.HeadedBy(WHEN)) {
-                    currentEvidentialTense = Tense.Present;
-                } else if (currentEvidential.HeadedBy(BEFORE)) {
-                    currentEvidentialTense = Tense.Past;
-                } else if (currentEvidential.HeadedBy(AFTER)) {
-                    currentEvidentialTense = Tense.Future;
+            if (currentFactive.HeadedBy(WHEN, BEFORE, AFTER)) {
+                if (currentFactive.HeadedBy(WHEN)) {
+                    currentFactiveTense = Tense.Present;
+                } else if (currentFactive.HeadedBy(BEFORE)) {
+                    currentFactiveTense = Tense.Past;
+                } else if (currentFactive.HeadedBy(AFTER)) {
+                    currentFactiveTense = Tense.Future;
                 }
                 // @Note this assumes the timestamp will be a parameter.
-                Debug.Log(currentEvidential);
-                currentEvidentialTimestamp = (currentEvidential.GetArgAsExpression(1).Head as Parameter).ID;
-                if (evidentialParity > 0 && !evidentialParityLock) {
-                    evidentialParity--;
+                Debug.Log(currentFactive);
+                currentFactiveTimestamp = (currentFactive.GetArgAsExpression(1).Head as Parameter).ID;
+                if (factiveParity > 0 && !factiveParityLock) {
+                    factiveParity--;
                 }
-                currentEvidential = currentEvidential.GetArgAsExpression(0);
+                currentFactive = currentFactive.GetArgAsExpression(0);
                 continue;
             }
             if (currentContent.HeadedBy(PAST)) {
@@ -246,56 +246,56 @@ public class MentalState : MonoBehaviour {
                 continue;
             }
 
-            // when we match against the evidentials, we ensure
+            // when we match against the factives, we ensure
             // that the tense is properly aligned as well.
             bool tenseAligned = false;
             if (currentContentTense == Tense.Future) {
-                if (currentEvidentialTense == Tense.Present) {
-                    tenseAligned = currentEvidentialTimestamp > Timestamp;    
-                } else if (currentEvidentialTense == Tense.Future) {
-                    tenseAligned = currentEvidentialTimestamp >= Timestamp;
+                if (currentFactiveTense == Tense.Present) {
+                    tenseAligned = currentFactiveTimestamp > Timestamp;    
+                } else if (currentFactiveTense == Tense.Future) {
+                    tenseAligned = currentFactiveTimestamp >= Timestamp;
                 }
             } else {
-                if (currentEvidentialTense == Tense.Present) {
-                    tenseAligned = currentEvidentialTimestamp < Timestamp;
-                } else if (currentEvidentialTense == Tense.Past) {
-                    tenseAligned = currentEvidentialTimestamp <= Timestamp;
+                if (currentFactiveTense == Tense.Present) {
+                    tenseAligned = currentFactiveTimestamp < Timestamp;
+                } else if (currentFactiveTense == Tense.Past) {
+                    tenseAligned = currentFactiveTimestamp <= Timestamp;
                 }
             }
 
-            // we have an evidential on the left side.
-            if (currentEvidential.HeadedBy(KNOW, SEE, MAKE)) {
-                // the right side is a matching evidential.
+            // we have an factive on the left side.
+            if (currentFactive.HeadedBy(KNOW, SEE, MAKE)) {
+                // the right side is a matching factive.
                 // recur on both sides.
-                if (currentEvidential.HeadedBy(currentContent) &&
-                    // currentEvidential.GetArgAsExpression(1).Equals(currentContent.GetArgAsExpression(1)) &&
-                    currentContent.GetArgAsExpression(1).GetMatches(currentEvidential.GetArgAsExpression(1)).Count > 0 &&
+                if (currentFactive.HeadedBy(currentContent) &&
+                    // currentFactive.GetArgAsExpression(1).Equals(currentContent.GetArgAsExpression(1)) &&
+                    currentContent.GetArgAsExpression(1).GetMatches(currentFactive.GetArgAsExpression(1)).Count > 0 &&
                     tenseAligned) {
-                    evidentialParityLock = true;
+                    factiveParityLock = true;
                     contentParityLock = true;
 
-                    currentEvidential = currentEvidential.GetArgAsExpression(0);
+                    currentFactive = currentFactive.GetArgAsExpression(0);
                     currentContent = currentContent.GetArgAsExpression(0);
                     continue;
-                // negative evidential w/ mismatch.
+                // negative factive w/ mismatch.
                 // this should return false, because
                 // we need the rest of the expression to
                 // match once we encounter a negative
-                // on the evidential side.
+                // on the factive side.
                 // 
                 // @Note this is true for an 'entails P'
                 // reading of 'knows P'. If we change to a
                 // 'presupposes P' account of 'knows P',
                 // this will have to change.
-                } else if (encounteredNegativeInEvidential) {
+                } else if (encounteredNegativeInFactive) {
                     answer.Item = false;
                     break;
                 // on positive mismatch, recur only on the left side.
                 } else {
-                    if (evidentialParity > 0 && !evidentialParityLock) {
-                        evidentialParity--;
+                    if (factiveParity > 0 && !factiveParityLock) {
+                        factiveParity--;
                     }
-                    currentEvidential = currentEvidential.GetArgAsExpression(0);
+                    currentFactive = currentFactive.GetArgAsExpression(0);
                     continue;
                 }
             }
@@ -303,8 +303,8 @@ public class MentalState : MonoBehaviour {
             // we've reached a 'dead end' - nothing to peel off -
             // so we see if the rest of the expression matches up,
             // and that our timestamps are aligned according to the given tense.
-            answer.Item = currentContent.GetMatches(currentEvidential).Count > 0 && tenseAligned;
-            parityAligned.Item = (evidentialParity == 0) == contentParity;
+            answer.Item = currentContent.GetMatches(currentFactive).Count > 0 && tenseAligned;
+            parityAligned.Item = (factiveParity == 0) == contentParity;
             break;
         }
 
@@ -604,6 +604,7 @@ public class MentalState : MonoBehaviour {
                             if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                                 yield return null;
                             }
+
                             // @Note we assume as an invariant that
                             // each sample we encounter is tensed.
                             
@@ -622,16 +623,16 @@ public class MentalState : MonoBehaviour {
                                 continue;
                             }
                             
-                            // here, we see if the evidential
+                            // here, we see if the factive
                             // lines up with our expectations.
-                            var evidentialContains = new Container<bool>(false);
+                            var factiveContains = new Container<bool>(false);
                             var parityAligned = new Container<bool>(true);
                             var ecDone = new Container<bool>(false);
 
-                            StartCoroutine(EvidentialContains(
+                            StartCoroutine(FactiveContains(
                                 sample,
                                 currentLemma,
-                                evidentialContains,
+                                factiveContains,
                                 parityAligned,
                                 ecDone));
 
@@ -639,7 +640,7 @@ public class MentalState : MonoBehaviour {
                                 yield return null;
                             }
 
-                            if (evidentialContains.Item) {
+                            if (factiveContains.Item) {
                                 // we have a match!
                                 if (parityAligned.Item) {
                                     var basis = new ProofBasis();
@@ -652,6 +653,12 @@ public class MentalState : MonoBehaviour {
                                 }
                             }
                         }
+                    }
+                    // if any of the following rules apply to sentence
+                    // forms that also take tense,
+                    // we shave off the tense here.
+                    if (currentLemma.HeadedBy(PAST, PRESENT, FUTURE)) {
+                        currentLemma = currentLemma.GetArgAsExpression(0);
                     }
                     // (END TAKE 2)
 
@@ -711,15 +718,6 @@ public class MentalState : MonoBehaviour {
                                 }
                             }
                         }
-                    }
-
-                    var newTense = Tense.Present;
-
-                    // if any of the following rules apply to sentence
-                    // forms that also take tense,
-                    // we shave off the tense here.
-                    if (currentLemma.HeadedBy(PAST, PRESENT, FUTURE)) {
-                        currentLemma = currentLemma.GetArgAsExpression(0);
                     }
 
                     //
@@ -1042,7 +1040,7 @@ public class MentalState : MonoBehaviour {
         // we need to queue this up so that it doesn't cause a
         // concurrent modification problem.
         
-        AddToKnowledgeBase(percept);
+        // AddToKnowledgeBase(percept);
 
         return param;
     }
