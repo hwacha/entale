@@ -18,19 +18,19 @@ public class RadialMenu : MonoBehaviour {
 
     public Dictionary<SemanticType, HashSet<Name>> Lexicon =
         new Dictionary<SemanticType, HashSet<Name>>(){
-            [TRUTH_VALUE] = new HashSet<Name>{
-                VERUM.Head as Name,
-                FALSUM.Head as Name,
-                NEUTRAL.Head as Name
-            },
-            [ASSERTION] = new HashSet<Name>(){
-                YES.Head as Name,
-                NO.Head  as Name
-            },
-            [CONFORMITY_VALUE] = new HashSet<Name>(){
-                ACCEPT.Head as Name,
-                REFUSE.Head as Name
-            },
+            // [TRUTH_VALUE] = new HashSet<Name>{
+            //     VERUM.Head as Name,
+            //     FALSUM.Head as Name,
+            //     NEUTRAL.Head as Name
+            // },
+            // [ASSERTION] = new HashSet<Name>(){
+            //     YES.Head as Name,
+            //     NO.Head  as Name
+            // },
+            // [CONFORMITY_VALUE] = new HashSet<Name>(){
+            //     ACCEPT.Head as Name,
+            //     REFUSE.Head as Name
+            // },
             [TRUTH_ASSERTION_FUNCTION] = new HashSet<Name>(){
                 ASSERT.Head as Name,
                 DENY.Head as Name
@@ -62,22 +62,25 @@ public class RadialMenu : MonoBehaviour {
             },
             [TRUTH_FUNCTION] = new HashSet<Name>(){
                 TRULY.Head as Name,
-                NOT.Head as Name
+                NOT.Head as Name,
+                PAST.Head as Name,
+                FUTURE.Head as Name
             },
-            [TRUTH_FUNCTION_2] = new HashSet<Name>(){
-                AND.Head as Name,
-                OR.Head  as Name,
-                IF.Head  as Name,
-                BETTER.Head as Name,
-                AS_GOOD_AS.Head  as Name
-            },
+            // [TRUTH_FUNCTION_2] = new HashSet<Name>(){
+            //     AND.Head as Name,
+            //     OR.Head  as Name,
+            //     IF.Head  as Name,
+            //     BETTER.Head as Name,
+            //     AS_GOOD_AS.Head  as Name
+            // },
             [INDIVIDUAL_TRUTH_RELATION] = new HashSet<Name>(){
-                BELIEVE.Head as Name,
+                // BELIEVE.Head as Name,
+                KNOW.Head as Name,
             },
-            [QUANTIFIER] = new HashSet<Name>(){
-                SOME.Head as Name,
-                ALL.Head as Name
-            }
+            // [QUANTIFIER] = new HashSet<Name>(){
+            //     SOME.Head as Name,
+            //     ALL.Head as Name
+            // }
         };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
 

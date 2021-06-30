@@ -164,45 +164,45 @@ public class InferenceRule
             new Expression[]{},
             new Expression[]{new Expression(REET, XE, YE)});
 
-    public static readonly InferenceRule GEACH_TRUTH_FUNCTION_INTRODUCTION =
+    public static readonly InferenceRule GEACH_E_TRUTH_FUNCTION_INTRODUCTION =
         new InferenceRule(
             new Expression[]{new Expression(FTF, new Expression(FET, XE))},
             new Expression[]{},
-            new Expression[]{new Expression(GEACH_TRUTH_FUNCTION, FTF, FET, XE)});
+            new Expression[]{new Expression(GEACH_E_TRUTH_FUNCTION, FTF, FET, XE)});
 
-    public static readonly InferenceRule GEACH_TRUTH_FUNCTION_ELIMINATION =
+    public static readonly InferenceRule GEACH_E_TRUTH_FUNCTION_ELIMINATION =
         new InferenceRule(
-            new Expression[]{new Expression(GEACH_TRUTH_FUNCTION, FTF, FET, XE)},
+            new Expression[]{new Expression(GEACH_E_TRUTH_FUNCTION, FTF, FET, XE)},
             new Expression[]{},
             new Expression[]{new Expression(FTF, new Expression(FET, XE))});
 
-    public static readonly InferenceRule GEACH_TRUTH_FUNCTION_2_INTRODUCTION =
+    public static readonly InferenceRule GEACH_E_TRUTH_FUNCTION_2_INTRODUCTION =
         new InferenceRule(
             new Expression[]{new Expression(FTTF, new Expression(FET, XE), new Expression(GET, XE))},
             new Expression[]{},
-            new Expression[]{new Expression(GEACH_TRUTH_FUNCTION_2, FTTF, FET, GET, XE)});
+            new Expression[]{new Expression(GEACH_E_TRUTH_FUNCTION_2, FTTF, FET, GET, XE)});
 
-    public static readonly InferenceRule GEACH_TRUTH_FUNCTION_2_ELIMINATION =
+    public static readonly InferenceRule GEACH_E_TRUTH_FUNCTION_2_ELIMINATION =
         new InferenceRule(
-            new Expression[]{new Expression(GEACH_TRUTH_FUNCTION_2, FTTF, FET, GET, XE)},
+            new Expression[]{new Expression(GEACH_E_TRUTH_FUNCTION_2, FTTF, FET, GET, XE)},
             new Expression[]{},
             new Expression[]{new Expression(FTTF, new Expression(FET, XE), new Expression(GET, XE))});
 
-    public static readonly InferenceRule GEACH_QUANTIFIER_PHRASE_INTRODUCTION =
+    public static readonly InferenceRule GEACH_E_QUANTIFIER_PHRASE_INTRODUCTION =
         new InferenceRule(
             new Expression[]{new Expression(PQP, new Expression(REET, XE))},
             new Expression[]{},
-            new Expression[]{new Expression(GEACH_QUANTIFIER_PHRASE, PQP, REET, XE)});
+            new Expression[]{new Expression(GEACH_E_QUANTIFIER_PHRASE, PQP, REET, XE)});
 
-    public static readonly InferenceRule GEACH_QUANTIFIER_PHRASE_ELIMINATION =
+    public static readonly InferenceRule GEACH_E_QUANTIFIER_PHRASE_ELIMINATION =
         new InferenceRule(
-            new Expression[]{new Expression(GEACH_QUANTIFIER_PHRASE, PQP, REET, XE)},
+            new Expression[]{new Expression(GEACH_E_QUANTIFIER_PHRASE, PQP, REET, XE)},
             new Expression[]{},
             new Expression[]{new Expression(PQP, new Expression(REET, XE))});
 
     public static readonly InferenceRule QUANTIFIER_PHRASE_COORDINATOR_2_INTRODUCTION =
         new InferenceRule(
-            new Expression[]{new Expression(PQP, new Expression(GEACH_QUANTIFIER_PHRASE, QQP, REET))},
+            new Expression[]{new Expression(PQP, new Expression(GEACH_E_QUANTIFIER_PHRASE, QQP, REET))},
             new Expression[]{},
             new Expression[]{new Expression(QUANTIFIER_PHRASE_COORDINATOR_2, REET, PQP, QQP)});
 
@@ -210,7 +210,7 @@ public class InferenceRule
         new InferenceRule(
             new Expression[]{new Expression(QUANTIFIER_PHRASE_COORDINATOR_2, REET, PQP, QQP)},
             new Expression[]{},
-            new Expression[]{new Expression(PQP, new Expression(GEACH_QUANTIFIER_PHRASE, QQP, REET))});
+            new Expression[]{new Expression(PQP, new Expression(GEACH_E_QUANTIFIER_PHRASE, QQP, REET))});
 
     public static readonly InferenceRule BETTER_ANTISYMMETRY =
         new InferenceRule(

@@ -92,18 +92,27 @@ public abstract class Constant : Atom {
 // A variable. Can be replaced by
 // different values in a substitution.
 public class Variable : Atom {
-    public readonly uint ID;
-    public Variable(SemanticType type, uint id) : base(type) {
+    public readonly int ID;
+    public Variable(SemanticType type, int id) : base(type) {
         ID = id;
+    }
+
+    public override bool Equals(Object o) {
+        if (!(o is Variable)) {
+            return false;
+        }
+        Variable that = o as Variable;
+        
+        return ID == that.ID && Type == that.Type;
+    }
+
+    public override int GetHashCode() {
+        return 23 * Type.GetHashCode() * (int) ID;
     }
 
     public override string ToString() {
         return "{" + ID + "}";
     }
-
-    public override int GetHashCode() {
-        return 23 * Type.GetHashCode() * (int) ID;
-    } 
 }
 
 // A symbol that can be publicly
@@ -114,34 +123,60 @@ public class Name : Constant {
         ID = id;
     }
 
-    public override string ToString() {
-        return ID;
+    public override bool Equals(Object o) {
+        if (!(o is Name)) {
+            return false;
+        }
+
+        Name that = o as Name;
+
+        return Type.Equals(that.Type) && ID.Equals(that.ID);
     }
 
     public override int GetHashCode() {
         return 29 * Type.GetHashCode() * ID.GetHashCode();
+    }
+
+    public override string ToString() {
+        return ID;
     }
 }
 
 // A parameter. A private symbol the
 // mental state can privately assign.
 public class Parameter : Constant {
-    public readonly uint ID;
-    public Parameter(SemanticType type, uint id) : base(type) {
+    public readonly int ID;
+    public Parameter(SemanticType type, int id) : base(type) {
         ID = id;
+    }
+
+    public override bool Equals(Object o) {
+        if (!(o is Parameter)) {
+            return false;
+        }
+
+        Parameter that = o as Parameter;
+
+        return ID == that.ID && Type.Equals(that.Type);
+    }
+
+    public override int GetHashCode() {
+        return 31 * Type.GetHashCode() * (int) ID;
     }
 
     public override string ToString() {
         return "$" + ID;
     }
 
-    public override int GetHashCode() {
-        return 31 * Type.GetHashCode() * (int) ID;
-    }
+    
 }
 
 public class Bottom : Bound {
     public Bottom(SemanticType type) : base(type) {}
+
+    public override bool Equals(Object o) {
+        return o is Bottom;
+    }
 
     public override string ToString() {
         return "\u22A5";
@@ -151,16 +186,13 @@ public class Bottom : Bound {
 public class Top : Bound {
     public Top(SemanticType type) : base(type) {}
 
+    public override bool Equals(Object o) {
+        return o is Top;
+    }
+
     public override string ToString() {
         return "\u22A4";
     }
-}
-
-// @note used as a placeholder in
-// the expression trie without
-// another interpretation.
-public class Blank : Atom {
-    public Blank(SemanticType type) : base(type) {}
 }
 
 // a wrapper for what can occur in the
@@ -329,6 +361,15 @@ public class Expression : Argument, IComparable<Expression> {
         return (Expression) Args[i];
     }
 
+    public bool HeadedBy(params Expression[] exprs) {
+        for (int i = 0; i < exprs.Length; i++) {
+            if (Head.Equals(exprs[i].Head)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // returns true if x occurs in this expression
     public bool HasOccurenceOf(Variable x) {
         if (Head.Equals(x)) {
@@ -380,6 +421,22 @@ public class Expression : Argument, IComparable<Expression> {
         }
 
         return new Expression(newHead, substitutedArgs);
+    }
+
+    public Expression ZeroTimeIndices() {
+        if (Type.Equals(TIME)) {
+            return new Expression(new Parameter(TIME, 0));
+        }
+        Argument[] replacedArgs = new Argument[Args.Length];
+        for (int i = 0; i < Args.Length; i++) {
+            if (Args[i] is Expression) {
+                replacedArgs[i] = (Args[i] as Expression).ZeroTimeIndices();
+            } else {
+                replacedArgs[i] = Args[i];
+            }
+        }
+
+        return new Expression(new Expression(Head), replacedArgs);
     }
 
     private void GetSelfSubstitution(Dictionary<Variable, Expression> sub) {
@@ -729,6 +786,166 @@ public class Expression : Argument, IComparable<Expression> {
             return -1;
         }
 
+        if (Type.Equals(Head.Type) && Head is Bottom &&
+            that.Type.Equals(that.Head.Type) && that.Head is Bottom) {
+            return 0;
+        }
+        if (Type.Equals(Head.Type) && Head is Bottom) {
+            return -1;
+        }
+        if (that.Type.Equals(that.Head.Type) && that.Head is Bottom) {
+            return 1;
+        }
+
+        // BEGIN CUSTOM-ORDERING FOR EVIDENTIALS, etc.
+        
+        // we check the depth to tell which to recur on.
+        // @Note This _shouldn't_ cause problems if dealing
+        // with reduced expressions.
+        int thisDepth = this.Depth;
+        int thatDepth = that.Depth;
+        
+        // EVIDENTIALS
+        bool thisIsFactive = this.HeadedBy(KNOW, SEE, MAKE);
+        bool thatIsFactive = that.HeadedBy(KNOW, SEE, MAKE);
+
+        if (thisIsFactive && thatIsFactive && thisDepth == thatDepth) {
+            var thisContent = this.GetArgAsExpression(0);
+            var thatContent = that.GetArgAsExpression(0);
+
+            int contentComparison = thisContent.CompareTo(thatContent);
+
+            if (contentComparison != 0) {
+                return contentComparison;
+            }
+
+            int factiveHeadComparison = this.Head.CompareTo(that.Head);
+
+            if (factiveHeadComparison != 0) {
+                return factiveHeadComparison;
+            }
+
+            var thisSubject = this.GetArgAsExpression(1);
+            var thatSubject = that.GetArgAsExpression(1);
+
+            int subjectComparison = thisSubject.CompareTo(thatSubject);
+
+            return subjectComparison;
+        }
+        if (thisIsFactive && !thatIsFactive ||
+            thisIsFactive && thatIsFactive && thisDepth > thatDepth) {
+            var content = this.GetArgAsExpression(0);
+            int comparison = content.CompareTo(that);
+            if (comparison == 0) {
+                return 1;
+            }
+            return comparison;
+        }
+        if (!thisIsFactive && thatIsFactive ||
+            thisIsFactive && thatIsFactive && thisDepth < thatDepth) {
+            var content = that.GetArgAsExpression(0);
+            int comparison = this.CompareTo(content);
+            if (comparison == 0) {
+                return -1;
+            }
+            return comparison;
+        }
+
+        // NEGATION
+        bool thisNot = this.HeadedBy(NOT);
+        bool thatNot = that.HeadedBy(NOT);
+
+        if (thisNot && thatNot && thisDepth == thatDepth) {
+            var thisSubclause = this.GetArgAsExpression(0);
+            var thatSubclause = that.GetArgAsExpression(0);
+
+            int comparison = thisSubclause.CompareTo(thatSubclause);
+            return comparison;
+        }
+
+        if (thisNot && !thatNot ||
+            thisNot && thatNot && thisDepth > thatDepth) {
+            var subclause = this.GetArgAsExpression(0);
+            int comparison = subclause.CompareTo(that);
+            if (comparison == 0) {
+                return 1;
+            }
+            return comparison;
+        }
+
+        if (!thisNot && thatNot ||
+            thisNot && thatNot && thisDepth < thatDepth) {
+            var subclause = that.GetArgAsExpression(0);
+            int comparison = this.CompareTo(subclause);
+            if (comparison == 0) {
+                return -1;
+            }
+            return comparison;
+        }
+
+        // TIME
+        // @Note this depends on the order of not/when
+        // e.g. we get the right ordering for not(when(A, t))
+        // but not for when(not(A), t)
+        // 
+        // We could check for more cases in the ordering,
+        // introduce subtyping to place restriction on
+        // which arguments the expressions accept,
+        // or (as we currently do) maintain the working
+        // order as an invariant.
+        bool thisWhen = this.HeadedBy(WHEN, BEFORE, AFTER);
+        bool thatWhen = that.HeadedBy(WHEN, BEFORE, AFTER);
+
+        if (thisWhen && thatWhen && thisDepth == thatDepth) {
+            var thisContent = this.GetArgAsExpression(0);
+            var thatContent = that.GetArgAsExpression(0);
+
+            int contentComparison = thisContent.CompareTo(thatContent);
+
+            if (contentComparison != 0) {
+                return contentComparison;
+            }
+
+            var thisTime = this.GetArgAsExpression(1);
+            var thatTime = that.GetArgAsExpression(1);
+
+            int timeComparison = thisTime.CompareTo(thatTime);
+
+            if (timeComparison == 0) {
+                if (this.HeadedBy(AFTER) && that.HeadedBy(WHEN, BEFORE) ||
+                    this.HeadedBy(AFTER, WHEN) && that.HeadedBy(BEFORE)) {
+                    return 1;
+                }
+                if (this.HeadedBy(BEFORE) && that.HeadedBy(WHEN, AFTER) ||
+                    this.HeadedBy(BEFORE, WHEN) && that.HeadedBy(AFTER)) {
+                    return -1;
+                }
+                return 0;
+            }
+
+            return timeComparison;
+        }
+
+        if (thisWhen && !thatWhen ||
+            thisWhen && thatWhen && thisDepth > thatDepth) {
+            var content = this.GetArgAsExpression(0);
+            int comparison = content.CompareTo(that);
+            if (comparison == 0) {
+                return 1;
+            }
+            return comparison;
+        }
+        if (!thisWhen && thatWhen ||
+            thisWhen && thatWhen && thisDepth < thatDepth) {
+            var content = that.GetArgAsExpression(0);
+            int comparison = this.CompareTo(content);
+            if (comparison == 0) {
+                return -1;
+            }
+            return comparison;
+        }
+        // END
+
         var headTypeComparison = this.Head.Type.CompareTo(that.Head.Type);
         if (headTypeComparison < 0) {
             return -1;
@@ -776,14 +993,14 @@ public class Expression : Argument, IComparable<Expression> {
 
 
     // Individual constants
-    public static readonly Expression SELF    = new Expression(new Name(INDIVIDUAL, "self"));
-    public static readonly Expression ALICE   = new Expression(new Name(INDIVIDUAL, "alice"));
-    public static readonly Expression BOB     = new Expression(new Name(INDIVIDUAL, "bob"));
-    public static readonly Expression CHARLIE = new Expression(new Name(INDIVIDUAL, "charlie"));
-    public static readonly Expression EVAN = new Expression(new Name(INDIVIDUAL, "evan"));
-    public static readonly Expression SOUP = new Expression(new Name(INDIVIDUAL, "soup"));
-    public static readonly Expression SWEETBERRY = new Expression(new Name(INDIVIDUAL, "sweetberry"));
-    public static readonly Expression SPICYBERRY = new Expression(new Name(INDIVIDUAL, "spicyberry"));
+    public static readonly Expression SELF        = new Expression(new Name(INDIVIDUAL, "self"));
+    public static readonly Expression ALICE       = new Expression(new Name(INDIVIDUAL, "alice"));
+    public static readonly Expression BOB         = new Expression(new Name(INDIVIDUAL, "bob"));
+    public static readonly Expression CHARLIE     = new Expression(new Name(INDIVIDUAL, "charlie"));
+    public static readonly Expression EVAN        = new Expression(new Name(INDIVIDUAL, "evan"));
+    public static readonly Expression SOUP        = new Expression(new Name(INDIVIDUAL, "soup"));
+    public static readonly Expression SWEETBERRY  = new Expression(new Name(INDIVIDUAL, "sweetberry"));
+    public static readonly Expression SPICYBERRY  = new Expression(new Name(INDIVIDUAL, "spicyberry"));
     public static readonly Expression FOREST_KING = new Expression(new Name(INDIVIDUAL, "forest_king"));
 
     // Individual variables
@@ -792,8 +1009,8 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression ZE = new Expression(new Variable(INDIVIDUAL, 2));
 
     // Truth Value constants
-    public static readonly Expression VERUM  = new Expression(new Name(TRUTH_VALUE, "verum"));
-    public static readonly Expression FALSUM = new Expression(new Name(TRUTH_VALUE, "falsum"));
+    public static readonly Expression VERUM   = new Expression(new Name(TRUTH_VALUE, "verum"));
+    public static readonly Expression FALSUM  = new Expression(new Name(TRUTH_VALUE, "falsum"));
     public static readonly Expression NEUTRAL = new Expression(new Name(TRUTH_VALUE, "neutral"));
 
     // Truth Value variables
@@ -802,14 +1019,14 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression PT = new Expression(new Variable(TRUTH_VALUE, 2));
 
     // Predicate constants
-    public static readonly Expression RED  = new Expression(new Name(PREDICATE, "red"));
-    public static readonly Expression BLUE = new Expression(new Name(PREDICATE, "blue"));
-    public static readonly Expression GREEN = new Expression(new Name(PREDICATE, "green"));
+    public static readonly Expression RED    = new Expression(new Name(PREDICATE, "red"));
+    public static readonly Expression BLUE   = new Expression(new Name(PREDICATE, "blue"));
+    public static readonly Expression GREEN  = new Expression(new Name(PREDICATE, "green"));
     public static readonly Expression YELLOW = new Expression(new Name(PREDICATE, "yellow"));
-    public static readonly Expression APPLE = new Expression(new Name(PREDICATE, "apple"));
-    public static readonly Expression SPICY = new Expression(new Name(PREDICATE, "spicy"));
-    public static readonly Expression SWEET = new Expression(new Name(PREDICATE, "sweet"));
-    public static readonly Expression TREE = new Expression(new Name(PREDICATE, "tree"));
+    public static readonly Expression APPLE  = new Expression(new Name(PREDICATE, "apple"));
+    public static readonly Expression SPICY  = new Expression(new Name(PREDICATE, "spicy"));
+    public static readonly Expression SWEET  = new Expression(new Name(PREDICATE, "sweet"));
+    public static readonly Expression TREE   = new Expression(new Name(PREDICATE, "tree"));
     public static readonly Expression TOMATO = new Expression(new Name(PREDICATE, "tomato"));
     public static readonly Expression BANANA = new Expression(new Name(PREDICATE, "banana"));
 
@@ -830,26 +1047,30 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression REET = new Expression(new Variable(RELATION_2, 0));
 
     // 1-place truth functions
-    public static readonly Expression NOT = new Expression(new Name(TRUTH_FUNCTION, "not"));
-    public static readonly Expression TRULY = new Expression(new Name(TRUTH_FUNCTION, "truly"));
+    public static readonly Expression NOT    = new Expression(new Name(TRUTH_FUNCTION, "not"));
+    public static readonly Expression TRULY  = new Expression(new Name(TRUTH_FUNCTION, "truly"));
     // the question of whether "A" is closed,
     // so you either believe A or ~A
     public static readonly Expression CLOSED = new Expression(new Name(TRUTH_FUNCTION, "closed"));
-    public static readonly Expression SEE = new Expression(new Name(TRUTH_FUNCTION, "see"));
-    public static readonly Expression GOOD = new Expression(new Name(TRUTH_FUNCTION, "good"));
+    public static readonly Expression GOOD   = new Expression(new Name(TRUTH_FUNCTION, "good"));
+    // tense operators
+    public static readonly Expression PAST    = new Expression(new Name(TRUTH_FUNCTION, "past"));
+    public static readonly Expression PRESENT = new Expression(new Name(TRUTH_FUNCTION, "present"));
+    public static readonly Expression FUTURE  = new Expression(new Name(TRUTH_FUNCTION, "future"));
+
 
     // higher-order variables
-    public static readonly Expression FTF = new Expression(new Variable(TRUTH_FUNCTION, 0));
-    public static readonly Expression GTF = new Expression(new Variable(TRUTH_FUNCTION, 1));
+    public static readonly Expression FTF  = new Expression(new Variable(TRUTH_FUNCTION, 0));
+    public static readonly Expression GTF  = new Expression(new Variable(TRUTH_FUNCTION, 1));
     public static readonly Expression FTTF = new Expression(new Variable(TRUTH_FUNCTION_2, 0));
-    public static readonly Expression PQP = new Expression(new Variable(QUANTIFIER_PHRASE, 0));
-    public static readonly Expression QQP = new Expression(new Variable(QUANTIFIER_PHRASE, 1));
+    public static readonly Expression PQP  = new Expression(new Variable(QUANTIFIER_PHRASE, 0));
+    public static readonly Expression QQP  = new Expression(new Variable(QUANTIFIER_PHRASE, 1));
 
     // 2-place truth functions
-    public static readonly Expression AND = new Expression(new Name(TRUTH_FUNCTION_2, "and"));
-    public static readonly Expression OR  = new Expression(new Name(TRUTH_FUNCTION_2, "or"));
-    public static readonly Expression IF  = new Expression(new Name(TRUTH_FUNCTION_2, "if"));
-    public static readonly Expression BETTER = new Expression(new Name(TRUTH_FUNCTION_2, "better"));
+    public static readonly Expression AND        = new Expression(new Name(TRUTH_FUNCTION_2, "and"));
+    public static readonly Expression OR         = new Expression(new Name(TRUTH_FUNCTION_2, "or"));
+    public static readonly Expression IF         = new Expression(new Name(TRUTH_FUNCTION_2, "if"));
+    public static readonly Expression BETTER     = new Expression(new Name(TRUTH_FUNCTION_2, "better"));
     public static readonly Expression AS_GOOD_AS = new Expression(new Name(TRUTH_FUNCTION_2, "~"));
 
     // truth-conformity relations
@@ -859,52 +1080,67 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression WOULD = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "would"));
 
     // individual-truth relations
-    public static readonly Expression SAY = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "say"));
-    public static readonly Expression KNOW = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
-    public static readonly Expression BELIEVE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "believe"));
-    public static readonly Expression ABLE    = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
-    public static readonly Expression PERCEIVE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceive"));
+    public static readonly Expression SAY       = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "say"));
+    public static readonly Expression KNOW      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
+    public static readonly Expression SEE       = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "see"));
+    public static readonly Expression MAKE      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "make"));
+    public static readonly Expression BELIEVE   = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "believe"));
+    public static readonly Expression ABLE      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
+    public static readonly Expression PERCEIVE  = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceive"));
     public static readonly Expression VERIDICAL = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "veridical"));
-    public static readonly Expression TRIED = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "tried"));
+    public static readonly Expression TRIED     = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "tried"));
     public static readonly Expression PERCEPTUALLY_CLOSED =
         new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
 
-    // @Note we might want to make this a 2-place truth function
-    public static readonly Expression WHEN = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "when"));
-
+    // tensed ITRs
+    public static readonly Expression KNOW_TENSED = new Expression(new Name(TENSED_INDIVIDUAL_TRUTH_RELATION, "know"));
+    
     // determiners
     public static readonly Expression SELECTOR = new Expression(new Name(DETERMINER, "selector"));
+
+    // tensers
+    public static readonly Expression WHEN   = new Expression(new Name(TENSER, "when"));
+    public static readonly Expression BEFORE = new Expression(new Name(TENSER, "before"));
+    public static readonly Expression AFTER  = new Expression(new Name(TENSER, "after"));
 
     // quantifiers
     public static readonly Expression SOME = new Expression(new Name(QUANTIFIER, "some"));
     public static readonly Expression ALL  = new Expression(new Name(QUANTIFIER, "all"));
-    public static readonly Expression QUANTIFIER_PHRASE_COORDINATOR_2 =
-        new Expression(new Name(SemanticType.QUANTIFIER_PHRASE_COORDINATOR_2, "rel2"));
 
     // sentential adverbs/quantifiers
-    public static readonly Expression ALWAYS = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "always"));
+    public static readonly Expression ALWAYS    = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "always"));
     public static readonly Expression SOMETIMES = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "sometimes"));
-    public static readonly Expression NORMALLY = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "normally"));
-    public static readonly Expression NORMAL = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "normal"));
+    public static readonly Expression NORMALLY  = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "normally"));
+    public static readonly Expression NORMAL    = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "normal"));
 
     // weird function words
-    public static readonly Expression ITSELF = new Expression(new Name(RELATION_2_REDUCER, "itself"));
+    public static readonly Expression ITSELF   = new Expression(new Name(RELATION_2_REDUCER, "itself"));
     // for permutations of arguments for higher-arity functions,
     // 'shift': ABC -> CAB and 'swap': ABC -> BAC should do the trick
     public static readonly Expression CONVERSE = new Expression(new Name(RELATION_2_MODIFIER, "converse"));
     // more function words: Geach
-    public static readonly Expression GEACH_TRUTH_FUNCTION = new Expression(new Name(SemanticType.GEACH_TRUTH_FUNCTION, "geach"));
-    public static readonly Expression GEACH_TRUTH_FUNCTION_2 = new Expression(new Name(SemanticType.GEACH_TRUTH_FUNCTION_2, "geach"));
-    public static readonly Expression GEACH_QUANTIFIER_PHRASE = new Expression(new Name(SemanticType.GEACH_QUANTIFIER_PHRASE, "geach"));
+    public static readonly Expression GEACH_E_TRUTH_FUNCTION    = new Expression(new Name(
+        SemanticType.Push(TRUTH_FUNCTION, SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION)), "geach"));
+    public static readonly Expression GEACH_T_TRUTH_FUNCTION    = new Expression(new Name(
+        SemanticType.Push(TRUTH_FUNCTION, SemanticType.Geach(TRUTH_VALUE, TRUTH_FUNCTION)), "geach"));
+    public static readonly Expression GEACH_E_TRUTH_FUNCTION_2  = new Expression(new Name(
+        SemanticType.Push(TRUTH_FUNCTION_2, SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION_2)), "geach"));
+    public static readonly Expression GEACH_E_QUANTIFIER_PHRASE = new Expression(new Name(
+        SemanticType.Push(QUANTIFIER_PHRASE, SemanticType.Geach(INDIVIDUAL, QUANTIFIER_PHRASE)), "geach"));
+
+    // simplifies geach operations for sentences
+    // with two quantifiers
+    public static readonly Expression QUANTIFIER_PHRASE_COORDINATOR_2 =
+        new Expression(new Name(SemanticType.QUANTIFIER_PHRASE_COORDINATOR_2, "rel2"));
 
     // question and assert functions
-    public static readonly Expression ASK = new Expression(new Name(TRUTH_QUESTION_FUNCTION, "ask"));
+    public static readonly Expression ASK    = new Expression(new Name(TRUTH_QUESTION_FUNCTION, "ask"));
     public static readonly Expression ASSERT = new Expression(new Name(TRUTH_ASSERTION_FUNCTION, "assert"));
-    public static readonly Expression DENY = new Expression(new Name(TRUTH_ASSERTION_FUNCTION, "deny"));
+    public static readonly Expression DENY   = new Expression(new Name(TRUTH_ASSERTION_FUNCTION, "deny"));
 
     // assertion constants
-    public static readonly Expression YES = new Expression(new Name(ASSERTION, "assert"));
-    public static readonly Expression NO  = new Expression(new Name(ASSERTION, "deny"));
+    public static readonly Expression YES   = new Expression(new Name(ASSERTION, "assert"));
+    public static readonly Expression NO    = new Expression(new Name(ASSERTION, "deny"));
     public static readonly Expression MAYBE = new Expression(new Name(ASSERTION, "maybe"));
 
     // conformity constants
@@ -913,4 +1149,8 @@ public class Expression : Argument, IComparable<Expression> {
 
     // heads for deictic expressions
     public static readonly Expression THIS = new Expression(new Name(INDIVIDUAL, "this"));
+
+    // // sourced predicates
+    // public static readonly Expression SOURCED_RED = new Expression(new Name(EVIDENTIAL_PREDICATE, "sred"));
+    // public static readonly Expression SOURCED_GREEN = new Expression(new Name(EVIDENTIAL_PREDICATE, "sgreen"));
 }

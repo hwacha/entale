@@ -17,4 +17,10 @@ public abstract class Agent : MonoBehaviour
         StartCoroutine(Sensor.ReceiveStimulus());
         StartCoroutine(Actuator.ExecutePlan());
     }
+
+    protected Expression Tense(Expression e) {
+        Debug.Assert(e.Type.Equals(SemanticType.TRUTH_VALUE));
+        return new Expression(WHEN, e, new Expression(new Parameter(SemanticType.TIME, 1)));
+    }
+
 }
