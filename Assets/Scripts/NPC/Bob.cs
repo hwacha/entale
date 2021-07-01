@@ -11,7 +11,8 @@ public class Bob : Agent
     {
         MentalState.Initialize(
             new Expression[]{
-                new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF)))
+                new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
+                new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
             }
         );
 

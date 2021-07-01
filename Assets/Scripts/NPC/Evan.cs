@@ -11,9 +11,10 @@ public class Evan : Agent
     {
         MentalState.Initialize(
             new Expression[]{
-                // new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
-                // new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF)))
-            });
+                new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
+                new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
+            }
+        );
 
         var banana = GameObject.Find("Banana");
         var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
@@ -21,8 +22,8 @@ public class Evan : Agent
         var tomato = GameObject.Find("Tomato");
         var tomatoParam = MentalState.ConstructPercept(TOMATO, tomato.transform.position);
 
-        var bob = GameObject.Find("Bob");
-        MentalState.Locations[BOB] = bob.transform.position;
+        // var bob = GameObject.Find("Bob");
+        // MentalState.Locations[BOB] = bob.transform.position;
 
         // MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER, new Expression(AT, SELF, bananaParam), NEUTRAL)));
         // MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER, new Expression(AT, SELF, tomatoParam),

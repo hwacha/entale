@@ -455,11 +455,12 @@ public class Testing : MonoBehaviour {
     }
 
     public static IEnumerator TestFactiveContains(MentalState m, Expression factive, Expression content, bool expect) {
+        var matches = new HashSet<Substitution>();
         var answer = new Container<bool>(false);
         var parityAligned = new Container<bool>(true);
         var done = new Container<bool>(false);
 
-        m.StartCoroutine(m.FactiveContains(factive, content, answer, parityAligned, done));
+        m.StartCoroutine(m.FactiveContains(factive, content, matches, answer, parityAligned, done));
 
         while (!done.Item) {
             yield return null;

@@ -68,7 +68,7 @@ public class MentalState : MonoBehaviour {
     // Assume, for now, as an invariant, that it is.
     public void Initialize(Expression[] initialKnowledge) {
         ParameterID = 0;
-        Timestamp = 1;
+        Timestamp = 0;
         Locations = new Dictionary<Expression, Vector3>();
 
         if (KnowledgeBase != null) {
@@ -78,14 +78,7 @@ public class MentalState : MonoBehaviour {
         var timeParameter = new Expression(new Parameter(TIME, Timestamp));
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
-            if (!initialKnowledge[i].Type.Equals(TRUTH_VALUE)) {
-                throw new ArgumentException("MentalState(): expected sentences for base: " + initialKnowledge[i]);
-            }
-
-            KnowledgeBase.Add(initialKnowledge[i]);
-            if (initialKnowledge[i].Depth > MaxDepth) {
-                MaxDepth = initialKnowledge[i].Depth;
-            }
+            AddToKnowledgeBase(initialKnowledge[i]);
         }
     }
 
@@ -115,6 +108,7 @@ public class MentalState : MonoBehaviour {
     public IEnumerator FactiveContains(
         Expression factive,
         Expression content,
+        HashSet<Substitution> matches,
         Container<bool> answer,
         Container<bool> parityAligned,
         Container<bool> done) {
@@ -219,7 +213,6 @@ public class MentalState : MonoBehaviour {
                     currentFactiveTense = Tense.Future;
                 }
                 // @Note this assumes the timestamp will be a parameter.
-                Debug.Log(currentFactive);
                 currentFactiveTimestamp = (currentFactive.GetArgAsExpression(1).Head as Parameter).ID;
                 if (factiveParity > 0 && !factiveParityLock) {
                     factiveParity--;
@@ -248,7 +241,7 @@ public class MentalState : MonoBehaviour {
 
             // when we match against the factives, we ensure
             // that the tense is properly aligned as well.
-            bool tenseAligned = false;
+            bool tenseAligned = true;
             if (currentContentTense == Tense.Future) {
                 if (currentFactiveTense == Tense.Present) {
                     tenseAligned = currentFactiveTimestamp > Timestamp;    
@@ -257,9 +250,9 @@ public class MentalState : MonoBehaviour {
                 }
             } else {
                 if (currentFactiveTense == Tense.Present) {
-                    tenseAligned = currentFactiveTimestamp < Timestamp;
-                } else if (currentFactiveTense == Tense.Past) {
                     tenseAligned = currentFactiveTimestamp <= Timestamp;
+                } else if (currentFactiveTense == Tense.Past) {
+                    tenseAligned = currentFactiveTimestamp < Timestamp;
                 }
             }
 
@@ -300,10 +293,13 @@ public class MentalState : MonoBehaviour {
                 }
             }
 
+            
+
             // we've reached a 'dead end' - nothing to peel off -
             // so we see if the rest of the expression matches up,
             // and that our timestamps are aligned according to the given tense.
-            answer.Item = currentContent.GetMatches(currentFactive).Count > 0 && tenseAligned;
+            matches.UnionWith(currentContent.GetMatches(currentFactive));
+            answer.Item = matches.Count > 0 && tenseAligned;
             parityAligned.Item = (factiveParity == 0) == contentParity;
             break;
         }
@@ -340,8 +336,12 @@ public class MentalState : MonoBehaviour {
             return e;
         }
 
-        if (e.HeadedBy(PAST, PRESENT, FUTURE, NOT)) {
+        if (e.HeadedBy(PAST, PRESENT, FUTURE, NOT, GOOD)) {
             return new Expression(new Expression(e.Head), Tensify(e.GetArgAsExpression(0), true));
+        }
+
+        if (e.HeadedBy(ABLE)) {
+            return e;
         }
 
         if (e.HeadedBy(AND, OR, IF)) {
@@ -520,7 +520,7 @@ public class MentalState : MonoBehaviour {
 
             // we set up our stack for DFS
             // with the intended
-            var root = new ProofNode(Tensify(conclusion), 0, null, 0);
+            var root = new ProofNode(conclusion, 0, null, 0);
             root.ChildBases = bases;
             root.IsLastChild = true;
             var stack = new Stack<ProofNode>();
@@ -537,8 +537,6 @@ public class MentalState : MonoBehaviour {
                 if (current.Depth > reachedDepth) {
                     reachedDepth = current.Depth;
                 }
-
-                // Debug.Log("visiting " + current.Lemma);
                 
                 var sends = new List<KeyValuePair<ProofBases, bool>>();
  
@@ -550,8 +548,9 @@ public class MentalState : MonoBehaviour {
                     var youngerSiblingBasis = current.YoungerSiblingBases[i];
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
+                    currentLemma = Tensify(currentLemma);
 
-                    // Debug.Log("substituted to " + currentLemma);
+
 
                     // the bases we get from directly
                     // querying the knowledge base.
@@ -625,27 +624,29 @@ public class MentalState : MonoBehaviour {
                             
                             // here, we see if the factive
                             // lines up with our expectations.
+                            var matches = new HashSet<Substitution>();
                             var factiveContains = new Container<bool>(false);
                             var parityAligned = new Container<bool>(true);
-                            var ecDone = new Container<bool>(false);
+                            var fcDone = new Container<bool>(false);
 
                             StartCoroutine(FactiveContains(
                                 sample,
                                 currentLemma,
+                                matches,
                                 factiveContains,
                                 parityAligned,
-                                ecDone));
+                                fcDone));
 
-                            while (!ecDone.Item) {
+                            while (!fcDone.Item) {
                                 yield return null;
                             }
 
                             if (factiveContains.Item) {
                                 // we have a match!
                                 if (parityAligned.Item) {
-                                    var basis = new ProofBasis();
-                                    basis.AddPremise(sample);
-                                    searchBases.Add(basis);
+                                    foreach (var match in matches) {
+                                        searchBases.Add(new ProofBasis(new List<Expression>{sample}, match));
+                                    }
                                 // this means the sample we're looking at
                                 // contradicts the query.
                                 } else if (currentLemma.HeadedBy(PRESENT)) {
@@ -653,7 +654,46 @@ public class MentalState : MonoBehaviour {
                                 }
                             }
                         }
+                    } else {
+                        // if the expression isn't tensed, simply search for it.
+                        var variables = currentLemma.GetVariables();
+                        var bottomSubstitution = new Substitution();
+                        var topSubstitution = new Substitution();
+                        foreach (Variable v in variables) {
+                            bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
+                            topSubstitution.Add(v, new Expression(new Top(v.Type)));
+                        }
+
+                        var bottom = currentLemma.Substitute(bottomSubstitution);
+                        var top    = currentLemma.Substitute(topSubstitution);
+
+                        var range = KnowledgeBase.GetViewBetween(bottom, top);
+
+                        foreach (var e in range) {
+                            var matches = new HashSet<Substitution>();
+                            var factiveContains = new Container<bool>(false);
+                            var parityAligned = new Container<bool>(true);
+                            var fcDone = new Container<bool>(false);
+                            StartCoroutine(FactiveContains(
+                                e,
+                                currentLemma,
+                                matches,
+                                factiveContains,
+                                parityAligned,
+                                fcDone));
+
+                            while (!fcDone.Item) {
+                                yield return null;
+                            }
+
+                            if (factiveContains.Item && parityAligned.Item) {
+                                foreach (var match in matches) {
+                                    searchBases.Add(new ProofBasis(new List<Expression>{e}, match));
+                                }
+                            }
+                        }
                     }
+
                     // if any of the following rules apply to sentence
                     // forms that also take tense,
                     // we shave off the tense here.
@@ -759,28 +799,20 @@ public class MentalState : MonoBehaviour {
                             exhaustive = false;
                         }
 
-                        // double negation +
+                        // negation: toggle parity
                         if (currentLemma.HeadedBy(NOT)) {
                             var subclause = currentLemma.GetArgAsExpression(0);
-                            if (subclause.HeadedBy(NOT)) {
-                                var subsubclause = subclause.GetArgAsExpression(0);
-                                newStack.Push(new ProofNode(subsubclause,
-                                    nextDepth, current, i,
-                                    parity: current.Parity));
-                                exhaustive = false;
-                            } else {
-                                newStack.Push(new ProofNode(
-                                    subclause, nextDepth, current, i,
-                                    parity: !current.Parity));
-                                exhaustive = false;
-                            }
-
                             // nonidentity assumption
                             if (subclause.HeadedBy(IDENTITY)) {
                                 newStack.Push(new ProofNode(subclause,
                                     nextDepth, current, i,
                                     isAssumption: true,
                                     parity: current.Parity));
+                                exhaustive = false;
+                            } else {
+                                newStack.Push(new ProofNode(
+                                    subclause, nextDepth, current, i,
+                                    parity: !current.Parity));
                                 exhaustive = false;
                             }
                         }
@@ -905,8 +937,6 @@ public class MentalState : MonoBehaviour {
                         // we want to meet with this one, and none of the others.
                         var meetBasis = meetBasisIndex == -1 ? null : merge.YoungerSiblingBases[meetBasisIndex];
 
-                        // Debug.Log("Merge " + merge.Lemma + " sending " + sendBases);
-
                         // trim each of the merged bases to
                         // discard unused variable assignments.
                         foreach (var sendBasis in sendBases) {
@@ -927,7 +957,6 @@ public class MentalState : MonoBehaviour {
                         ProofBases productBases = new ProofBases();
 
                         if (merge.IsAssumption) {
-                            
                             // no refutation
                             if (sendBases.IsEmpty() &&
                                 merge.ChildBases.IsEmpty() &&
@@ -1040,7 +1069,7 @@ public class MentalState : MonoBehaviour {
         // we need to queue this up so that it doesn't cause a
         // concurrent modification problem.
         
-        // AddToKnowledgeBase(percept);
+        AddToKnowledgeBase(percept);
 
         return param;
     }
@@ -1048,12 +1077,17 @@ public class MentalState : MonoBehaviour {
     // @Note: this should be private ultimately.
     // public for testing purposes.
     public bool AddToKnowledgeBase(Expression knowledge) {
+        Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
         var modifiedFormKnowledge = AddCurrentTimestamp(Tensify(Reduce(knowledge)));
+
         if (KnowledgeBase.Contains(modifiedFormKnowledge)) {
             return false;
         }
-        Debug.Log("Adding " + modifiedFormKnowledge);
+
         KnowledgeBase.Add(modifiedFormKnowledge);
+        if (modifiedFormKnowledge.Depth > MaxDepth) {
+            MaxDepth = modifiedFormKnowledge.Depth;
+        }
         return true;
     }
 

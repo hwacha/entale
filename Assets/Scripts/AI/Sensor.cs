@@ -15,7 +15,7 @@ public class Sensor : MonoBehaviour {
     #endregion
 
     #region Fields
-        public bool SensorActive = true;
+        public bool SensorActive = false;
     #endregion
 
     // @Note for separate sense modalities,
