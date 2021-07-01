@@ -23,6 +23,10 @@ public class Bob : Agent
         var banana = GameObject.Find("Banana");
         var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
 
+        MentalState.AddToKnowledgeBase(new Expression(GOOD, new Expression(NOT, new Expression(AT, SELF, bananaParam))));
+        MentalState.AddToKnowledgeBase(new Expression(GOOD, new Expression(NOT,
+            new Expression(MAKE, new Expression(AT, SELF, bananaParam), SELF))));
+
         // the player knows that there's a tomato on the table, but doesn't know the word for tomato.
         // The player doesn't know anything about how the language works, but will probably make
         // a few assumptions, implicitly, about how it works.

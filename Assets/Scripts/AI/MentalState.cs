@@ -336,11 +336,11 @@ public class MentalState : MonoBehaviour {
             return e;
         }
 
-        if (e.HeadedBy(PAST, PRESENT, FUTURE, NOT, GOOD)) {
+        if (e.HeadedBy(PAST, PRESENT, FUTURE, NOT)) {
             return new Expression(new Expression(e.Head), Tensify(e.GetArgAsExpression(0), true));
         }
 
-        if (e.HeadedBy(ABLE)) {
+        if (e.HeadedBy(ABLE, GOOD)) {
             return e;
         }
 
@@ -598,7 +598,6 @@ public class MentalState : MonoBehaviour {
 
                         bool admissible = true;
                         Expression currentContent = null;
-
                         foreach (var sample in iter) {
                             if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                                 yield return null;
@@ -1127,6 +1126,9 @@ public class MentalState : MonoBehaviour {
             evaluativeBase.Add(assignment);
         }
 
+        int bestTotalValue = 0;
+        List<Expression> bestPlan = new List<Expression>{new Expression(WILL, NEUTRAL)};
+
         foreach (var good in evaluativeBase) {
             var proofBases = new ProofBases();
             var proofDone = new Container<bool>(false);
@@ -1146,26 +1148,82 @@ public class MentalState : MonoBehaviour {
             }
 
             if (!planBases.IsEmpty()) {
-                List<Expression> bestPlan = null;
                 foreach (var basis in planBases) {
-                    var resolutions = new List<Expression>();
+                    int localBestValue = 1;
+                    List<Expression> resolutions = new List<Expression>();
                     foreach (var premise in basis.Premises) {
                         if (premise.Type.Equals(CONFORMITY_VALUE)) {
                             resolutions.Add(premise);
+                            var collateral = premise.GetArgAsExpression(0);
+
+                            var benefit = new Expression(GOOD, collateral);
+
+                            var benefitBases = new ProofBases();
+                            var benefitDone  = new Container<bool>(false);
+                            StartCoroutine(StreamProofs(benefitBases, benefit, benefitDone, Proof));
+
+                            while (!benefitDone.Item) {
+                                yield return null;
+                            }
+
+                            if (benefitBases.IsEmpty()) {
+                                var cost = new Expression(GOOD, new Expression(NOT, collateral));
+
+                                var costBases = new ProofBases();
+                                var costDone  = new Container<bool>(false);
+                                StartCoroutine(StreamProofs(costBases, cost, costDone, Proof));
+
+                                while (!costDone.Item) {
+                                    yield return null;
+                                }
+
+                                if (!costBases.IsEmpty()) {
+                                    localBestValue--;
+                                }
+                            } else {
+                                localBestValue++;
+                            }
+
+                            var makeBenefit = new Expression(GOOD,
+                                new Expression(MAKE, collateral, SELF));
+
+                            var makeBenefitBases = new ProofBases();
+                            var makeBenefitDone  = new Container<bool>(false);
+                            StartCoroutine(StreamProofs(makeBenefitBases, makeBenefit, makeBenefitDone, Proof));
+
+                            while (!makeBenefitDone.Item) {
+                                yield return null;
+                            }
+
+                            if (makeBenefitBases.IsEmpty()) {
+                                var makeCost = new Expression(GOOD,
+                                    new Expression(NOT, new Expression(MAKE, collateral, SELF)));
+
+                                var makeCostBases = new ProofBases();
+                                var makeCostDone  = new Container<bool>(false);
+                                StartCoroutine(StreamProofs(makeCostBases, makeCost, makeCostDone, Proof));
+
+                                while (!makeCostDone.Item) {
+                                    yield return null;
+                                }
+
+                                if (!makeCostBases.IsEmpty()) {
+                                    localBestValue--;
+                                }
+                            } else {
+                                localBestValue++;
+                            }
                         }
+
                     }
-                    if (bestPlan == null || bestPlan.Count > resolutions.Count) {
+                    if (localBestValue > bestTotalValue) {
                         bestPlan = resolutions;
+                        bestTotalValue = localBestValue;
                     }
                 }
-                plan.AddRange(bestPlan);
-                done.Item = true;
-                yield break;
             }
         }
-
-        plan.Add(new Expression(WILL, NEUTRAL));
-
+        plan.AddRange(bestPlan);
         done.Item = true;
         yield break;
     }
