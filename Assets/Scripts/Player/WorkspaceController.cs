@@ -49,9 +49,9 @@ public class WorkspaceController : MonoBehaviour
     int cursorX = 0;
     int cursorY = 0;
     
-    float timeBetweenSteps = 0.25f;
-    float lastStepHorizontal = 0.25f;
-    float lastStepVertical = 0.25f;
+    float timeBetweenSteps = 0.1f;
+    float lastStepHorizontal = 0.0f;
+    float lastStepVertical = 0.0f;
 
     GameObject SelectedExpression = null;
     GameObject EquippedExpression = null;
