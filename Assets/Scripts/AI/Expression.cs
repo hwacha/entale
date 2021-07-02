@@ -1130,6 +1130,10 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression GEACH_E_QUANTIFIER_PHRASE = new Expression(new Name(
         SemanticType.Push(QUANTIFIER_PHRASE, SemanticType.Geach(INDIVIDUAL, QUANTIFIER_PHRASE)), "geach"));
 
+    // compose
+    public static readonly Expression COMPOSE_TRUTH_FUNCTION = new Expression(new Name(
+        SemanticType.Compose(TRUTH_VALUE, TRUTH_VALUE, TRUTH_VALUE), "compose"));
+
     // simplifies geach operations for sentences
     // with two quantifiers
     public static readonly Expression QUANTIFIER_PHRASE_COORDINATOR_2 =

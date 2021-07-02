@@ -135,7 +135,13 @@ public abstract class SemanticType : IComparable<SemanticType> {
 
         return new FunctionalType(newInputs, ft.Output);
     }
-     
+
+    public static SemanticType Compose(AtomicType input, AtomicType intermediate, AtomicType output) {
+        return new FunctionalType(new SemanticType[]{
+            new FunctionalType(new SemanticType[]{input}, intermediate),
+            new FunctionalType(new SemanticType[]{intermediate}, output),
+            input}, output);
+    }
 
     public abstract int CompareTo(SemanticType that);
 

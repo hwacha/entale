@@ -344,7 +344,7 @@ public class MentalState : MonoBehaviour {
         bool newLockTense = false;
         bool dontTenseTopLevel = false;
 
-        if (e.HeadedBy(PAST, PRESENT, FUTURE, WHEN, NOT)) {
+        if (e.HeadedBy(PAST, PRESENT, FUTURE, WHEN, NOT, GEACH_E_TRUTH_FUNCTION, GEACH_T_TRUTH_FUNCTION)) {
             newLockTense = true;
             dontTenseTopLevel = true;
         }
@@ -353,7 +353,7 @@ public class MentalState : MonoBehaviour {
             return e;
         }
 
-        if (e.HeadedBy(AND, OR, IF, GEACH_E_TRUTH_FUNCTION, GEACH_T_TRUTH_FUNCTION, SOME, ALL)) {
+        if (e.HeadedBy(AND, OR, IF, SOME, ALL)) {
             dontTenseTopLevel = true;
         }
 
@@ -527,7 +527,7 @@ public class MentalState : MonoBehaviour {
 
             // we set up our stack for DFS
             // with the intended
-            var root = new ProofNode(conclusion, 0, null, 0);
+            var root = new ProofNode(Tensify(conclusion), 0, null, 0);
             root.ChildBases = bases;
             root.IsLastChild = true;
             var stack = new Stack<ProofNode>();
@@ -555,9 +555,8 @@ public class MentalState : MonoBehaviour {
                     var youngerSiblingBasis = current.YoungerSiblingBases[i];
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
-                    currentLemma = Tensify(currentLemma);
 
-
+                    // currentLemma = Tensify(currentLemma);
 
                     // the bases we get from directly
                     // querying the knowledge base.
@@ -662,20 +661,32 @@ public class MentalState : MonoBehaviour {
                         }
                     } else {
                         // if the expression isn't tensed, simply search for it.
-                        var variables = currentLemma.GetVariables();
-                        var bottomSubstitution = new Substitution();
-                        var topSubstitution = new Substitution();
-                        foreach (Variable v in variables) {
-                            bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
-                            topSubstitution.Add(v, new Expression(new Top(v.Type)));
-                        }
+                        Expression bottom = null;
+                        Expression top = null;
 
-                        var bottom = currentLemma.Substitute(bottomSubstitution);
-                        var top    = currentLemma.Substitute(topSubstitution);
+                        var variables = currentLemma.GetVariables();
+
+                        if (variables.Count > 0) {
+                            var bottomSubstitution = new Substitution();
+                            var topSubstitution = new Substitution();
+                            foreach (Variable v in variables) {
+                                bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
+                                topSubstitution.Add(v, new Expression(new Top(v.Type)));
+                            }
+
+                            bottom = currentLemma.Substitute(bottomSubstitution);
+                            top    = currentLemma.Substitute(topSubstitution);
+                        } else {
+                            bottom = currentLemma;
+                            top = new Expression(WHEN, currentLemma, new Expression(new Top(TIME)));
+                        }
 
                         var range = KnowledgeBase.GetViewBetween(bottom, top);
 
                         foreach (var e in range) {
+                            if (currentLemma.HeadedBy(ALL)) {
+                                Debug.Log(e + " | " + currentLemma);
+                            }
                             var matches = new HashSet<Substitution>();
                             var factiveContains = new Container<bool>(false);
                             var parityAligned = new Container<bool>(true);
@@ -693,6 +704,9 @@ public class MentalState : MonoBehaviour {
                             }
 
                             if (factiveContains.Item && parityAligned.Item) {
+                                if (currentLemma.HeadedBy(ALL)) {
+                                    Debug.Log("FACTIVE CONTAINS");
+                                }
                                 foreach (var match in matches) {
                                     searchBases.Add(new ProofBasis(new List<Expression>{e}, match));
                                 }
@@ -897,7 +911,8 @@ public class MentalState : MonoBehaviour {
 
                         foreach (var f2xBinding in f2xMatches) {
                             var allF1F2 = new Expression(ALL, new Expression(f1), f2xBinding[f2]);
-                            var f1xFormula = new Expression(new Expression(f1), new Expression(x1));
+                            
+                            var f1xFormula = new Expression(new Expression(f1), f2xBinding[x1]);
                             
                             var f1xNode = new ProofNode(f1xFormula,
                                     nextDepth, current, i,
@@ -913,11 +928,11 @@ public class MentalState : MonoBehaviour {
                             exhaustive = false;
                         }
 
-                        // geach - : (t -> t) -> (e -> t, e -> t)
+                        // geach - : (t -> t), (e -> t), e -> t
                         // M |- geach(T, F, x) => M |- T(F(x))
-                        var t1 = GetUnusedVariable(TRUTH_FUNCTION, currentVariables);
+                        var tf1 = GetUnusedVariable(TRUTH_FUNCTION, currentVariables);
                         var tfxFormula = new Expression(
-                            new Expression(t1),
+                            new Expression(tf1),
                                 new Expression(new Expression(f1), new Expression(x1)));
 
                         var tfxMatches = tfxFormula.GetMatches(currentLemma);
@@ -925,7 +940,7 @@ public class MentalState : MonoBehaviour {
                         foreach (var tfxBinding in tfxMatches) {
                             var geachedTfx =
                                 new Expression(GEACH_E_TRUTH_FUNCTION,
-                                    tfxBinding[t1],
+                                    tfxBinding[tf1],
                                     tfxBinding[f1],
                                     tfxBinding[x1]);
 
@@ -937,9 +952,38 @@ public class MentalState : MonoBehaviour {
                             exhaustive = false;
                         }
 
+                        // geach - : (t -> t), (t -> t), t -> t
+                        // M |- geach(T1, T2, S) => M |- T1(T2(S))
+                        var geachTTFAugmentedVariables = new HashSet<Variable>{tf1};
+                        geachTTFAugmentedVariables.UnionWith(currentVariables);
+                        var tf2 = GetUnusedVariable(TRUTH_FUNCTION, geachTTFAugmentedVariables);
+                        var t1 = GetUnusedVariable(TRUTH_VALUE, currentVariables);
+                        var tf1tf2tFormula = new Expression(
+                            new Expression(tf1),
+                                new Expression(
+                                    new Expression(tf2),
+                                    new Expression(t1)));
+
+                        var tf1tf2tMatches = tf1tf2tFormula.GetMatches(currentLemma);
+
+                        foreach (var tf1tf2tBinding in tf1tf2tMatches) {                           
+                            var geachedTf1tf2t =
+                                new Expression(GEACH_T_TRUTH_FUNCTION,
+                                    tf1tf2tBinding[tf1],
+                                    tf1tf2tBinding[tf2],
+                                    tf1tf2tBinding[t1]);
+
+                            newStack.Push(new ProofNode(
+                                geachedTf1tf2t,
+                                nextDepth, current, i,
+                                parity: current.Parity));
+
+                            exhaustive = false;
+                        }
+
                         if (currentLemma.Depth <= this.MaxDepth) {
                             // plan -
-                            if (pt == Plan) {
+                            if (pt == Plan && !currentLemma.HeadedBy(ABLE)) {
                                 var able = new Expression(ABLE, currentLemma, SELF);
                                 var will = new Expression(WILL, currentLemma);
 
@@ -1262,6 +1306,8 @@ public class MentalState : MonoBehaviour {
                                 var makeCost = new Expression(GOOD,
                                     new Expression(NOT, new Expression(MAKE, collateral, SELF)));
 
+                                Debug.Log(makeCost);
+
                                 var makeCostBases = new ProofBases();
                                 var makeCostDone  = new Container<bool>(false);
                                 StartCoroutine(StreamProofs(makeCostBases, makeCost, makeCostDone, Proof));
@@ -1271,6 +1317,7 @@ public class MentalState : MonoBehaviour {
                                 }
 
                                 if (!makeCostBases.IsEmpty()) {
+                                    Debug.Log("HIT");
                                     localBestValue--;
                                 }
                             } else {

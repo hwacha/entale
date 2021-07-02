@@ -153,16 +153,42 @@ public class Testing : MonoBehaviour {
             //     new Expression(SPICY, BOB),
             //     new Expression(new Parameter(TIME, 60))),
 
-            new Expression(GEACH_E_TRUTH_FUNCTION,
-                GOOD,
+            // new Expression(GEACH_E_TRUTH_FUNCTION,
+            //     new Expression(GEACH_T_TRUTH_FUNCTION, GOOD, NOT),
+            //     SPICY,
+            //     CHARLIE),
+
+            new Expression(BLUE, CHARLIE),
+
+            new Expression(ALL, BLUE, YELLOW),
+
+            new Expression(ALL, BLUE,
                 new Expression(GEACH_E_TRUTH_FUNCTION,
-                    NOT,
-                    SPICY),
-                CHARLIE),
+                    new Expression(GEACH_T_TRUTH_FUNCTION, GOOD, NOT), SPICY)),
 
             new Expression(ALL, RED, APPLE),
 
             new Expression(ALL, APPLE, new Expression(GEACH_E_TRUTH_FUNCTION, NOT, SPICY)),
+
+            new Expression(BANANA, ALICE),
+
+            // @Note the left-associative order of the T-geaches
+            // isn't arbitrary: the search doesn't work
+            // if the geach is made to be right-associative instead.
+            // 
+            // This seems like a problem if we don't constrain the
+            // player's ability to make the expressions. Intuitively,
+            // they should be equivalent.
+            new Expression(ALL, BANANA,
+                new Expression(GEACH_E_TRUTH_FUNCTION,
+                    new Expression(GEACH_T_TRUTH_FUNCTION,
+                        new Expression(GEACH_T_TRUTH_FUNCTION,
+                            GOOD,
+                            NOT),
+                        new Expression(MAKE,
+                            new Empty(SemanticType.TRUTH_VALUE),
+                            SELF)),
+                        new Expression(AT, SELF))),
 
         });
 
@@ -464,11 +490,21 @@ public class Testing : MonoBehaviour {
         //             new Expression(SPICY, ALICE),
         //             SELF))));
         
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(GOOD, new Expression(NOT, new Expression(SPICY, CHARLIE)))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(YELLOW, CHARLIE)));
+        
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(GOOD,
+        //         new Expression(NOT,
+        //             new Expression(MAKE,
+        //                 new Expression(AT, SELF, ALICE),
+        //                 SELF)))));
 
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(NOT, new Expression(SPICY, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState,
+            // new Expression(GOOD, new Expression(NOT, new Expression(SPICY, CHARLIE)))));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(NOT, new Expression(SPICY, SELF))));
         
     }
 
