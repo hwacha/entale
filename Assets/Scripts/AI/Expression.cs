@@ -798,151 +798,153 @@ public class Expression : Argument, IComparable<Expression> {
         }
 
         // BEGIN CUSTOM-ORDERING FOR EVIDENTIALS, etc.
-        
-        // we check the depth to tell which to recur on.
-        // @Note This _shouldn't_ cause problems if dealing
-        // with reduced expressions.
-        int thisDepth = this.Depth;
-        int thatDepth = that.Depth;
-        
-        // EVIDENTIALS
-        bool thisIsFactive = this.HeadedBy(KNOW, SEE, MAKE);
-        bool thatIsFactive = that.HeadedBy(KNOW, SEE, MAKE);
+        if (Type.Equals(TRUTH_VALUE)) {
+            
+            // we check the depth to tell which to recur on.
+            // @Note This _shouldn't_ cause problems if dealing
+            // with reduced expressions.
+            int thisDepth = this.Depth;
+            int thatDepth = that.Depth;
+            
+            // EVIDENTIALS
+            bool thisIsFactive = this.HeadedBy(KNOW, SEE, MAKE);
+            bool thatIsFactive = that.HeadedBy(KNOW, SEE, MAKE);
 
-        if (thisIsFactive && thatIsFactive && thisDepth == thatDepth) {
-            var thisContent = this.GetArgAsExpression(0);
-            var thatContent = that.GetArgAsExpression(0);
+            if (thisIsFactive && thatIsFactive && thisDepth == thatDepth) {
+                var thisContent = this.GetArgAsExpression(0);
+                var thatContent = that.GetArgAsExpression(0);
 
-            int contentComparison = thisContent.CompareTo(thatContent);
+                int contentComparison = thisContent.CompareTo(thatContent);
 
-            if (contentComparison != 0) {
-                return contentComparison;
+                if (contentComparison != 0) {
+                    return contentComparison;
+                }
+
+                int factiveHeadComparison = this.Head.CompareTo(that.Head);
+
+                if (factiveHeadComparison != 0) {
+                    return factiveHeadComparison;
+                }
+
+                var thisSubject = this.GetArgAsExpression(1);
+                var thatSubject = that.GetArgAsExpression(1);
+
+                int subjectComparison = thisSubject.CompareTo(thatSubject);
+
+                return subjectComparison;
             }
-
-            int factiveHeadComparison = this.Head.CompareTo(that.Head);
-
-            if (factiveHeadComparison != 0) {
-                return factiveHeadComparison;
-            }
-
-            var thisSubject = this.GetArgAsExpression(1);
-            var thatSubject = that.GetArgAsExpression(1);
-
-            int subjectComparison = thisSubject.CompareTo(thatSubject);
-
-            return subjectComparison;
-        }
-        if (thisIsFactive && !thatIsFactive ||
-            thisIsFactive && thatIsFactive && thisDepth > thatDepth) {
-            var content = this.GetArgAsExpression(0);
-            int comparison = content.CompareTo(that);
-            if (comparison == 0) {
-                return 1;
-            }
-            return comparison;
-        }
-        if (!thisIsFactive && thatIsFactive ||
-            thisIsFactive && thatIsFactive && thisDepth < thatDepth) {
-            var content = that.GetArgAsExpression(0);
-            int comparison = this.CompareTo(content);
-            if (comparison == 0) {
-                return -1;
-            }
-            return comparison;
-        }
-
-        // NEGATION
-        bool thisNot = this.HeadedBy(NOT);
-        bool thatNot = that.HeadedBy(NOT);
-
-        if (thisNot && thatNot && thisDepth == thatDepth) {
-            var thisSubclause = this.GetArgAsExpression(0);
-            var thatSubclause = that.GetArgAsExpression(0);
-
-            int comparison = thisSubclause.CompareTo(thatSubclause);
-            return comparison;
-        }
-
-        if (thisNot && !thatNot ||
-            thisNot && thatNot && thisDepth > thatDepth) {
-            var subclause = this.GetArgAsExpression(0);
-            int comparison = subclause.CompareTo(that);
-            if (comparison == 0) {
-                return 1;
-            }
-            return comparison;
-        }
-
-        if (!thisNot && thatNot ||
-            thisNot && thatNot && thisDepth < thatDepth) {
-            var subclause = that.GetArgAsExpression(0);
-            int comparison = this.CompareTo(subclause);
-            if (comparison == 0) {
-                return -1;
-            }
-            return comparison;
-        }
-
-        // TIME
-        // @Note this depends on the order of not/when
-        // e.g. we get the right ordering for not(when(A, t))
-        // but not for when(not(A), t)
-        // 
-        // We could check for more cases in the ordering,
-        // introduce subtyping to place restriction on
-        // which arguments the expressions accept,
-        // or (as we currently do) maintain the working
-        // order as an invariant.
-        bool thisWhen = this.HeadedBy(WHEN, BEFORE, AFTER);
-        bool thatWhen = that.HeadedBy(WHEN, BEFORE, AFTER);
-
-        if (thisWhen && thatWhen && thisDepth == thatDepth) {
-            var thisContent = this.GetArgAsExpression(0);
-            var thatContent = that.GetArgAsExpression(0);
-
-            int contentComparison = thisContent.CompareTo(thatContent);
-
-            if (contentComparison != 0) {
-                return contentComparison;
-            }
-
-            var thisTime = this.GetArgAsExpression(1);
-            var thatTime = that.GetArgAsExpression(1);
-
-            int timeComparison = thisTime.CompareTo(thatTime);
-
-            if (timeComparison == 0) {
-                if (this.HeadedBy(AFTER) && that.HeadedBy(WHEN, BEFORE) ||
-                    this.HeadedBy(AFTER, WHEN) && that.HeadedBy(BEFORE)) {
+            if (thisIsFactive && !thatIsFactive ||
+                thisIsFactive && thatIsFactive && thisDepth > thatDepth) {
+                var content = this.GetArgAsExpression(0);
+                int comparison = content.CompareTo(that);
+                if (comparison == 0) {
                     return 1;
                 }
-                if (this.HeadedBy(BEFORE) && that.HeadedBy(WHEN, AFTER) ||
-                    this.HeadedBy(BEFORE, WHEN) && that.HeadedBy(AFTER)) {
+                return comparison;
+            }
+            if (!thisIsFactive && thatIsFactive ||
+                thisIsFactive && thatIsFactive && thisDepth < thatDepth) {
+                var content = that.GetArgAsExpression(0);
+                int comparison = this.CompareTo(content);
+                if (comparison == 0) {
                     return -1;
                 }
-                return 0;
+                return comparison;
             }
 
-            return timeComparison;
-        }
+            // NEGATION
+            bool thisNot = this.HeadedBy(NOT);
+            bool thatNot = that.HeadedBy(NOT);
 
-        if (thisWhen && !thatWhen ||
-            thisWhen && thatWhen && thisDepth > thatDepth) {
-            var content = this.GetArgAsExpression(0);
-            int comparison = content.CompareTo(that);
-            if (comparison == 0) {
-                return 1;
+            if (thisNot && thatNot && thisDepth == thatDepth) {
+                var thisSubclause = this.GetArgAsExpression(0);
+                var thatSubclause = that.GetArgAsExpression(0);
+
+                int comparison = thisSubclause.CompareTo(thatSubclause);
+                return comparison;
             }
-            return comparison;
-        }
-        if (!thisWhen && thatWhen ||
-            thisWhen && thatWhen && thisDepth < thatDepth) {
-            var content = that.GetArgAsExpression(0);
-            int comparison = this.CompareTo(content);
-            if (comparison == 0) {
-                return -1;
+
+            if (thisNot && !thatNot ||
+                thisNot && thatNot && thisDepth > thatDepth) {
+                var subclause = this.GetArgAsExpression(0);
+                int comparison = subclause.CompareTo(that);
+                if (comparison == 0) {
+                    return 1;
+                }
+                return comparison;
             }
-            return comparison;
+
+            if (!thisNot && thatNot ||
+                thisNot && thatNot && thisDepth < thatDepth) {
+                var subclause = that.GetArgAsExpression(0);
+                int comparison = this.CompareTo(subclause);
+                if (comparison == 0) {
+                    return -1;
+                }
+                return comparison;
+            }
+
+            // TIME
+            // @Note this depends on the order of not/when
+            // e.g. we get the right ordering for not(when(A, t))
+            // but not for when(not(A), t)
+            // 
+            // We could check for more cases in the ordering,
+            // introduce subtyping to place restriction on
+            // which arguments the expressions accept,
+            // or (as we currently do) maintain the working
+            // order as an invariant.
+            bool thisWhen = this.HeadedBy(WHEN, BEFORE, AFTER);
+            bool thatWhen = that.HeadedBy(WHEN, BEFORE, AFTER);
+
+            if (thisWhen && thatWhen && thisDepth == thatDepth) {
+                var thisContent = this.GetArgAsExpression(0);
+                var thatContent = that.GetArgAsExpression(0);
+
+                int contentComparison = thisContent.CompareTo(thatContent);
+
+                if (contentComparison != 0) {
+                    return contentComparison;
+                }
+
+                var thisTime = this.GetArgAsExpression(1);
+                var thatTime = that.GetArgAsExpression(1);
+
+                int timeComparison = thisTime.CompareTo(thatTime);
+
+                if (timeComparison == 0) {
+                    if (this.HeadedBy(AFTER) && that.HeadedBy(WHEN, BEFORE) ||
+                        this.HeadedBy(AFTER, WHEN) && that.HeadedBy(BEFORE)) {
+                        return 1;
+                    }
+                    if (this.HeadedBy(BEFORE) && that.HeadedBy(WHEN, AFTER) ||
+                        this.HeadedBy(BEFORE, WHEN) && that.HeadedBy(AFTER)) {
+                        return -1;
+                    }
+                    return 0;
+                }
+
+                return timeComparison;
+            }
+
+            if (thisWhen && !thatWhen ||
+                thisWhen && thatWhen && thisDepth > thatDepth) {
+                var content = this.GetArgAsExpression(0);
+                int comparison = content.CompareTo(that);
+                if (comparison == 0) {
+                    return 1;
+                }
+                return comparison;
+            }
+            if (!thisWhen && thatWhen ||
+                thisWhen && thatWhen && thisDepth < thatDepth) {
+                var content = that.GetArgAsExpression(0);
+                int comparison = this.CompareTo(content);
+                if (comparison == 0) {
+                    return -1;
+                }
+                return comparison;
+            }
         }
         // END
 

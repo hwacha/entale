@@ -145,13 +145,24 @@ public class Testing : MonoBehaviour {
                     BOB),
                 new Expression(new Parameter(TIME, 80))),
 
-            new Expression(BEFORE,
-                new Expression(SPICY, SELF),
-                new Expression(new Parameter(TIME, 20))),
+            // new Expression(BEFORE,
+            //     new Expression(SPICY, SELF),
+            //     new Expression(new Parameter(TIME, 20))),
 
-            new Expression(AFTER,
-                new Expression(SPICY, BOB),
-                new Expression(new Parameter(TIME, 60))),
+            // new Expression(AFTER,
+            //     new Expression(SPICY, BOB),
+            //     new Expression(new Parameter(TIME, 60))),
+
+            new Expression(GEACH_E_TRUTH_FUNCTION,
+                GOOD,
+                new Expression(GEACH_E_TRUTH_FUNCTION,
+                    NOT,
+                    SPICY),
+                CHARLIE),
+
+            new Expression(ALL, RED, APPLE),
+
+            new Expression(ALL, APPLE, new Expression(GEACH_E_TRUTH_FUNCTION, NOT, SPICY)),
 
         });
 
@@ -166,12 +177,12 @@ public class Testing : MonoBehaviour {
             // new Expression(NOT, new Expression(NOT, new Expression(RED, SELF))),
             // new Expression(NOT, new Expression(NOT, new Expression(GREEN, SELF))),
             // new Expression(NOT, new Expression(NOT, new Expression(BLUE, SELF))),
-            new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 0))),
-            new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 1))),
-            new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 0))),
-            new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 1))),
-            new Expression(WHEN, new Expression(BLUE, SELF), new Expression(new Parameter(TIME, 0))),
-            new Expression(WHEN, new Expression(BLUE, SELF), new Expression(new Parameter(TIME, 1))),
+            // new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 0))),
+            // new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 1))),
+            // new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 0))),
+            // new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 1))),
+            // new Expression(WHEN, new Expression(BLUE, SELF), new Expression(new Parameter(TIME, 0))),
+            // new Expression(WHEN, new Expression(BLUE, SELF), new Expression(new Parameter(TIME, 1))),
             // new Expression(NOT, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 0)))),
             // new Expression(NOT, new Expression(WHEN, new Expression(RED, SELF), new Expression(new Parameter(TIME, 1)))),
             // new Expression(NOT, new Expression(WHEN, new Expression(GREEN, SELF), new Expression(new Parameter(TIME, 0)))),
@@ -196,18 +207,18 @@ public class Testing : MonoBehaviour {
             //     new Expression(new Parameter(TIME, 0))), ALICE),
             // new Expression(KNOW, new Expression(WHEN, new Expression(BLUE, SELF),
             //     new Expression(new Parameter(TIME, 0))), ALICE),
-            new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF),
-                new Expression(new Parameter(TIME, 0))), BOB), new Expression(new Parameter(TIME, 1))),
-            new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF),
-                new Expression(new Parameter(TIME, 0))), BOB), new Expression(new Parameter(TIME, 1))),
-            new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(BLUE, SELF),
-                new Expression(new Parameter(TIME, 0))), BOB), new Expression(new Parameter(TIME, 1))),
-            new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF),
-                new Expression(new Parameter(TIME, 0))), ALICE), new Expression(new Parameter(TIME, 1))),
-            new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF),
-                new Expression(new Parameter(TIME, 0))), ALICE), new Expression(new Parameter(TIME, 1))),
-            new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(BLUE, SELF),
-                new Expression(new Parameter(TIME, 0))), ALICE), new Expression(new Parameter(TIME, 1))),
+            // new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF),
+            //     new Expression(new Parameter(TIME, 0))), BOB), new Expression(new Parameter(TIME, 1))),
+            // new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF),
+            //     new Expression(new Parameter(TIME, 0))), BOB), new Expression(new Parameter(TIME, 1))),
+            // new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(BLUE, SELF),
+            //     new Expression(new Parameter(TIME, 0))), BOB), new Expression(new Parameter(TIME, 1))),
+            // new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(RED, SELF),
+            //     new Expression(new Parameter(TIME, 0))), ALICE), new Expression(new Parameter(TIME, 1))),
+            // new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(GREEN, SELF),
+            //     new Expression(new Parameter(TIME, 0))), ALICE), new Expression(new Parameter(TIME, 1))),
+            // new Expression(WHEN, new Expression(KNOW, new Expression(WHEN, new Expression(BLUE, SELF),
+            //     new Expression(new Parameter(TIME, 0))), ALICE), new Expression(new Parameter(TIME, 1))),
         };
 
         // var sort = sequence.GetViewBetween(
@@ -296,44 +307,44 @@ public class Testing : MonoBehaviour {
         //             ALICE),
         //         BOB)));
         
-        var selfIsRed = new Expression(RED, SELF);
-        var aliceKnowsSelfIsRed = new Expression(KNOW, selfIsRed, ALICE);
+        // var selfIsRed = new Expression(RED, SELF);
+        // var aliceKnowsSelfIsRed = new Expression(KNOW, selfIsRed, ALICE);
 
         // StartCoroutine(TestFactiveContains(MentalState, aliceKnowsSelfIsRed, selfIsRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, selfIsRed, aliceKnowsSelfIsRed, false));
 
-        var bobKnowsAliceKnowsSelfIsRed = new Expression(KNOW, aliceKnowsSelfIsRed, BOB);
+        // var bobKnowsAliceKnowsSelfIsRed = new Expression(KNOW, aliceKnowsSelfIsRed, BOB);
 
         // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceKnowsSelfIsRed, aliceKnowsSelfIsRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceKnowsSelfIsRed, selfIsRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceKnowsSelfIsRed, new Expression(GREEN, SELF), false));
 
-        var charlieKnows = new Expression(KNOW, bobKnowsAliceKnowsSelfIsRed, CHARLIE);
+        // var charlieKnows = new Expression(KNOW, bobKnowsAliceKnowsSelfIsRed, CHARLIE);
 
         // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, bobKnowsAliceKnowsSelfIsRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, aliceKnowsSelfIsRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, selfIsRed, true));
 
-        var bobKnowsSelfIsRed = new Expression(KNOW, selfIsRed, BOB);
+        // var bobKnowsSelfIsRed = new Expression(KNOW, selfIsRed, BOB);
 
         // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, bobKnowsSelfIsRed, true));
 
-        var aliceKnowsBobKnowsSelfIsRed = new Expression(KNOW, bobKnowsSelfIsRed, ALICE);
+        // var aliceKnowsBobKnowsSelfIsRed = new Expression(KNOW, bobKnowsSelfIsRed, ALICE);
 
         // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, aliceKnowsBobKnowsSelfIsRed, false));
 
-        var charlieKnowsAliceKnowsSelfIsRed = new Expression(KNOW, aliceKnowsSelfIsRed, CHARLIE);
+        // var charlieKnowsAliceKnowsSelfIsRed = new Expression(KNOW, aliceKnowsSelfIsRed, CHARLIE);
 
         // StartCoroutine(TestFactiveContains(MentalState, charlieKnows, charlieKnowsAliceKnowsSelfIsRed, true));
         
-        var selfIsntRed = new Expression(NOT, selfIsRed);
+        // var selfIsntRed = new Expression(NOT, selfIsRed);
 
         // StartCoroutine(TestFactiveContains(MentalState, selfIsRed, selfIsntRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, selfIsntRed, selfIsRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, aliceKnowsSelfIsRed, selfIsntRed, true));
 
-        var aliceDoesntKnowSelfIsRed = new Expression(NOT, aliceKnowsSelfIsRed);
-        var aliceKnowsSelfIsntRed = new Expression(KNOW, selfIsntRed, ALICE);
+        // var aliceDoesntKnowSelfIsRed = new Expression(NOT, aliceKnowsSelfIsRed);
+        // var aliceKnowsSelfIsntRed = new Expression(KNOW, selfIsntRed, ALICE);
 
         // StartCoroutine(TestFactiveContains(MentalState, aliceDoesntKnowSelfIsRed, selfIsRed, false));
         // StartCoroutine(TestFactiveContains(MentalState, aliceDoesntKnowSelfIsRed, selfIsRed, false));
@@ -343,20 +354,20 @@ public class Testing : MonoBehaviour {
         
         // StartCoroutine(TestFactiveContains(MentalState, aliceDoesntKnowSelfIsRed, aliceKnowsSelfIsntRed, false));
 
-        var bobDoesntKnowAliceKnowsSelfIsRed = new Expression(NOT, bobKnowsAliceKnowsSelfIsRed);
+        // var bobDoesntKnowAliceKnowsSelfIsRed = new Expression(NOT, bobKnowsAliceKnowsSelfIsRed);
 
         // StartCoroutine(TestFactiveContains(MentalState, bobDoesntKnowAliceKnowsSelfIsRed, selfIsRed, false));
         // StartCoroutine(TestFactiveContains(MentalState, bobDoesntKnowAliceKnowsSelfIsRed, aliceKnowsSelfIsRed, false));
         // StartCoroutine(TestFactiveContains(MentalState, bobDoesntKnowAliceKnowsSelfIsRed, bobKnowsAliceKnowsSelfIsRed, true));
 
-        var bobKnowsAliceDoesntKnowSelfIsRed = new Expression(KNOW, aliceDoesntKnowSelfIsRed, BOB);
+        // var bobKnowsAliceDoesntKnowSelfIsRed = new Expression(KNOW, aliceDoesntKnowSelfIsRed, BOB);
 
         // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceDoesntKnowSelfIsRed, aliceDoesntKnowSelfIsRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceDoesntKnowSelfIsRed, aliceKnowsSelfIsRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceDoesntKnowSelfIsRed, aliceKnowsSelfIsntRed, false));
 
-        var aliceDoesntKnowSelfIsntRed = new Expression(NOT, aliceKnowsSelfIsntRed);
-        var bobKnowsAliceDoesntKnowSelfIsntRed = new Expression(KNOW, aliceDoesntKnowSelfIsntRed, BOB);
+        // var aliceDoesntKnowSelfIsntRed = new Expression(NOT, aliceKnowsSelfIsntRed);
+        // var bobKnowsAliceDoesntKnowSelfIsntRed = new Expression(KNOW, aliceDoesntKnowSelfIsntRed, BOB);
 
         // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceKnowsSelfIsRed, bobKnowsAliceDoesntKnowSelfIsntRed, true));
         // StartCoroutine(TestFactiveContains(MentalState, bobKnowsAliceDoesntKnowSelfIsntRed, bobKnowsAliceKnowsSelfIsRed, false));
@@ -452,6 +463,13 @@ public class Testing : MonoBehaviour {
         //         new Expression(KNOW,
         //             new Expression(SPICY, ALICE),
         //             SELF))));
+        
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(GOOD, new Expression(NOT, new Expression(SPICY, CHARLIE)))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(NOT, new Expression(SPICY, SELF))));
+        
     }
 
     public static IEnumerator TestFactiveContains(MentalState m, Expression factive, Expression content, bool expect) {

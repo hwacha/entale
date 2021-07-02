@@ -75,7 +75,6 @@ public class MentalState : MonoBehaviour {
             throw new Exception("Initialize: mental state already initialized.");
         }
         KnowledgeBase = new SortedSet<Expression>();
-        var timeParameter = new Expression(new Parameter(TIME, Timestamp));
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
             AddToKnowledgeBase(initialKnowledge[i]);
@@ -309,6 +308,12 @@ public class MentalState : MonoBehaviour {
     }
 
     private static Expression Reduce(Expression e) {
+        // @Note this is only to prevent problems.
+        // This should be souped-up later to
+        // account for Geaches, etc.
+        if (!e.Type.Equals(TRUTH_VALUE)) {
+            return e;
+        }
         if (e.HeadedBy(TRULY)) {
             return Reduce(e);
         }
@@ -336,18 +341,20 @@ public class MentalState : MonoBehaviour {
             return e;
         }
 
-        if (e.HeadedBy(PAST, PRESENT, FUTURE, NOT)) {
-            return new Expression(new Expression(e.Head), Tensify(e.GetArgAsExpression(0), true));
+        bool newLockTense = false;
+        bool dontTenseTopLevel = false;
+
+        if (e.HeadedBy(PAST, PRESENT, FUTURE, WHEN, NOT)) {
+            newLockTense = true;
+            dontTenseTopLevel = true;
         }
 
         if (e.HeadedBy(ABLE, GOOD)) {
             return e;
         }
 
-        if (e.HeadedBy(AND, OR, IF)) {
-            return new Expression(new Expression(e.Head),
-                Tensify(e.GetArgAsExpression(0)),
-                Tensify(e.GetArgAsExpression(1)));
+        if (e.HeadedBy(AND, OR, IF, GEACH_E_TRUTH_FUNCTION, GEACH_T_TRUTH_FUNCTION, SOME, ALL)) {
+            dontTenseTopLevel = true;
         }
 
         Argument[] tensedArgs = new Argument[e.NumArgs];
@@ -356,7 +363,7 @@ public class MentalState : MonoBehaviour {
             if (arg is Empty) {
                 tensedArgs[i] = arg;
             } else {
-                tensedArgs[i] = Tensify(arg as Expression);
+                tensedArgs[i] = Tensify(arg as Expression, newLockTense);
             }
         }
         var content = new Expression(new Expression(e.Head), tensedArgs);
@@ -364,7 +371,7 @@ public class MentalState : MonoBehaviour {
         // @Note we may want to implement 'sticky tense' in which
         // we would keep the tense the same for subclauses until
         // stated otherwise. This may be most intuitive.
-        return lockTense ? content : new Expression(PRESENT, content);
+        return lockTense || dontTenseTopLevel ? content : new Expression(PRESENT, content);
     }
 
     private static Expression Timeify(Expression e) {
@@ -871,6 +878,62 @@ public class MentalState : MonoBehaviour {
                                 nextDepth, current, i,
                                 isAssumption: !current.Parity,
                                 parity: current.Parity));
+                            exhaustive = false;
+                        }
+
+                        // all -
+                        // M |- all(F, G), M |- F(x) => G(x)
+                        var currentVariables = currentLemma.GetVariables();
+                        var x1 = GetUnusedVariable(INDIVIDUAL, currentVariables);
+                        var f1 = GetUnusedVariable(PREDICATE, currentVariables);
+
+                        var augmentedVariables = new HashSet<Variable>{f1};
+                        augmentedVariables.UnionWith(currentVariables);
+
+                        var f2 = GetUnusedVariable(PREDICATE, augmentedVariables);
+
+                        var f2xFormula = new Expression(new Expression(f2), new Expression(x1));
+                        var f2xMatches = f2xFormula.GetMatches(currentLemma);
+
+                        foreach (var f2xBinding in f2xMatches) {
+                            var allF1F2 = new Expression(ALL, new Expression(f1), f2xBinding[f2]);
+                            var f1xFormula = new Expression(new Expression(f1), new Expression(x1));
+                            
+                            var f1xNode = new ProofNode(f1xFormula,
+                                    nextDepth, current, i,
+                                    hasYoungerSibling: true,
+                                    parity: current.Parity);
+
+                            var allNode = new ProofNode(allF1F2,
+                                nextDepth, current, i, f1xNode, parity: current.Parity);
+
+                            newStack.Push(allNode);
+                            newStack.Push(f1xNode);
+
+                            exhaustive = false;
+                        }
+
+                        // geach - : (t -> t) -> (e -> t, e -> t)
+                        // M |- geach(T, F, x) => M |- T(F(x))
+                        var t1 = GetUnusedVariable(TRUTH_FUNCTION, currentVariables);
+                        var tfxFormula = new Expression(
+                            new Expression(t1),
+                                new Expression(new Expression(f1), new Expression(x1)));
+
+                        var tfxMatches = tfxFormula.GetMatches(currentLemma);
+
+                        foreach (var tfxBinding in tfxMatches) {
+                            var geachedTfx =
+                                new Expression(GEACH_E_TRUTH_FUNCTION,
+                                    tfxBinding[t1],
+                                    tfxBinding[f1],
+                                    tfxBinding[x1]);
+
+                            newStack.Push(new ProofNode(
+                                geachedTfx,
+                                nextDepth, current, i,
+                                parity: current.Parity));
+
                             exhaustive = false;
                         }
 

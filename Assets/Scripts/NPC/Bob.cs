@@ -13,6 +13,9 @@ public class Bob : Agent
             new Expression[]{
                 new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
                 new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
+                new Expression(ALL, BANANA,
+                    new Expression(GEACH_E_TRUTH_FUNCTION, NOT,
+                        new Expression(GEACH_E_TRUTH_FUNCTION, GOOD, new Expression(AT, SELF)))),
             }
         );
 
