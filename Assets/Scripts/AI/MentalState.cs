@@ -344,7 +344,8 @@ public class MentalState : MonoBehaviour {
         bool newLockTense = false;
         bool dontTenseTopLevel = false;
 
-        if (e.HeadedBy(PAST, PRESENT, FUTURE, WHEN, NOT, GEACH_E_TRUTH_FUNCTION, GEACH_T_TRUTH_FUNCTION)) {
+        if (e.HeadedBy(PAST, PRESENT, FUTURE, WHEN, NOT,
+            GEACH_E_TRUTH_FUNCTION, GEACH_T_TRUTH_FUNCTION)) {
             newLockTense = true;
             dontTenseTopLevel = true;
         }
@@ -734,6 +735,18 @@ public class MentalState : MonoBehaviour {
                     // these are our base cases.
                     if (currentLemma.GetVariables().Count == 0) {
 
+                        // M |- verum
+                        if (currentLemma.Equals(VERUM) && current.Parity) {
+                            var basis = new ProofBasis();
+                            searchBases.Add(basis);
+                        }
+
+                        // M |- ~falsum
+                        if (currentLemma.Equals(FALSUM) && !current.Parity) {
+                            var basis = new ProofBasis();
+                            searchBases.Add(basis);
+                        }
+
                         // I can say anything.
                         if (currentLemma.HeadedBy(ABLE) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
@@ -837,27 +850,25 @@ public class MentalState : MonoBehaviour {
                             }
                         }
 
-                        // or +
-                        if (currentLemma.HeadedBy(OR)) {
-                            var disjunctA = currentLemma.GetArgAsExpression(0);
-                            var disjunctB = currentLemma.GetArgAsExpression(1);
-                            newStack.Push(new ProofNode(disjunctA, nextDepth, current, i,
-                                parity: current.Parity));
-                            newStack.Push(new ProofNode(disjunctB, nextDepth, current, i,
-                                parity: current.Parity));
+                        // or +, ~and +
+                        if (currentLemma.HeadedBy(OR)  &&  current.Parity ||
+                            currentLemma.HeadedBy(AND) && !current.Parity) {
+                            var a = currentLemma.GetArgAsExpression(0);
+                            var b = currentLemma.GetArgAsExpression(1);
+                            newStack.Push(new ProofNode(a, nextDepth, current, i));
+                            newStack.Push(new ProofNode(b, nextDepth, current, i));
                             exhaustive = false;
                         }
 
-                        // and +
-                        if (currentLemma.HeadedBy(AND)) {
-                            var conjunctA = currentLemma.GetArgAsExpression(0);
-                            var conjunctB = currentLemma.GetArgAsExpression(1);
+                        // and +, ~or +
+                        if (currentLemma.HeadedBy(AND) &&  current.Parity ||
+                            currentLemma.HeadedBy(OR)  && !current.Parity) {
+                            var a = currentLemma.GetArgAsExpression(0);
+                            var b = currentLemma.GetArgAsExpression(1);
 
-                            var bNode = new ProofNode(conjunctB, nextDepth, current, i,
-                                hasYoungerSibling: true,
-                                parity: current.Parity);
-                            var aNode = new ProofNode(conjunctA, nextDepth, current, i, bNode,
-                                parity: current.Parity);
+                            var bNode = new ProofNode(b, nextDepth, current, i,
+                                hasYoungerSibling: true);
+                            var aNode = new ProofNode(a, nextDepth, current, i, bNode);
 
                             newStack.Push(aNode);
                             newStack.Push(bNode);
@@ -865,7 +876,7 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // some +
-                        if (currentLemma.HeadedBy(SOME)) {
+                        if (currentLemma.HeadedBy(SOME) && current.Parity) {
                             var f = currentLemma.GetArgAsExpression(0);
                             var g = currentLemma.GetArgAsExpression(1);
 
@@ -875,10 +886,8 @@ public class MentalState : MonoBehaviour {
                             var gx = new Expression(g, x);
 
                             var gxNode = new ProofNode(gx, nextDepth, current, i,
-                                hasYoungerSibling: true,
-                                parity: current.Parity);
-                            var fxNode = new ProofNode(fx, nextDepth, current, i, gxNode,
-                                parity: current.Parity);
+                                hasYoungerSibling: true);
+                            var fxNode = new ProofNode(fx, nextDepth, current, i, gxNode);
 
                             newStack.Push(fxNode);
                             newStack.Push(gxNode);
@@ -886,12 +895,12 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // M |- P => M |- know(P, self)
+                        // M |/- P => not(know(P, self))
                         if (currentLemma.HeadedBy(KNOW) && currentLemma.GetArgAsExpression(1).Equals(SELF)) {
                             newStack.Push(new ProofNode(
                                 currentLemma.GetArgAsExpression(0),
                                 nextDepth, current, i,
-                                isAssumption: !current.Parity,
-                                parity: current.Parity));
+                                isAssumption: !current.Parity));
                             exhaustive = false;
                         }
 
@@ -1217,6 +1226,91 @@ public class MentalState : MonoBehaviour {
         return AddToKnowledgeBase(new Expression(KNOW, new Expression(GOOD, content), speaker));
     }
 
+    public static Expression Conjunctify(List<Expression> set) {
+        Expression conjunction = null;
+        for (int i = set.Count - 1; i >= 0; i--) {
+            var conjunct = set[i];
+            if (conjunction == null) {
+                conjunction = conjunct;
+            } else {
+                conjunction = new Expression(AND, conjunct, conjunction);    
+            }
+        }
+        return conjunction;
+    }
+
+    // @Note accessibility for testing purposes
+    public IEnumerator FindMostSpecificConjunction(List<Expression> conjunction,  List<List<Expression>> result, Container<bool> done) {
+        var currentGeneration =
+            new List<KeyValuePair<int, List<Expression>>>{
+                new KeyValuePair<int, List<Expression>>(0, conjunction)};
+
+        while (currentGeneration.Count > 0) {
+            var nextGeneration = new List<KeyValuePair<int, List<Expression>>>();
+            foreach (var generation in currentGeneration) {
+                int lastRemovedIndex = generation.Key;
+                var subconjunction   = generation.Value;
+
+                bool isSubset = false;
+                foreach (var res in result) {
+                    if (!subconjunction.Except(res).Any()) {
+                        isSubset = true;
+                        break;
+                    }
+                }
+
+                if (!isSubset) {
+                    var subconjunctionBases = new ProofBases();
+                    var subconjunctionDone = new Container<bool>(false);                    
+
+                    StartCoroutine(StreamProofs(
+                        subconjunctionBases,
+                        new Expression(GOOD, Conjunctify(subconjunction)),
+                        subconjunctionDone));
+
+                    while (!subconjunctionDone.Item) {
+                        yield return null;
+                    }
+
+                    if (!subconjunctionBases.IsEmpty()) {
+                        result.Add(subconjunction);
+
+                        for (int i = 0; i < lastRemovedIndex; i++) {
+                            var removeOne = new List<Expression>(subconjunction);
+                            removeOne.RemoveAt(i);
+                            
+                            KeyValuePair<int, List<Expression>> toRemoveFromNextGeneration =
+                                default(KeyValuePair<int, List<Expression>>);
+
+                            foreach (var info in nextGeneration) {
+                                if (info.Value.SequenceEqual(removeOne)) {
+                                    toRemoveFromNextGeneration = info;
+                                    break;    
+                                }
+                            }
+
+                            if (!toRemoveFromNextGeneration.Equals(default(KeyValuePair<int, List<Expression>>))) {
+                                nextGeneration.Remove(toRemoveFromNextGeneration);
+                            }
+                        }
+                    } else {
+                        for (int i = lastRemovedIndex; i < subconjunction.Count; i++) {
+                            var removeOne = new List<Expression>(subconjunction);
+                            removeOne.RemoveAt(i);
+                            if (removeOne.Count > 0) {
+                                nextGeneration.Add(new KeyValuePair<int, List<Expression>>(i, removeOne));    
+                            }
+                        }
+                    }
+                }
+            }
+            currentGeneration = nextGeneration;
+        }
+
+        done.Item = true;
+        yield break;
+    }
+
     public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
         var goodProofs = new ProofBases();
         var goodDone = new Container<bool>(false);
@@ -1306,8 +1400,6 @@ public class MentalState : MonoBehaviour {
                                 var makeCost = new Expression(GOOD,
                                     new Expression(NOT, new Expression(MAKE, collateral, SELF)));
 
-                                Debug.Log(makeCost);
-
                                 var makeCostBases = new ProofBases();
                                 var makeCostDone  = new Container<bool>(false);
                                 StartCoroutine(StreamProofs(makeCostBases, makeCost, makeCostDone, Proof));
@@ -1317,7 +1409,6 @@ public class MentalState : MonoBehaviour {
                                 }
 
                                 if (!makeCostBases.IsEmpty()) {
-                                    Debug.Log("HIT");
                                     localBestValue--;
                                 }
                             } else {

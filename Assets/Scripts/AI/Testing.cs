@@ -29,6 +29,12 @@ public class Testing : MonoBehaviour {
         // DON'T COMMENT ABOVE THIS LINE
         MentalState.FrameTimer = FrameTimer;
 
+        var a = new Expression(new Name(TRUTH_VALUE, "A"));
+        var b = new Expression(new Name(TRUTH_VALUE, "B"));
+        var c = new Expression(new Name(TRUTH_VALUE, "C"));
+        var d = new Expression(new Name(TRUTH_VALUE, "D"));
+        var e = new Expression(new Name(TRUTH_VALUE, "E"));
+
         MentalState.Initialize(new Expression[]{
             new Expression(WHEN,
                 new Expression(KNOW,
@@ -189,6 +195,28 @@ public class Testing : MonoBehaviour {
                             new Empty(SemanticType.TRUTH_VALUE),
                             SELF)),
                         new Expression(AT, SELF))),
+
+            new Expression(GOOD, a),
+            new Expression(GOOD, b),
+            new Expression(GOOD, c),
+            new Expression(GOOD, d),
+            new Expression(GOOD, e),
+
+            new Expression(GOOD, new Expression(AND, a, c)),
+            new Expression(GOOD, new Expression(AND, a, b)),
+
+            new Expression(GOOD, new Expression(AND, b,
+                new Expression(AND, d, e))),
+
+            new Expression(GOOD, new Expression(AND, a,
+                new Expression(AND, b,
+                    new Expression(AND, c, e)))),
+
+            new Expression(GOOD,
+                new Expression(AND, a,
+                    new Expression(AND, b,
+                        new Expression(AND, c,
+                            new Expression(AND, d, e))))),
 
         });
 
@@ -505,7 +533,8 @@ public class Testing : MonoBehaviour {
 
         // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(NOT, new Expression(SPICY, SELF))));
-        
+        StartCoroutine(TestFindMostSpecificConjunction(MentalState, new List<Expression>{a, b, c, d, e}));
+
     }
 
     public static IEnumerator TestFactiveContains(MentalState m, Expression factive, Expression content, bool expect) {
@@ -524,6 +553,23 @@ public class Testing : MonoBehaviour {
             factive +
             (answer.Item ? " contains " : " does not contain ") +
             content);
+    }
+
+    public static IEnumerator TestFindMostSpecificConjunction(MentalState m, List<Expression> conjunction) {
+        var result = new List<List<Expression>>();
+        var done   = new Container<bool>(false);
+        m.StartCoroutine(m.FindMostSpecificConjunction(conjunction, result, done));
+
+        while (!done.Item) {
+            yield return null;
+        }
+
+        StringBuilder s = new StringBuilder();
+        foreach (var c in result) {
+            s.Append(MentalState.Conjunctify(c) + "\n");
+        }
+
+        Log(s.ToString());
     }
 
     public static String Verbose(Expression e) {
