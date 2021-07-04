@@ -11,8 +11,8 @@ public class Bob : Agent
     {
         MentalState.Initialize(
             new Expression[]{
-                // new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
-                // new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
+                new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
+                new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
                 // new Expression(ALL, BANANA,
                 //     new Expression(GEACH_E_TRUTH_FUNCTION,
                 //         new Expression(GEACH_T_TRUTH_FUNCTION,
@@ -33,9 +33,13 @@ public class Bob : Agent
         var banana = GameObject.Find("Banana");
         var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
 
-        // MentalState.AddToKnowledgeBase(new Expression(GOOD, new Expression(NOT, new Expression(AT, SELF, bananaParam))));
-        // MentalState.AddToKnowledgeBase(new Expression(GOOD, new Expression(NOT,
-        //     new Expression(MAKE, new Expression(AT, SELF, bananaParam), SELF))));
+        var atNan = new Expression(AT, SELF, bananaParam);
+
+        MentalState.AddToKnowledgeBase(new Expression(GOOD, new Expression(NOT, atNan)));
+        MentalState.AddToKnowledgeBase(new Expression(GOOD, new Expression(NOT,
+            new Expression(MAKE, atNan, SELF))));
+        MentalState.AddToKnowledgeBase(new Expression(GOOD,
+            new Expression(AND, atNan, new Expression(MAKE, atNan, SELF))));
 
         // the player knows that there's a tomato on the table, but doesn't know the word for tomato.
         // The player doesn't know anything about how the language works, but will probably make

@@ -255,6 +255,18 @@ public class MentalState : MonoBehaviour {
                 }
             }
 
+            // we have a 'very' on the left side.
+            if (currentFactive.HeadedBy(VERY)) {
+                if (currentContent.HeadedBy(VERY) && tenseAligned) {
+                    currentFactive = currentFactive.GetArgAsExpression(0);
+                    currentContent = currentContent.GetArgAsExpression(0);
+                    continue;
+                } else {
+                    currentFactive = currentFactive.GetArgAsExpression(0);
+                    continue;
+                }
+            }
+
             // we have an factive on the left side.
             if (currentFactive.HeadedBy(KNOW, SEE, MAKE)) {
                 // the right side is a matching factive.
@@ -350,11 +362,15 @@ public class MentalState : MonoBehaviour {
             dontTenseTopLevel = true;
         }
 
+        // if (e.HeadedBy(VERY)) {
+        //     newLockTense = true;
+        // }
+
         if (e.HeadedBy(ABLE, GOOD)) {
             return e;
         }
 
-        if (e.HeadedBy(AND, OR, IF, SOME, ALL)) {
+        if (e.HeadedBy(AND, OR, IF, SOME, ALL, VERY)) {
             dontTenseTopLevel = true;
         }
 
@@ -595,6 +611,8 @@ public class MentalState : MonoBehaviour {
                         SortedSet<Expression> timespan;
                         IEnumerable<Expression> iter;
 
+                        Debug.Log(beginning + " | " + pastPresent);
+
                         if (currentLemma.HeadedBy(PAST, PRESENT)) {
                             timespan = KnowledgeBase.GetViewBetween(beginning, pastPresent);
                             iter = timespan.Reverse();
@@ -609,6 +627,8 @@ public class MentalState : MonoBehaviour {
                             if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                                 yield return null;
                             }
+
+                            Debug.Log(sample);
 
                             // @Note we assume as an invariant that
                             // each sample we encounter is tensed.
@@ -685,9 +705,6 @@ public class MentalState : MonoBehaviour {
                         var range = KnowledgeBase.GetViewBetween(bottom, top);
 
                         foreach (var e in range) {
-                            if (currentLemma.HeadedBy(ALL)) {
-                                Debug.Log(e + " | " + currentLemma);
-                            }
                             var matches = new HashSet<Substitution>();
                             var factiveContains = new Container<bool>(false);
                             var parityAligned = new Container<bool>(true);
@@ -705,9 +722,6 @@ public class MentalState : MonoBehaviour {
                             }
 
                             if (factiveContains.Item && parityAligned.Item) {
-                                if (currentLemma.HeadedBy(ALL)) {
-                                    Debug.Log("FACTIVE CONTAINS");
-                                }
                                 foreach (var match in matches) {
                                     searchBases.Add(new ProofBasis(new List<Expression>{e}, match));
                                 }
@@ -1251,55 +1265,94 @@ public class MentalState : MonoBehaviour {
                 int lastRemovedIndex = generation.Key;
                 var subconjunction   = generation.Value;
 
-                bool isSubset = false;
-                foreach (var res in result) {
-                    if (!subconjunction.Except(res).Any()) {
-                        isSubset = true;
-                        break;
+                // we have to generate all combinations of negations
+                // of each conjunct in the subconjunction.
+                var currentNegationList = new List<List<Expression>>{subconjunction};
+                var nextNegationList = new List<List<Expression>>();
+                for (int i = 0; i < subconjunction.Count; i++) {
+                    foreach (var cur in currentNegationList) {
+                        var subconjunct = cur[i];
+
+                        Expression negation;
+                        if (subconjunct.HeadedBy(NOT)) {
+                            negation = subconjunct.GetArgAsExpression(0);
+                        } else {
+                            negation = new Expression(NOT, subconjunct);
+                        }
+                        var neg = new List<Expression>(cur);
+                        neg[i] = negation;
+
+                        nextNegationList.Add(cur);
+                        nextNegationList.Add(neg);
                     }
+                    currentNegationList = nextNegationList;
+                    nextNegationList = new List<List<Expression>>();
                 }
 
-                if (!isSubset) {
-                    var subconjunctionBases = new ProofBases();
-                    var subconjunctionDone = new Container<bool>(false);                    
-
-                    StartCoroutine(StreamProofs(
-                        subconjunctionBases,
-                        new Expression(GOOD, Conjunctify(subconjunction)),
-                        subconjunctionDone));
-
-                    while (!subconjunctionDone.Item) {
-                        yield return null;
+                bool lockNextGen = false;
+                foreach (var subconjunctionNegation in currentNegationList) {
+                    bool isSubset = false;
+                    foreach (var res in result) {
+                        if (!subconjunctionNegation.Except(res).Any()) {
+                            isSubset = true;
+                            break;
+                        }
                     }
 
-                    if (!subconjunctionBases.IsEmpty()) {
-                        result.Add(subconjunction);
+                    if (isSubset) {
+                        // we have a more specific conjunction in the result
+                        // already, so we want to stop searching for this
+                        // negation set altogether.
+                        break;
+                    } else {
+                        var subconjunctionNegationBases = new ProofBases();
+                        var subconjunctionNegationDone = new Container<bool>(false);                    
 
-                        for (int i = 0; i < lastRemovedIndex; i++) {
-                            var removeOne = new List<Expression>(subconjunction);
-                            removeOne.RemoveAt(i);
-                            
-                            KeyValuePair<int, List<Expression>> toRemoveFromNextGeneration =
-                                default(KeyValuePair<int, List<Expression>>);
+                        StartCoroutine(StreamProofs(
+                            subconjunctionNegationBases,
+                            new Expression(GOOD, Conjunctify(subconjunctionNegation)),
+                            subconjunctionNegationDone));
 
-                            foreach (var info in nextGeneration) {
-                                if (info.Value.SequenceEqual(removeOne)) {
-                                    toRemoveFromNextGeneration = info;
-                                    break;    
+                        while (!subconjunctionNegationDone.Item) {
+                            yield return null;
+                        }
+
+                        if (!subconjunctionNegationBases.IsEmpty()) {
+                            result.Add(subconjunctionNegation);
+
+                            // remove from the next generation any potential
+                            // subconjunctions of this conjunction, if they
+                            // were already added.
+                            for (int i = 0; i < lastRemovedIndex; i++) {
+                                var removeOne = new List<Expression>(subconjunction);
+                                removeOne.RemoveAt(i);
+                                
+                                KeyValuePair<int, List<Expression>> toRemoveFromNextGeneration =
+                                    default(KeyValuePair<int, List<Expression>>);
+
+                                foreach (var info in nextGeneration) {
+                                    if (info.Value.SequenceEqual(removeOne)) {
+                                        toRemoveFromNextGeneration = info;
+                                        break;    
+                                    }
+                                }
+
+                                if (!toRemoveFromNextGeneration.Equals(default(KeyValuePair<int, List<Expression>>))) {
+                                    nextGeneration.Remove(toRemoveFromNextGeneration);
                                 }
                             }
-
-                            if (!toRemoveFromNextGeneration.Equals(default(KeyValuePair<int, List<Expression>>))) {
-                                nextGeneration.Remove(toRemoveFromNextGeneration);
+                            // these alternatives are all mutually incompatible,
+                            // so if we found it, we break out of this loop.
+                            break;
+                        } else if (!lockNextGen) {
+                            for (int i = lastRemovedIndex; i < subconjunction.Count; i++) {
+                                var removeOne = new List<Expression>(subconjunction);
+                                removeOne.RemoveAt(i);
+                                if (removeOne.Count > 0) {
+                                    nextGeneration.Add(new KeyValuePair<int, List<Expression>>(i, removeOne));    
+                                }
                             }
-                        }
-                    } else {
-                        for (int i = lastRemovedIndex; i < subconjunction.Count; i++) {
-                            var removeOne = new List<Expression>(subconjunction);
-                            removeOne.RemoveAt(i);
-                            if (removeOne.Count > 0) {
-                                nextGeneration.Add(new KeyValuePair<int, List<Expression>>(i, removeOne));    
-                            }
+                            lockNextGen = true;
                         }
                     }
                 }
@@ -1350,73 +1403,93 @@ public class MentalState : MonoBehaviour {
 
             if (!planBases.IsEmpty()) {
                 foreach (var basis in planBases) {
-                    int localBestValue = 1;
+                    List<Expression> benefitConjunction = new List<Expression>();
                     List<Expression> resolutions = new List<Expression>();
+
+                    // @Note the assumption here is that, because the goal
+                    // is good, bringing it about should automatically
+                    // confer some value. This isn't true, however, if
+                    // the plan contains a resolution which _entails_
+                    // the goal but is itself disvalued.
+                    // 
+                    // Currently, that confers an overall value of 0,
+                    // as the positive and negative are both counted.
+                    // However, it should count as -1.
+                    // 
+                    // TODO figure out how to check for this case
+                    int localBestValue = 1;
+                    
                     foreach (var premise in basis.Premises) {
                         if (premise.Type.Equals(CONFORMITY_VALUE)) {
                             resolutions.Add(premise);
+
                             var collateral = premise.GetArgAsExpression(0);
 
-                            var benefit = new Expression(GOOD, collateral);
+                            var benefit = collateral;
+                            var makeBenefit = new Expression(MAKE, collateral, SELF);
 
-                            var benefitBases = new ProofBases();
-                            var benefitDone  = new Container<bool>(false);
-                            StartCoroutine(StreamProofs(benefitBases, benefit, benefitDone, Proof));
+                            benefitConjunction.Add(benefit);
+                            benefitConjunction.Add(makeBenefit);
+                        }
+                    }
 
-                            while (!benefitDone.Item) {
-                                yield return null;
+                    var benefitResult = new List<List<Expression>>();
+                    var benefitDone = new Container<bool>(false);
+                    StartCoroutine(FindMostSpecificConjunction(benefitConjunction, benefitResult, benefitDone));
+
+                    while (!benefitDone.Item) {
+                        yield return null;
+                    }
+
+                    
+                    // sum up the value of the most specific subconjunctions for this plan.
+                    int benefitValue = 0;
+                    foreach (var conjunction in benefitResult) {
+                        var conjunctIndex = 0;
+                        bool isNegation = false;
+
+                        // here, we check if the subconjunction we found
+                        // contradicts the resolution.
+                        foreach (var benefitConjunct in benefitConjunction) {
+                            var benefitContent = benefitConjunct;
+                            bool benefitParity = true;
+                            if (benefitConjunct.HeadedBy(NOT)) {
+                                benefitContent = benefitConjunct.GetArgAsExpression(0);
+                                benefitParity = false;
                             }
 
-                            if (benefitBases.IsEmpty()) {
-                                var cost = new Expression(GOOD, new Expression(NOT, collateral));
-
-                                var costBases = new ProofBases();
-                                var costDone  = new Container<bool>(false);
-                                StartCoroutine(StreamProofs(costBases, cost, costDone, Proof));
-
-                                while (!costDone.Item) {
-                                    yield return null;
-                                }
-
-                                if (!costBases.IsEmpty()) {
-                                    localBestValue--;
-                                }
-                            } else {
-                                localBestValue++;
+                            var conjunct = conjunction[conjunctIndex];
+                            var conjunctContent = conjunct;
+                            bool conjunctParity = true;
+                            if (conjunct.HeadedBy(NOT)) {
+                                conjunctContent = conjunct.GetArgAsExpression(0);
+                                conjunctParity = false;
                             }
 
-                            var makeBenefit = new Expression(GOOD,
-                                new Expression(MAKE, collateral, SELF));
-
-                            var makeBenefitBases = new ProofBases();
-                            var makeBenefitDone  = new Container<bool>(false);
-                            StartCoroutine(StreamProofs(makeBenefitBases, makeBenefit, makeBenefitDone, Proof));
-
-                            while (!makeBenefitDone.Item) {
-                                yield return null;
-                            }
-
-                            if (makeBenefitBases.IsEmpty()) {
-                                var makeCost = new Expression(GOOD,
-                                    new Expression(NOT, new Expression(MAKE, collateral, SELF)));
-
-                                var makeCostBases = new ProofBases();
-                                var makeCostDone  = new Container<bool>(false);
-                                StartCoroutine(StreamProofs(makeCostBases, makeCost, makeCostDone, Proof));
-
-                                while (!makeCostDone.Item) {
-                                    yield return null;
+                            if (benefitContent.Equals(conjunctContent)) {
+                                if (benefitParity == conjunctParity) {
+                                    ++conjunctIndex;
+                                    if (conjunctIndex >= conjunction.Count) {
+                                        break;
+                                    }
+                                    continue;
+                                } else {
+                                    isNegation = true;
+                                    break;
                                 }
-
-                                if (!makeCostBases.IsEmpty()) {
-                                    localBestValue--;
-                                }
-                            } else {
-                                localBestValue++;
                             }
                         }
-
+                        // @Note this should ultimately be a different
+                        // aggregation w/ preferences/utilities.
+                        if (isNegation) {
+                            --benefitValue;
+                        } else {
+                            ++benefitValue;
+                        }
                     }
+
+                    localBestValue += benefitValue;
+
                     if (localBestValue > bestTotalValue) {
                         bestPlan = resolutions;
                         bestTotalValue = localBestValue;

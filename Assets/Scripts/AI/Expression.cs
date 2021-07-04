@@ -798,8 +798,22 @@ public class Expression : Argument, IComparable<Expression> {
         }
 
         // BEGIN CUSTOM-ORDERING FOR EVIDENTIALS, etc.
-        if (Type.Equals(TRUTH_VALUE)) {
-            
+        if (Type.Equals(TRUTH_VALUE)) {         
+            if (this.HeadedBy(VERY)) {
+                int contentComparison = this.GetArgAsExpression(0).CompareTo(that);
+                if (contentComparison == 0) {
+                    return 1;
+                }
+                return contentComparison;
+            }
+            if (that.HeadedBy(VERY)) {
+                int contentComparison = this.CompareTo(that.GetArgAsExpression(0));
+                if (contentComparison == 0) {
+                    return -1;
+                }
+                return contentComparison;
+            }
+
             // we check the depth to tell which to recur on.
             // @Note This _shouldn't_ cause problems if dealing
             // with reduced expressions.
@@ -1059,6 +1073,8 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression PAST    = new Expression(new Name(TRUTH_FUNCTION, "past"));
     public static readonly Expression PRESENT = new Expression(new Name(TRUTH_FUNCTION, "present"));
     public static readonly Expression FUTURE  = new Expression(new Name(TRUTH_FUNCTION, "future"));
+    // very
+    public static readonly Expression VERY = new Expression(new Name(TRUTH_FUNCTION, "very"));
 
 
     // higher-order variables

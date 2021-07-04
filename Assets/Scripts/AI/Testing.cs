@@ -197,7 +197,7 @@ public class Testing : MonoBehaviour {
                         new Expression(AT, SELF))),
 
             new Expression(GOOD, a),
-            new Expression(GOOD, b),
+            new Expression(GOOD, new Expression(NOT, b)),
             new Expression(GOOD, c),
             new Expression(GOOD, d),
             new Expression(GOOD, e),
@@ -206,17 +206,19 @@ public class Testing : MonoBehaviour {
             new Expression(GOOD, new Expression(AND, a, b)),
 
             new Expression(GOOD, new Expression(AND, b,
-                new Expression(AND, d, e))),
+                new Expression(AND, new Expression(NOT, d), e))),
 
             new Expression(GOOD, new Expression(AND, a,
-                new Expression(AND, b,
+                new Expression(AND, new Expression(NOT, b),
                     new Expression(AND, c, e)))),
 
-            new Expression(GOOD,
-                new Expression(AND, a,
-                    new Expression(AND, b,
-                        new Expression(AND, c,
-                            new Expression(AND, d, e))))),
+            new Expression(VERY, new Expression(TREE, ALICE)),
+
+            // new Expression(GOOD,
+            //     new Expression(AND, a,
+            //         new Expression(AND, b,
+            //             new Expression(AND, c,
+            //                 new Expression(AND, d, e))))),
 
         });
 
@@ -533,8 +535,18 @@ public class Testing : MonoBehaviour {
 
         // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(NOT, new Expression(SPICY, SELF))));
-        StartCoroutine(TestFindMostSpecificConjunction(MentalState, new List<Expression>{a, b, c, d, e}));
+        // StartCoroutine(TestFindMostSpecificConjunction(MentalState, new List<Expression>{a, b, c, d, e}));
 
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(TREE, ALICE)));
+
+        // TODO get this to be proven properly.
+        // Need to revamp Expression.Compare.To()??
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(VERY, new Expression(TREE, ALICE))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(VERY, new Expression(VERY, new Expression(TREE, ALICE)))));
     }
 
     public static IEnumerator TestFactiveContains(MentalState m, Expression factive, Expression content, bool expect) {
