@@ -545,6 +545,9 @@ public class Testing : MonoBehaviour {
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(VERY, new Expression(TREE, ALICE))));
 
+
+        // adding comment
+
         // StartCoroutine(LogBasesStream(MentalState,
         //     new Expression(VERY, new Expression(VERY, new Expression(TREE, ALICE)))));
     }
