@@ -799,76 +799,11 @@ public class Expression : Argument, IComparable<Expression> {
 
         // BEGIN CUSTOM-ORDERING FOR EVIDENTIALS, etc.
         if (Type.Equals(TRUTH_VALUE)) {         
-            if (this.HeadedBy(VERY) && that.HeadedBy(VERY)) {
-                int contentComparison = this.GetArgAsExpression(0).CompareTo(that.GetArgAsExpression(0));
-                return contentComparison;
-            }
-            if (this.HeadedBy(VERY)) {
-                int contentComparison = this.GetArgAsExpression(0).CompareTo(that);
-                if (contentComparison == 0) {
-                    return 1;
-                }
-                return contentComparison;
-            }
-            if (that.HeadedBy(VERY)) {
-                int contentComparison = this.CompareTo(that.GetArgAsExpression(0));
-                if (contentComparison == 0) {
-                    return -1;
-                }
-                return contentComparison;
-            }
-
             // we check the depth to tell which to recur on.
             // @Note This _shouldn't_ cause problems if dealing
             // with reduced expressions.
             int thisDepth = this.Depth;
             int thatDepth = that.Depth;
-            
-            // EVIDENTIALS
-            bool thisIsFactive = this.HeadedBy(KNOW, SEE, MAKE);
-            bool thatIsFactive = that.HeadedBy(KNOW, SEE, MAKE);
-
-            if (thisIsFactive && thatIsFactive && thisDepth == thatDepth) {
-                var thisContent = this.GetArgAsExpression(0);
-                var thatContent = that.GetArgAsExpression(0);
-
-                int contentComparison = thisContent.CompareTo(thatContent);
-
-                if (contentComparison != 0) {
-                    return contentComparison;
-                }
-
-                int factiveHeadComparison = this.Head.CompareTo(that.Head);
-
-                if (factiveHeadComparison != 0) {
-                    return factiveHeadComparison;
-                }
-
-                var thisSubject = this.GetArgAsExpression(1);
-                var thatSubject = that.GetArgAsExpression(1);
-
-                int subjectComparison = thisSubject.CompareTo(thatSubject);
-
-                return subjectComparison;
-            }
-            if (thisIsFactive && !thatIsFactive ||
-                thisIsFactive && thatIsFactive && thisDepth > thatDepth) {
-                var content = this.GetArgAsExpression(0);
-                int comparison = content.CompareTo(that);
-                if (comparison == 0) {
-                    return 1;
-                }
-                return comparison;
-            }
-            if (!thisIsFactive && thatIsFactive ||
-                thisIsFactive && thatIsFactive && thisDepth < thatDepth) {
-                var content = that.GetArgAsExpression(0);
-                int comparison = this.CompareTo(content);
-                if (comparison == 0) {
-                    return -1;
-                }
-                return comparison;
-            }
 
             // NEGATION
             bool thisNot = this.HeadedBy(NOT);
@@ -912,41 +847,13 @@ public class Expression : Argument, IComparable<Expression> {
             // which arguments the expressions accept,
             // or (as we currently do) maintain the working
             // order as an invariant.
+            // 
+            // @Bug ordering does not work properly when there
+            // is a variable in the content.
             bool thisWhen = this.HeadedBy(WHEN, BEFORE, AFTER);
             bool thatWhen = that.HeadedBy(WHEN, BEFORE, AFTER);
 
-            int numThisWhens = 0;
-            var exprs = new Queue<Expression>();
-            exprs.Enqueue(this);
-            while (exprs.Count > 0) {
-                var cur = exprs.Dequeue();
-                if (cur.HeadedBy(WHEN, BEFORE, AFTER)) {
-                    numThisWhens++;
-                }
-                for (int i = 0; i < cur.NumArgs; i++) {
-                    var arg = cur.GetArg(i);
-                    if (arg is Expression) {
-                        exprs.Enqueue(arg as Expression);
-                    }
-                }
-            }
-            int numThatWhens = 0;
-            exprs = new Queue<Expression>();
-            exprs.Enqueue(that);
-            while (exprs.Count > 0) {
-                var cur = exprs.Dequeue();
-                if (cur.HeadedBy(WHEN, BEFORE, AFTER)) {
-                    numThatWhens++;
-                }
-                for (int i = 0; i < cur.NumArgs; i++) {
-                    var arg = cur.GetArg(i);
-                    if (arg is Expression) {
-                        exprs.Enqueue(arg as Expression);
-                    }
-                }
-            }
-
-            if (thisWhen && thatWhen && numThisWhens == numThatWhens) {
+            if (thisWhen && thatWhen) {
                 var thisContent = this.GetArgAsExpression(0);
                 var thatContent = that.GetArgAsExpression(0);
 
@@ -976,8 +883,7 @@ public class Expression : Argument, IComparable<Expression> {
                 return timeComparison;
             }
 
-            if (thisWhen && !thatWhen ||
-                thisWhen && thatWhen && numThisWhens > numThatWhens) {
+            if (thisWhen && !thatWhen) {
                 var content = this.GetArgAsExpression(0);
                 int comparison = content.CompareTo(that);
                 if (comparison == 0) {
@@ -985,8 +891,7 @@ public class Expression : Argument, IComparable<Expression> {
                 }
                 return comparison;
             }
-            if (!thisWhen && thatWhen ||
-                thisWhen && thatWhen && numThisWhens < numThatWhens) {
+            if (!thisWhen && thatWhen) {
                 var content = that.GetArgAsExpression(0);
                 int comparison = this.CompareTo(content);
                 if (comparison == 0) {
