@@ -799,6 +799,10 @@ public class Expression : Argument, IComparable<Expression> {
 
         // BEGIN CUSTOM-ORDERING FOR EVIDENTIALS, etc.
         if (Type.Equals(TRUTH_VALUE)) {         
+            if (this.HeadedBy(VERY) && that.HeadedBy(VERY)) {
+                int contentComparison = this.GetArgAsExpression(0).CompareTo(that.GetArgAsExpression(0));
+                return contentComparison;
+            }
             if (this.HeadedBy(VERY)) {
                 int contentComparison = this.GetArgAsExpression(0).CompareTo(that);
                 if (contentComparison == 0) {
@@ -911,7 +915,38 @@ public class Expression : Argument, IComparable<Expression> {
             bool thisWhen = this.HeadedBy(WHEN, BEFORE, AFTER);
             bool thatWhen = that.HeadedBy(WHEN, BEFORE, AFTER);
 
-            if (thisWhen && thatWhen && thisDepth == thatDepth) {
+            int numThisWhens = 0;
+            var exprs = new Queue<Expression>();
+            exprs.Enqueue(this);
+            while (exprs.Count > 0) {
+                var cur = exprs.Dequeue();
+                if (cur.HeadedBy(WHEN, BEFORE, AFTER)) {
+                    numThisWhens++;
+                }
+                for (int i = 0; i < cur.NumArgs; i++) {
+                    var arg = cur.GetArg(i);
+                    if (arg is Expression) {
+                        exprs.Enqueue(arg as Expression);
+                    }
+                }
+            }
+            int numThatWhens = 0;
+            exprs = new Queue<Expression>();
+            exprs.Enqueue(that);
+            while (exprs.Count > 0) {
+                var cur = exprs.Dequeue();
+                if (cur.HeadedBy(WHEN, BEFORE, AFTER)) {
+                    numThatWhens++;
+                }
+                for (int i = 0; i < cur.NumArgs; i++) {
+                    var arg = cur.GetArg(i);
+                    if (arg is Expression) {
+                        exprs.Enqueue(arg as Expression);
+                    }
+                }
+            }
+
+            if (thisWhen && thatWhen && numThisWhens == numThatWhens) {
                 var thisContent = this.GetArgAsExpression(0);
                 var thatContent = that.GetArgAsExpression(0);
 
@@ -942,7 +977,7 @@ public class Expression : Argument, IComparable<Expression> {
             }
 
             if (thisWhen && !thatWhen ||
-                thisWhen && thatWhen && thisDepth > thatDepth) {
+                thisWhen && thatWhen && numThisWhens > numThatWhens) {
                 var content = this.GetArgAsExpression(0);
                 int comparison = content.CompareTo(that);
                 if (comparison == 0) {
@@ -951,7 +986,7 @@ public class Expression : Argument, IComparable<Expression> {
                 return comparison;
             }
             if (!thisWhen && thatWhen ||
-                thisWhen && thatWhen && thisDepth < thatDepth) {
+                thisWhen && thatWhen && numThisWhens < numThatWhens) {
                 var content = that.GetArgAsExpression(0);
                 int comparison = this.CompareTo(content);
                 if (comparison == 0) {

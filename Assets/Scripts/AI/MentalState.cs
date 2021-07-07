@@ -362,10 +362,6 @@ public class MentalState : MonoBehaviour {
             dontTenseTopLevel = true;
         }
 
-        // if (e.HeadedBy(VERY)) {
-        //     newLockTense = true;
-        // }
-
         if (e.HeadedBy(ABLE, GOOD)) {
             return e;
         }
@@ -574,6 +570,8 @@ public class MentalState : MonoBehaviour {
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
                     // currentLemma = Tensify(currentLemma);
+
+                    Debug.Log(currentLemma);
 
                     // the bases we get from directly
                     // querying the knowledge base.
@@ -945,9 +943,8 @@ public class MentalState : MonoBehaviour {
                             var allNode = new ProofNode(allF1F2,
                                 nextDepth, current, i, f1xNode, parity: current.Parity);
 
-                            newStack.Push(allNode);
-                            newStack.Push(f1xNode);
-
+                            // newStack.Push(allNode);
+                            // newStack.Push(f1xNode);
                             exhaustive = false;
                         }
 
@@ -967,10 +964,10 @@ public class MentalState : MonoBehaviour {
                                     tfxBinding[f1],
                                     tfxBinding[x1]);
 
-                            newStack.Push(new ProofNode(
-                                geachedTfx,
-                                nextDepth, current, i,
-                                parity: current.Parity));
+                            // newStack.Push(new ProofNode(
+                            //     geachedTfx,
+                            //     nextDepth, current, i,
+                            //     parity: current.Parity));
 
                             exhaustive = false;
                         }
@@ -996,10 +993,10 @@ public class MentalState : MonoBehaviour {
                                     tf1tf2tBinding[tf2],
                                     tf1tf2tBinding[t1]);
 
-                            newStack.Push(new ProofNode(
-                                geachedTf1tf2t,
-                                nextDepth, current, i,
-                                parity: current.Parity));
+                            // newStack.Push(new ProofNode(
+                            //     geachedTf1tf2t,
+                            //     nextDepth, current, i,
+                            //     parity: current.Parity));
 
                             exhaustive = false;
                         }

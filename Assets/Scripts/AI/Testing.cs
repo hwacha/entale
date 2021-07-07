@@ -545,8 +545,8 @@ public class Testing : MonoBehaviour {
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(VERY, new Expression(TREE, ALICE))));
 
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(VERY, new Expression(VERY, new Expression(TREE, ALICE)))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(VERY, new Expression(VERY, new Expression(TREE, ALICE)))));
     }
 
     public static IEnumerator TestFactiveContains(MentalState m, Expression factive, Expression content, bool expect) {
