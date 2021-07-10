@@ -1060,6 +1060,7 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression SEE    = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "see"));
     public static readonly Expression RECALL  = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "recall"));
     public static readonly Expression INFORM  = new Expression(new Name(INDIVIDUAL_2_TRUTH_RELATION, "inform"));
+
     // agentives
     public static readonly Expression MAKE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "make"));
 

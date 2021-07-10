@@ -22,19 +22,32 @@ public class Testing : MonoBehaviour {
         MentalState.FrameTimer = FrameTimer;
 
         var p = new Expression(new Name(TRUTH_VALUE, "P"));
+        var q = new Expression(new Name(TRUTH_VALUE, "Q"));
+        var r = new Expression(new Name(TRUTH_VALUE, "R"));
 
         MentalState.Initialize(new Expression[]{
-            new Expression(KNOW, new Expression(RED, ALICE), BOB),
-            // new Expression(GOOD, p),
-            // new Expression(GOOD, new Expression(NOT, new Expression(VERY, p))),
-            // new Expression(ABLE, p, SELF),
-            // new Expression(ABLE, new Expression(VERY, p), SELF),
+            // new Expression(KNOW, new Expression(RED, ALICE), BOB),
+            // new Expression(KNOW, new Expression(KNOW, new Expression(RED, ALICE), BOB), CHARLIE),
+            // // new Expression(PAST, new Expression(SEE, p, SELF)),
+            // p,
+            // new Expression(IF, q, p),
+            // new Expression(IF, r, q),
+
+            // new Expression(SEE, new Expression(BLUE, SELF), SELF),
+
+            new Expression(ABLE, new Expression(GREEN, SELF), SELF),
         });
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, ALICE)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, new Expression(RED, ALICE), BOB)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF)));
 
-        // StartCoroutine(LogBasesStream(MentalState, p, Plan));
+        // StartCoroutine(Assert(MentalState, new Expression(NOT, new Expression(BLUE, SELF)), BOB));
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF), Plan));
+    }
+
+    public static IEnumerator Assert(MentalState m, Expression content, Expression speaker) {
+        yield return new WaitForSeconds(5);
+        m.StartCoroutine(m.ReceiveAssertion(content, speaker));
     }
 
     public static IEnumerator TestFindMostSpecificConjunction(MentalState m, List<Expression> conjunction) {
