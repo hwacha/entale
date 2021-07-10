@@ -949,15 +949,21 @@ public class Expression : Argument, IComparable<Expression> {
 
 
     // Individual constants
-    public static readonly Expression SELF        = new Expression(new Name(INDIVIDUAL, "self"));
-    public static readonly Expression ALICE       = new Expression(new Name(INDIVIDUAL, "alice"));
-    public static readonly Expression BOB         = new Expression(new Name(INDIVIDUAL, "bob"));
-    public static readonly Expression CHARLIE     = new Expression(new Name(INDIVIDUAL, "charlie"));
-    public static readonly Expression EVAN        = new Expression(new Name(INDIVIDUAL, "evan"));
-    public static readonly Expression SOUP        = new Expression(new Name(INDIVIDUAL, "soup"));
-    public static readonly Expression SWEETBERRY  = new Expression(new Name(INDIVIDUAL, "sweetberry"));
-    public static readonly Expression SPICYBERRY  = new Expression(new Name(INDIVIDUAL, "spicyberry"));
-    public static readonly Expression FOREST_KING = new Expression(new Name(INDIVIDUAL, "forest_king"));
+    // function words
+    public static readonly Expression THIS = new Expression(new Name(INDIVIDUAL, "this"));
+
+    // determiners
+    public static readonly Expression SELECTOR = new Expression(new Name(DETERMINER, "selector"));
+
+    // names
+    public static readonly Expression SELF    = new Expression(new Name(INDIVIDUAL, "self"));
+    public static readonly Expression ALICE   = new Expression(new Name(INDIVIDUAL, "alice"));
+    public static readonly Expression BOB     = new Expression(new Name(INDIVIDUAL, "bob"));
+    public static readonly Expression CHARLIE = new Expression(new Name(INDIVIDUAL, "charlie"));
+    public static readonly Expression DANI    = new Expression(new Name(INDIVIDUAL, "dani"));
+    public static readonly Expression EVAN    = new Expression(new Name(INDIVIDUAL, "evan"));
+
+    
 
     // Individual variables
     public static readonly Expression XE = new Expression(new Variable(INDIVIDUAL, 0));
@@ -985,9 +991,8 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression TREE   = new Expression(new Name(PREDICATE, "tree"));
     public static readonly Expression TOMATO = new Expression(new Name(PREDICATE, "tomato"));
     public static readonly Expression BANANA = new Expression(new Name(PREDICATE, "banana"));
-
-    // a predicate that applies to any individual
-    public static readonly Expression VEROUS = new Expression(new Name(PREDICATE, "verous"));
+    public static readonly Expression PEPPER = new Expression(new Name(PREDICATE, "pepper"));
+    public static readonly Expression ROUND  = new Expression(new Name(PREDICATE, "round"));
 
     // Predicate variables
     public static readonly Expression FET = new Expression(new Variable(PREDICATE, 0));
@@ -997,7 +1002,6 @@ public class Expression : Argument, IComparable<Expression> {
     // 2-place relation constants
     public static readonly Expression IDENTITY = new Expression(new Name(RELATION_2, "="));
     public static readonly Expression AT       = new Expression(new Name(RELATION_2, "at"));
-    public static readonly Expression ADDED_TO = new Expression(new Name(RELATION_2, "added_to"));
 
     // 2-place relation variables
     public static readonly Expression REET = new Expression(new Variable(RELATION_2, 0));
@@ -1025,11 +1029,21 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression QQP  = new Expression(new Variable(QUANTIFIER_PHRASE, 1));
 
     // 2-place truth functions
-    public static readonly Expression AND        = new Expression(new Name(TRUTH_FUNCTION_2, "and"));
-    public static readonly Expression OR         = new Expression(new Name(TRUTH_FUNCTION_2, "or"));
-    public static readonly Expression IF         = new Expression(new Name(TRUTH_FUNCTION_2, "if"));
+    
+    // truth functions
+    public static readonly Expression AND = new Expression(new Name(TRUTH_FUNCTION_2, "and"));
+    public static readonly Expression OR  = new Expression(new Name(TRUTH_FUNCTION_2, "or"));
+    public static readonly Expression IF  = new Expression(new Name(TRUTH_FUNCTION_2, "if"));
+
+    // value operators
     public static readonly Expression BETTER     = new Expression(new Name(TRUTH_FUNCTION_2, "better"));
     public static readonly Expression AS_GOOD_AS = new Expression(new Name(TRUTH_FUNCTION_2, "~"));
+
+    // tense operators
+    public static readonly Expression SINCE  = new Expression(new Name(TRUTH_FUNCTION_2, "since"));
+    public static readonly Expression UNTIL  = new Expression(new Name(TRUTH_FUNCTION_2, "until"));
+    // public static readonly Expression BEFORE = new Expression(new Name(TRUTH_FUNCTION_2, "before"));
+    // public static readonly Expression AFTER  = new Expression(new Name(TRUTH_FUNCTION_2, "after"));
 
     // truth-conformity relations
     // "will" is interpreted as an instruction for the actuator in LOT
@@ -1038,23 +1052,21 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression WOULD = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "would"));
 
     // individual-truth relations
-    public static readonly Expression SAY       = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "say"));
-    public static readonly Expression KNOW      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
-    public static readonly Expression SEE       = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "see"));
-    public static readonly Expression MAKE      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "make"));
-    public static readonly Expression BELIEVE   = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "believe"));
     public static readonly Expression ABLE      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
-    public static readonly Expression PERCEIVE  = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceive"));
-    public static readonly Expression VERIDICAL = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "veridical"));
-    public static readonly Expression TRIED     = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "tried"));
-    public static readonly Expression PERCEPTUALLY_CLOSED =
-        new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "perceptually_closed"));
 
-    // tensed ITRs
-    public static readonly Expression KNOW_TENSED = new Expression(new Name(TENSED_INDIVIDUAL_TRUTH_RELATION, "know"));
-    
-    // determiners
-    public static readonly Expression SELECTOR = new Expression(new Name(DETERMINER, "selector"));
+    // FACTIVES
+    // evidentials
+    public static readonly Expression KNOW   = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
+    public static readonly Expression SEE    = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "see"));
+    public static readonly Expression RECALL  = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "recall"));
+    public static readonly Expression INFORM  = new Expression(new Name(INDIVIDUAL_2_TRUTH_RELATION, "inform"));
+    // agentives
+    public static readonly Expression MAKE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "make"));
+
+    // defactivizer: turns a sentence F(P) that entails P
+    // into one that doesn't entail P
+    // df(F(P)) is also entailed by F(P)
+    public static readonly Expression DF = new Expression(new Name(TRUTH_FUNCTION, "df"));
 
     // tensers
     public static readonly Expression WHEN   = new Expression(new Name(TENSER, "when"));
@@ -1064,12 +1076,6 @@ public class Expression : Argument, IComparable<Expression> {
     // quantifiers
     public static readonly Expression SOME = new Expression(new Name(QUANTIFIER, "some"));
     public static readonly Expression ALL  = new Expression(new Name(QUANTIFIER, "all"));
-
-    // sentential adverbs/quantifiers
-    public static readonly Expression ALWAYS    = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "always"));
-    public static readonly Expression SOMETIMES = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "sometimes"));
-    public static readonly Expression NORMALLY  = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "normally"));
-    public static readonly Expression NORMAL    = new Expression(new Name(PROPOSITIONAL_QUANTIFIER, "normal"));
 
     // weird function words
     public static readonly Expression ITSELF   = new Expression(new Name(RELATION_2_REDUCER, "itself"));
@@ -1108,11 +1114,4 @@ public class Expression : Argument, IComparable<Expression> {
     // conformity constants
     public static readonly Expression ACCEPT = new Expression(new Name(CONFORMITY_VALUE, "accept"));
     public static readonly Expression REFUSE = new Expression(new Name(CONFORMITY_VALUE, "refuse"));
-
-    // heads for deictic expressions
-    public static readonly Expression THIS = new Expression(new Name(INDIVIDUAL, "this"));
-
-    // // sourced predicates
-    // public static readonly Expression SOURCED_RED = new Expression(new Name(EVIDENTIAL_PREDICATE, "sred"));
-    // public static readonly Expression SOURCED_GREEN = new Expression(new Name(EVIDENTIAL_PREDICATE, "sgreen"));
 }

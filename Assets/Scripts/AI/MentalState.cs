@@ -343,7 +343,9 @@ public class MentalState : MonoBehaviour {
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
-                    currentLemma = Tensify(currentLemma);
+                    currentLemma = currentLemma;
+
+                    // Debug.Log(currentLemma);
 
                     // the bases we get from directly
                     // querying the knowledge base.
@@ -429,28 +431,8 @@ public class MentalState : MonoBehaviour {
 
                             // we have a match
                             if (sampleParity == current.Parity) {
-                                var linkQueue = new Queue<Expression>();
-                                linkQueue.Enqueue(sample);
-                                while (linkQueue.Count > 0) {
-                                    var curLink = linkQueue.Dequeue();
-                                    if (BackwardLinks.ContainsKey(curLink)) {
-                                        foreach (var nextLink in BackwardLinks[curLink]) {
-                                            if (nextLink.Equals(curLink)) {
-                                                foreach (var match in matches) {
-                                                    searchBases.Add(
-                                                        new ProofBasis(
-                                                            new List<Expression>{curLink},
-                                                            match));
-                                                }
-                                            } else {
-                                                linkQueue.Enqueue(nextLink);
-                                            }
-                                        }
-                                    } else {
-                                        foreach (var match in matches) {
-                                            searchBases.Add(new ProofBasis(new List<Expression>{curLink}, match));
-                                        }
-                                    }
+                                foreach (var match in matches) {
+                                    searchBases.Add(new ProofBasis(new List<Expression>{sample}, match));
                                 }
                             // this means the sample we're looking at
                             // contradicts the query.
@@ -478,39 +460,14 @@ public class MentalState : MonoBehaviour {
                         var range = KnowledgeBase.GetViewBetween(bottom, top);
 
                         foreach (var e in range) {
-                            bool sampleParity = e.HeadedBy(NOT);
+                            bool sampleParity = !e.HeadedBy(NOT);
 
                             var matches = currentLemma.GetMatches(e);
                             // we have a match
                             if (sampleParity == current.Parity) {
-                                var linkQueue = new Queue<Expression>();
-                                linkQueue.Enqueue(e);
-                                while (linkQueue.Count > 0) {
-                                    var curLink = linkQueue.Dequeue();
-                                    if (BackwardLinks.ContainsKey(curLink)) {
-                                        if (BackwardLinks[curLink].Contains(curLink)) {
-                                            
-                                        }
-                                        foreach (var nextLink in BackwardLinks[curLink]) {
-                                            if (nextLink.Equals(curLink)) {
-                                                foreach (var match in matches) {
-                                                    searchBases.Add(
-                                                        new ProofBasis(
-                                                            new List<Expression>{curLink},
-                                                            match));
-                                                }
-                                            } else {
-                                                linkQueue.Enqueue(nextLink);
-                                            }
-                                        }
-                                    } else {
-                                        foreach (var match in matches) {
-                                            searchBases.Add(new ProofBasis(new List<Expression>{curLink}, match));
-                                        }
-                                    }
+                                foreach (var match in matches) {
+                                    searchBases.Add(new ProofBasis(new List<Expression>{e}, match));
                                 }
-                            // this means the sample we're looking at
-                            // contradicts the query.
                             }
                         }
                     }
@@ -550,8 +507,8 @@ public class MentalState : MonoBehaviour {
                         // I can say anything.
                         if (currentLemma.HeadedBy(ABLE) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
-                            currentLemma.GetArgAsExpression(0).HeadedBy(SAY) &&
-                            currentLemma.GetArgAsExpression(0).GetArgAsExpression(1).Equals(SELF)) {
+                            currentLemma.GetArgAsExpression(0).HeadedBy(INFORM) &&
+                            currentLemma.GetArgAsExpression(0).GetArgAsExpression(2).Equals(SELF)) {
                             var basis = new ProofBasis();
                             basis.AddPremise(currentLemma);
                             searchBases.Add(basis);
@@ -567,8 +524,8 @@ public class MentalState : MonoBehaviour {
                             searchBases.Add(basis);
                         }
 
-                        // if a and b are within 5 meters of each other,
-                        // then at(a, b).
+                        // if a and b are within 5 meters
+                        // of each other, then M |- at(a, b).
                         if (currentLemma.HeadedBy(AT)) {
                             var a = currentLemma.GetArgAsExpression(0);
                             var b = currentLemma.GetArgAsExpression(1);
@@ -678,6 +635,51 @@ public class MentalState : MonoBehaviour {
                             newStack.Push(aNode);
                             newStack.Push(bNode);
                             exhaustive = false;
+                        }
+
+                        // here, we check against rules that
+                        // would otherwise be premise-expansive.
+                        HashSet<Expression> backwardLinks = null;
+
+                        if (current.Parity) {
+                            if (BackwardLinks.ContainsKey(currentLemma)) {
+                                backwardLinks = BackwardLinks[currentLemma];    
+                            }
+                        } else if (BackwardLinks.ContainsKey(new Expression(NOT, currentLemma))) {
+                            backwardLinks = BackwardLinks[new Expression(NOT, currentLemma)];
+                        }
+
+                        if (backwardLinks != null) {
+                            foreach (var backwardLink in backwardLinks) {
+                                // M |- factive(P) => M |- P
+                                // factive - (1)
+                                if (backwardLink.HeadedBy(KNOW, SEE, MAKE, VERY)) {
+                                    var factiveNode = new ProofNode(backwardLink, nextDepth, current, i, true);
+
+                                    newStack.Push(factiveNode);
+                                    exhaustive = false;
+                                }
+                                // Modus Ponens
+                                // M |- A -> B, M |- A => M |- B
+                                if (backwardLink.HeadedBy(IF)) {
+                                    var antecedent = backwardLink.GetArgAsExpression(0);
+                                    var antecedentNode = new ProofNode(antecedent, nextDepth, current, i, true,
+                                        hasYoungerSibling: true);
+                                    var conditionalNode = new ProofNode(backwardLink, nextDepth, current, i, true,
+                                        antecedentNode);
+
+                                    newStack.Push(conditionalNode);
+                                    newStack.Push(antecedentNode);
+                                    exhaustive = false;
+                                }
+                            }                            
+                        }
+
+
+                        // if -
+                        // we check the backward links contain the conditional
+                        if (BackwardLinks.ContainsKey(currentLemma)) {
+
                         }
 
                         // some +
@@ -1002,45 +1004,45 @@ public class MentalState : MonoBehaviour {
         KnowledgeBase.Add(modifiedFormKnowledge);
 
         if (knowledge.HeadedBy(VERY, KNOW, SEE, MAKE)) {
-            var subclause = AddToKnowledgeBase(knowledge.GetArgAsExpression(0), false);
+            var subclause = AddCurrentTimestamp(Tensify(Reduce(knowledge.GetArgAsExpression(0))));
 
             AddBackwardLink(modifiedFormKnowledge, subclause);
-
-            if (firstCall) {
-                AddBackwardLink(modifiedFormKnowledge, modifiedFormKnowledge);
-            }
         }
         
         if (knowledge.HeadedBy(AND)) {
-            var a = AddToKnowledgeBase(knowledge.GetArgAsExpression(0), false);
-            var b = AddToKnowledgeBase(knowledge.GetArgAsExpression(1), false);
+            var a = AddCurrentTimestamp(Tensify(Reduce(knowledge.GetArgAsExpression(0))));
+            var b = AddCurrentTimestamp(Tensify(Reduce(knowledge.GetArgAsExpression(1))));
 
             AddBackwardLink(modifiedFormKnowledge, a);
             AddBackwardLink(modifiedFormKnowledge, b);
-
-            if (firstCall) {
-                AddBackwardLink(modifiedFormKnowledge, modifiedFormKnowledge);
-            }
         }
 
         if (knowledge.HeadedBy(NOT)) {
             var subclause = knowledge.GetArgAsExpression(0);
             if (subclause.HeadedBy(OR)) {
-                var a = AddToKnowledgeBase(new Expression(NOT, subclause.GetArgAsExpression(0)), false);
-                var b = AddToKnowledgeBase(new Expression(NOT, subclause.GetArgAsExpression(1)), false);
+                var a = AddCurrentTimestamp(Tensify(Reduce(new Expression(NOT, subclause.GetArgAsExpression(0)))));
+                var b = AddCurrentTimestamp(Tensify(Reduce(new Expression(NOT, subclause.GetArgAsExpression(1)))));
 
                 AddBackwardLink(modifiedFormKnowledge, a);
                 AddBackwardLink(modifiedFormKnowledge, b);
-
-                if (firstCall) {
-                    AddBackwardLink(modifiedFormKnowledge, modifiedFormKnowledge);
-                }
             }
         }
+
+        if (knowledge.HeadedBy(IF)) {
+            var consequent = AddCurrentTimestamp(Tensify(Reduce(knowledge.GetArgAsExpression(1))));
+
+            AddBackwardLink(modifiedFormKnowledge, consequent);
+        }
+
+        // if (firstCall) {
+        //     AddBackwardLink(modifiedFormKnowledge, modifiedFormKnowledge);
+        // }
 
         if (modifiedFormKnowledge.Depth > MaxDepth) {
             MaxDepth = modifiedFormKnowledge.Depth;
         }
+
+        Debug.Log(modifiedFormKnowledge);
 
         return modifiedFormKnowledge;
     }

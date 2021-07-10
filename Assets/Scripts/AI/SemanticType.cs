@@ -83,6 +83,9 @@ public abstract class SemanticType : IComparable<SemanticType> {
     public static readonly FunctionalType INDIVIDUAL_TRUTH_RELATION =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL}, TRUTH_VALUE);
 
+    public static readonly FunctionalType INDIVIDUAL_2_TRUTH_RELATION =
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL, INDIVIDUAL}, TRUTH_VALUE);
+
     public static readonly FunctionalType RELATION_2_REDUCER =
         new FunctionalType(new SemanticType[]{RELATION_2, INDIVIDUAL}, TRUTH_VALUE);
     public static readonly FunctionalType RELATION_2_MODIFIER =
@@ -95,7 +98,9 @@ public abstract class SemanticType : IComparable<SemanticType> {
         new FunctionalType(new SemanticType[]{TRUTH_VALUE, TIME}, TRUTH_VALUE);
 
     public static readonly FunctionalType TENSED_INDIVIDUAL_TRUTH_RELATION =
-        new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL, TIME}, TRUTH_VALUE);    
+        new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL, TIME}, TRUTH_VALUE);
+
+
 
     public static SemanticType Push(SemanticType t, SemanticType ts) {
         if (ts is AtomicType) {

@@ -21,37 +21,20 @@ public class Testing : MonoBehaviour {
         // DON'T COMMENT ABOVE THIS LINE
         MentalState.FrameTimer = FrameTimer;
 
+        var p = new Expression(new Name(TRUTH_VALUE, "P"));
+
         MentalState.Initialize(new Expression[]{
-            new Expression(SEE, new Expression(VERY, new Expression(RED, ALICE)), SELF),
             new Expression(KNOW, new Expression(RED, ALICE), BOB),
-            new Expression(KNOW, new Expression(KNOW, new Expression(RED, ALICE), CHARLIE), BOB),
-
-            new Expression(KNOW,
-                new Expression(AND,
-                    new Expression(BLUE, CHARLIE),
-                    new Expression(GREEN, CHARLIE)),
-                BOB),
-
-            new Expression(KNOW,
-                new Expression(NOT,
-                    new Expression(OR,
-                        new Expression(BLUE, BOB),
-                        new Expression(GREEN, BOB))),
-                ALICE),
+            // new Expression(GOOD, p),
+            // new Expression(GOOD, new Expression(NOT, new Expression(VERY, p))),
+            // new Expression(ABLE, p, SELF),
+            // new Expression(ABLE, new Expression(VERY, p), SELF),
         });
 
-        // MentalState.Timestamp = 30;
-        // MentalState.AddToKnowledgeBase(new Expression(SEE, new Expression(NOT, new Expression(RED, ALICE)), SELF));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, ALICE)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, new Expression(RED, ALICE), BOB)));
 
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(RED, ALICE)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(RED, ALICE))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, CHARLIE)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, CHARLIE)));
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(BLUE, BOB))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GREEN, BOB))));
-
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(VERY, new Expression(BLUE, BOB)))));
+        // StartCoroutine(LogBasesStream(MentalState, p, Plan));
     }
 
     public static IEnumerator TestFindMostSpecificConjunction(MentalState m, List<Expression> conjunction) {

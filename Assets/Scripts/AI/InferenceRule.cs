@@ -67,12 +67,6 @@ public class InferenceRule
             new Expression[]{},
             new Expression[]{VERUM});
 
-    public static readonly InferenceRule VEROUS_INTRODUCTION =
-        new InferenceRule(
-            new Expression[]{},
-            new Expression[]{},
-            new Expression[]{new Expression(VEROUS, XE)});
-
     public static readonly InferenceRule TRULY_INTRODUCTION =
         new InferenceRule(
             new Expression[]{ST},
@@ -224,34 +218,6 @@ public class InferenceRule
             new Expression[]{},
             new Expression[]{new Expression(BETTER, ST, PT)});
 
-    public static readonly InferenceRule PERCEPTUAL_BELIEF =
-        new InferenceRule(
-            new Expression[]{new Expression(PERCEIVE, SELF, ST)},
-            new Expression[]{new Expression(VERIDICAL, SELF, ST)},
-            new Expression[]{ST});
-
-    public static readonly InferenceRule SOMETIMES_INTRODUCTION =
-        new InferenceRule(
-            new Expression[]{new Expression(FTF, ST), new Expression(GTF, ST)},
-            new Expression[]{},
-            new Expression[]{new Expression(SOMETIMES, FTF, GTF)});
-
-    public static readonly InferenceRule ALWAYS_ELIMINATION =
-        new InferenceRule(
-            new Expression[]{new Expression(ALWAYS, FTF, GTF), new Expression(FTF, ST)},
-            new Expression[]{},
-            new Expression[]{new Expression(GTF, ST)});
-
-    public static readonly InferenceRule SELF_BELIEF_INTRODUCTION =
-        new InferenceRule(new Expression[]{ST},
-            new Expression[]{},
-            new Expression[]{new Expression(BELIEVE, SELF, ST)});
-
-    public static readonly InferenceRule NEGATIVE_SELF_BELIEF_INTRODUCTION =
-        new InferenceRule(new Expression[]{},
-            new Expression[]{new Expression(NOT, ST)},
-            new Expression[]{new Expression(NOT, new Expression(BELIEVE, SELF, ST))});
-
     public static readonly InferenceRule SYMMETRY_OF_LOCATION =
         new InferenceRule(new Expression[]{
             new Expression(AT, XE, YE)},
@@ -268,22 +234,9 @@ public class InferenceRule
             new Expression[]{},
             new Expression[]{new Expression(AT, XE, ZE)});
 
-    public static readonly InferenceRule SPEECH_ABILITY =
-        new InferenceRule(
-            new Expression[]{},
-            new Expression[]{new Expression(ABLE, SELF, new Expression(SAY, SELF, ST))},
-            new Expression[]{new Expression(ABLE, SELF, new Expression(SAY, SELF, ST))});
-
     public static readonly InferenceRule CLOSED_QUESTION_ASSUMPTION =
         new InferenceRule(
             new Expression[]{new Expression(CLOSED, ST)},
             new Expression[]{new Expression(NOT, ST)},
             new Expression[]{new Expression(NOT, ST)});
-
-    public static readonly InferenceRule PERCEPTUALLY_CLOSED_ASSUMPTION =
-        new InferenceRule(
-            new Expression[]{new Expression(PERCEPTUALLY_CLOSED, XE, ST)},
-            new Expression[]{new Expression(NOT, new Expression(PERCEIVE, XE, ST))},
-            new Expression[]{new Expression(new Expression(PERCEIVE, XE, new Expression(NOT, ST)))}
-        );
 }
