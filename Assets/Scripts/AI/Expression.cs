@@ -1018,8 +1018,9 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression PRESENT = new Expression(new Name(TRUTH_FUNCTION, "present"));
     public static readonly Expression FUTURE  = new Expression(new Name(TRUTH_FUNCTION, "future"));
     // very
-    public static readonly Expression VERY = new Expression(new Name(TRUTH_FUNCTION, "very"));
-
+    public static readonly Expression VERY  = new Expression(new Name(TRUTH_FUNCTION, "very"));
+    // limit-ordinal: used to mark lexical priority
+    public static readonly Expression OMEGA = new Expression(new Name(TRUTH_FUNCTION, "omega"));
 
     // higher-order variables
     public static readonly Expression FTF  = new Expression(new Variable(TRUTH_FUNCTION, 0));

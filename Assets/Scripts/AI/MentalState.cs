@@ -632,6 +632,25 @@ public class MentalState : MonoBehaviour {
                             }                            
                         }
 
+                        if (current.Parity) {
+                            // here, we want omega(P) to entail
+                            // very(...very(P)) for any number of very's
+                            var verylessContent = currentLemma;
+                            while (verylessContent.HeadedBy(VERY)) {
+                                verylessContent = verylessContent.GetArgAsExpression(0);
+                            }
+
+                            if (BackwardLinks.ContainsKey(verylessContent)) {
+                                var omega = new Expression(OMEGA, verylessContent);
+                                if (BackwardLinks[verylessContent].Contains(omega)) {
+                                    var omegaNode = new ProofNode(omega, nextDepth, current, i, true);
+                                    newStack.Push(omegaNode);
+                                    exhaustive = false;
+                                }
+                            }
+                        }
+
+
                         // END PREMISE-EXPANSIVE RULES
 
                         // M |- P => M |- know(P, self)
@@ -938,7 +957,7 @@ public class MentalState : MonoBehaviour {
             return false;
         }
 
-        if (knowledge.HeadedBy(VERY, KNOW, MAKE)) {
+        if (knowledge.HeadedBy(VERY, OMEGA, KNOW, MAKE)) {
             var subclause = knowledge.GetArgAsExpression(0);
             AddToKnowledgeBase(subclause, false);
             AddBackwardLink(knowledge, subclause);
@@ -1071,7 +1090,7 @@ public class MentalState : MonoBehaviour {
             if (conjunction == null) {
                 conjunction = conjunct;
             } else {
-                conjunction = new Expression(AND, conjunct, conjunction);    
+                conjunction = new Expression(AND, conjunct, conjunction);
             }
         }
         return conjunction;
@@ -1103,21 +1122,33 @@ public class MentalState : MonoBehaviour {
 
             if (!costBases.IsEmpty()) {
                 // TODO same as above, except we multiply by -1
+            } else {
+                // otherwise, we recur on all the
+                // proximate forward entailments
+                // and sum them
+                // 
+                // we'll also want to use FindMostSpecificConjunction
+                // instead of the proxmiate entailments for and chains
+                //
+                // we want each conjunct to be one the same proxmity
+                // level, independently of how the conjuncts are associated
+                // 
+                // similarly for any other associative entailments
+                //
+                
+                // rules: here, we recur on the consequent of
+                // each applicable inference rule and sum the results
+
+
+
+                // very -
+                // M |- very(P) => M |- P
+                if (e.HeadedBy(VERY)) {
+                    // var vv = FindValueOf(e.GetArgAsExpression(0));
+                    // value += vv;
+                }
             }
         }
-
-        // otherwise, we recur on all the
-        // proximate forward entailments
-        // and sum them
-        // 
-        // we'll also want to use FindMostSpecificConjunction
-        // instead of the proxmiate entailments for and chains
-        //
-        // we want each conjunct to be one the same proxmity
-        // level, independently of how the conjuncts are associated
-        // 
-        // similarly for any other associative entailments
-        // 
     }
 
     // @Note accessibility for testing purposes

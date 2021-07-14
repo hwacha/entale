@@ -32,17 +32,26 @@ public class Testing : MonoBehaviour {
             // p,
             // new Expression(IF, q, p),
             // new Expression(IF, r, q),
+            
+            new Expression(OMEGA, p),
 
             // new Expression(SEE, new Expression(BLUE, SELF), SELF),
 
-            new Expression(ABLE, new Expression(GREEN, SELF), SELF),
+            // new Expression(ABLE, new Expression(GREEN, SELF), SELF),
         });
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF)));
 
         // StartCoroutine(Assert(MentalState, new Expression(NOT, new Expression(BLUE, SELF)), BOB));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF), Plan));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF), Plan));
+        
+        var vp = p;
+        for (int i = 0; i < 10; i++) {
+            vp = new Expression(VERY, vp);
+        }
+
+        StartCoroutine(LogBasesStream(MentalState, vp));
     }
 
     public static IEnumerator Assert(MentalState m, Expression content, Expression speaker) {
