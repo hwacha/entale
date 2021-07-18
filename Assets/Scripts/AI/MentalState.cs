@@ -1061,7 +1061,6 @@ public class MentalState : MonoBehaviour {
         var toRemove = new List<Expression>();
         foreach (var link in links) {
             if (link.Value.Contains(knowledge)) {
-                Debug.Log(link.Key + " : " + (forward ? "forward" : "backward"));
                 link.Value.Remove(knowledge);
             }
             // if there are no more links to this value, remove it.
