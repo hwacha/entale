@@ -1,6 +1,8 @@
 # entale
 An open-world game with autonomous agents the player can freely talk to using a robust language system.
 
+https://user-images.githubusercontent.com/6621013/126084500-c607889f-d8ab-4b7e-839c-0fa852b7c572.mov
+
 ## How To Use
 
 ### Controls
@@ -17,3 +19,15 @@ At this stage of development, most focus has been put on the AI system behind th
 
 ## Features
 
+### Language
+The language of Entale is a constructed language with a unique tree-structure appearance and color-coded grammatical type system. The player uses this language to communicate to NPCs, who use it to communicate with each other. The language is also used internally in the agent's reasoning and planning.
+
+One of the central gameplay challenges is for the player to learn this language. No translation manual is provided - the player must figure it out through careful observation and experimentation.
+
+### AI
+Agents respresent knowledge of the game world, reason to answer questions and make plans, and communicate with each other using a language system. AI logical reasoning has come the farthest. Yet to be implemented are features like utility/value determination, inductive reasoning, theory of mind, pragmatic reasoning, spatial reasoning and navigation, efficient visual processing, time, event, and action-based reasoning.
+
+Another central component of gameplay is the player's interacting with these agents socially. The player must work to understand, persuade, make trades with, cooperate with, etc., AI agents to move forward.
+
+### Highly dynamic open-world
+The AI agents will be affected by the player and, in general, the game-events around them. They will remember them, and change how they act accordingly. This will make the single-player experience be more significant and intimate.
