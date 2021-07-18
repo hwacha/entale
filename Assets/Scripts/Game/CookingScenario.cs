@@ -31,6 +31,11 @@ public class CookingScenario : MonoBehaviour
 
     Name inputWord = null;
 
+    static readonly Expression SOUP = new Expression(new Name(INDIVIDUAL, "soup"));
+    static readonly Expression SPICYBERRY = new Expression(new Name(INDIVIDUAL, "spicyberry"));
+    static readonly Expression SWEETBERRY = new Expression(new Name(INDIVIDUAL, "sweetberry"));
+    static readonly Expression ADDED_TO = new Expression(new Name(RELATION_2, "added_to"));
+    
     GameObject SpawnExpressionContainer(Expression e, Vector3 pos, Quaternion rot, Transform parent) {
         GameObject expressionContainerInstance =
             Instantiate(expressionContainerPrefab, parent.position + pos, parent.rotation * Quaternion.Euler(0, 0, 90) * Quaternion.Euler(90, 0, 0)  * rot);

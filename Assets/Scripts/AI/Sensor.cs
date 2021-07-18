@@ -31,6 +31,7 @@ public class Sensor : MonoBehaviour {
     // Right now, assume it's a vision module.
     public IEnumerator ReceiveStimulus() {
         while (true) {
+            Agent.MentalState.ClearPresentPercepts();
 
             // SELF-PERCEPTION
             // In normal circumstances, you know your own
