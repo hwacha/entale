@@ -33,12 +33,19 @@ public class Testing : MonoBehaviour {
             // new Expression(IF, q, p),
             // new Expression(IF, r, q),
             
-            new Expression(OMEGA, p),
+            new Expression(AND, p, new Expression(AND, q, r)),
+
+            new Expression(OR, p, new Expression(OR, q, r)),
+            
+            // new Expression(OMEGA, p),
 
             // new Expression(SEE, new Expression(BLUE, SELF), SELF),
 
             // new Expression(ABLE, new Expression(GREEN, SELF), SELF),
         });
+
+        MentalState.RemoveFromKnowledgeBase(new Expression(AND, p, new Expression(AND, q, r)));
+        MentalState.RemoveFromKnowledgeBase(new Expression(OR, p, new Expression(OR, q, r)));
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF)));
 
@@ -46,12 +53,12 @@ public class Testing : MonoBehaviour {
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF), Plan));
         
-        var vp = p;
-        for (int i = 0; i < 10; i++) {
-            vp = new Expression(VERY, vp);
-        }
+        // var vp = p;
+        // for (int i = 0; i < 100; i++) {
+        //     vp = new Expression(VERY, vp);
+        // }
 
-        StartCoroutine(LogBasesStream(MentalState, vp));
+        // StartCoroutine(LogBasesStream(MentalState, vp));
     }
 
     public static IEnumerator Assert(MentalState m, Expression content, Expression speaker) {

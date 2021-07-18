@@ -77,6 +77,7 @@ public class MentalState : MonoBehaviour {
             throw new Exception("Initialize: mental state already initialized.");
         }
         KnowledgeBase = new SortedSet<Expression>();
+        ForwardLinks = new Dictionary<Expression, HashSet<Expression>>();
         BackwardLinks = new Dictionary<Expression, HashSet<Expression>>();
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
@@ -950,64 +951,90 @@ public class MentalState : MonoBehaviour {
 
     // @Note: this should be private ultimately.
     // public for testing purposes.
-    public bool AddToKnowledgeBase(Expression knowledge, bool firstCall = true) {
+    public bool AddToKnowledgeBase(Expression knowledge, bool firstCall = true, bool isForward = false) {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
-        
-        if (KnowledgeBase.Contains(knowledge)) {
-            return false;
-        }
 
-        if (knowledge.HeadedBy(VERY, OMEGA, KNOW, MAKE)) {
-            var subclause = knowledge.GetArgAsExpression(0);
-            AddToKnowledgeBase(subclause, false);
-            AddBackwardLink(knowledge, subclause);
-        }
-
-        if (knowledge.HeadedBy(SEE, INFORM)) {
-            var p = knowledge.GetArgAsExpression(0);
-            var pSinceSawP = new Expression(SINCE, p, knowledge);
-
-            // @Note: since(A, B) as a logical operator is typically
-            // made to be a conditional on was(B) to conclude A.
-            // 
-            // We're making it factive. It's ampliatively assumed
-            // we we add a factive event into the knowledge base.
-            // 
-            // M <- see(P, x)
-            // M <- since(P, see(P, x)) which entails both
-            // P and was(see(P, x))
-            // 
-            if (firstCall) {
-                return AddToKnowledgeBase(pSinceSawP, true);
-            } else {
+        if (!isForward) {
+            if (KnowledgeBase.Contains(knowledge)) {
                 return false;
             }
+
+            if (knowledge.HeadedBy(VERY, OMEGA, KNOW, MAKE)) {
+                var subclause = knowledge.GetArgAsExpression(0);
+                AddToKnowledgeBase(subclause, false);
+                AddBackwardLink(knowledge, subclause);
+            }
+
+            if (knowledge.HeadedBy(SEE, INFORM)) {
+                var p = knowledge.GetArgAsExpression(0);
+                var pSinceSawP = new Expression(SINCE, p, knowledge);
+
+                // @Note: since(A, B) as a logical operator is typically
+                // made to be a conditional on was(B) to conclude A.
+                // 
+                // We're making it factive. It's ampliatively assumed
+                // we we add a factive event into the knowledge base.
+                // 
+                // M <- see(P, x)
+                // M <- since(P, see(P, x)) which entails both
+                // P and was(see(P, x))
+                // 
+                if (firstCall) {
+                    return AddToKnowledgeBase(pSinceSawP, true);
+                } else {
+                    return false;
+                }
+                
+                // AddBackwardLink(knowledge, pSinceSawP);
+            }
             
-            // AddBackwardLink(knowledge, pSinceSawP);
-        }
-        
-        if (knowledge.HeadedBy(AND)) {
-            var a = knowledge.GetArgAsExpression(0);
-            var b = knowledge.GetArgAsExpression(1);
-            
-            AddToKnowledgeBase(a, false);
-            AddToKnowledgeBase(b, false);
+            if (knowledge.HeadedBy(AND)) {
+                var a = knowledge.GetArgAsExpression(0);
+                var b = knowledge.GetArgAsExpression(1);
+                
+                AddToKnowledgeBase(a, false);
+                AddToKnowledgeBase(b, false);
 
-            AddBackwardLink(knowledge, a);
-            AddBackwardLink(knowledge, b);
-        }
+                AddBackwardLink(knowledge, a);
+                AddBackwardLink(knowledge, b);
+            }
 
-        if (knowledge.HeadedBy(NOT)) {
-            var subclause = knowledge.GetArgAsExpression(0);
-            if (subclause.HeadedBy(OR)) {
-                var notA = new Expression(NOT, subclause.GetArgAsExpression(0));
-                var notB = new Expression(NOT, subclause.GetArgAsExpression(1));
+            if (knowledge.HeadedBy(NOT)) {
+                var subclause = knowledge.GetArgAsExpression(0);
+                if (subclause.HeadedBy(OR)) {
+                    var notA = new Expression(NOT, subclause.GetArgAsExpression(0));
+                    var notB = new Expression(NOT, subclause.GetArgAsExpression(1));
 
-                AddToKnowledgeBase(notA, false);
-                AddToKnowledgeBase(notB, false);
+                    AddToKnowledgeBase(notA, false);
+                    AddToKnowledgeBase(notB, false);
 
-                AddBackwardLink(knowledge, notA);
-                AddBackwardLink(knowledge, notB);
+                    AddBackwardLink(knowledge, notA);
+                    AddBackwardLink(knowledge, notB);
+                }
+            }
+
+            if (knowledge.HeadedBy(IF, ABLE)) {
+                var consequent = knowledge.GetArgAsExpression(0);            
+                AddBackwardLink(knowledge, consequent);
+            }
+
+            if (knowledge.HeadedBy(SINCE)) {
+                var topic = knowledge.GetArgAsExpression(0);
+                var anchor = new Expression(PAST, knowledge.GetArgAsExpression(1));
+
+                AddToKnowledgeBase(topic, false);
+                AddToKnowledgeBase(anchor, false);
+
+                AddBackwardLink(knowledge, topic);
+                AddBackwardLink(knowledge, anchor);
+            }
+
+            if (knowledge.Depth > MaxDepth) {
+                MaxDepth = knowledge.Depth;
+            }
+
+            if (firstCall) {
+                KnowledgeBase.Add(knowledge);
             }
         }
 
@@ -1015,39 +1042,50 @@ public class MentalState : MonoBehaviour {
             var a = knowledge.GetArgAsExpression(0);
             var b = knowledge.GetArgAsExpression(1);
 
+            AddToKnowledgeBase(a, false, true);
+            AddToKnowledgeBase(b, false, true);
+
             AddForwardLink(a, knowledge);
             AddForwardLink(b, knowledge);
         }
 
-        if (knowledge.HeadedBy(IF, ABLE)) {
-            var consequent = knowledge.GetArgAsExpression(0);            
-            AddBackwardLink(knowledge, consequent);
-        }
-
-        if (knowledge.HeadedBy(SINCE)) {
-            var topic = knowledge.GetArgAsExpression(0);
-            var anchor = new Expression(PAST, knowledge.GetArgAsExpression(1));
-
-            AddToKnowledgeBase(topic, false);
-            AddToKnowledgeBase(anchor, false);
-
-            AddBackwardLink(knowledge, topic);
-            AddBackwardLink(knowledge, anchor);
-        }
-
-        if (knowledge.Depth > MaxDepth) {
-            MaxDepth = knowledge.Depth;
-        }
-
-        if (firstCall) {
-            KnowledgeBase.Add(knowledge);    
-        }
         return true;
     }
 
-    // TODO add link removal functionality.
+    // we remove the chain of backward links
+    // associated with the expression 'knowledge'
+    protected void RemoveLinks(Expression knowledge, bool forward) {
+        var links = forward ? ForwardLinks : BackwardLinks;
+        // if there is an expression that contains knowledge,
+        // remove knowledge as a link.
+        var toRemove = new List<Expression>();
+        foreach (var link in links) {
+            if (link.Value.Contains(knowledge)) {
+                Debug.Log(link.Key + " : " + (forward ? "forward" : "backward"));
+                link.Value.Remove(knowledge);
+            }
+            // if there are no more links to this value, remove it.
+            if (link.Value.Count == 0) {
+                toRemove.Add(link.Key);
+            }
+        }
+        foreach (var remove in toRemove) {
+            links.Remove(remove);
+            // if this is an intermediate link, then remove
+            // all of what it links as well.
+            if (!KnowledgeBase.Contains(remove)) {
+                RemoveLinks(remove, forward);
+            }
+        }
+    }
+
     public bool RemoveFromKnowledgeBase(Expression knowledge) {
-        return KnowledgeBase.Remove(knowledge);
+        if (KnowledgeBase.Remove(knowledge)) {
+            RemoveLinks(knowledge, forward: true);
+            RemoveLinks(knowledge, forward: false);
+            return true;
+        }
+        return false;
     }
 
     // a direct assertion.
