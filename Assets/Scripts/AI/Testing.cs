@@ -33,32 +33,42 @@ public class Testing : MonoBehaviour {
             // new Expression(IF, q, p),
             // new Expression(IF, r, q),
             
-            new Expression(AND, p, new Expression(AND, q, r)),
+            // new Expression(AND, p, new Expression(AND, q, r)),
 
-            new Expression(OR, p, new Expression(OR, q, r)),
-            
-            // new Expression(OMEGA, p),
+            // new Expression(OR, p, new Expression(OR, q, r)),
+            new Expression(VERY, new Expression(VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), p))),
 
             // new Expression(SEE, new Expression(BLUE, SELF), SELF),
 
             // new Expression(ABLE, new Expression(GREEN, SELF), SELF),
         });
 
-        MentalState.RemoveFromKnowledgeBase(new Expression(AND, p, new Expression(AND, q, r)));
-        MentalState.RemoveFromKnowledgeBase(new Expression(OR, p, new Expression(OR, q, r)));
+        // MentalState.RemoveFromKnowledgeBase(new Expression(AND, p, new Expression(AND, q, r)));
+        // MentalState.RemoveFromKnowledgeBase(new Expression(OR, p, new Expression(OR, q, r)));
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF)));
 
         // StartCoroutine(Assert(MentalState, new Expression(NOT, new Expression(BLUE, SELF)), BOB));
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF), Plan));
-        
-        // var vp = p;
-        // for (int i = 0; i < 100; i++) {
-        //     vp = new Expression(VERY, vp);
-        // }
 
-        // StartCoroutine(LogBasesStream(MentalState, vp));
+        var ovp = p;
+        var omega = VERY;
+        for (int i = 1; i <= 2; i++) {
+            omega = new Expression(OMEGA, omega);
+        }
+
+        while (true) {
+            for (int i = 1; i <= 3; i++) {
+                ovp = new Expression(omega, ovp);
+            }
+            if (!omega.HeadedBy(OMEGA)) {
+                break;
+            }
+            omega = omega.GetArgAsExpression(0);
+        }
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), p))));
     }
 
     public static IEnumerator Assert(MentalState m, Expression content, Expression speaker) {

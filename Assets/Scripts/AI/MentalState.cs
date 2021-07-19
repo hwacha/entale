@@ -633,6 +633,16 @@ public class MentalState : MonoBehaviour {
                             }                            
                         }
 
+                        //
+                        // assume, for now, that the expressions
+                        // are ordered in terms of
+                        // omegas applied first, verys applied last
+                        // 
+                        // I'll have to do a reduction so that
+                        // the equivalent expressions are captured
+                        // 
+                        // i.e. omega(very(P)) -||- omega(P)
+                        // 
                         if (current.Parity) {
                             // here, we want omega(P) to entail
                             // very(...very(P)) for any number of very's
@@ -642,15 +652,53 @@ public class MentalState : MonoBehaviour {
                             }
 
                             if (BackwardLinks.ContainsKey(verylessContent)) {
-                                var omega = new Expression(OMEGA, verylessContent);
-                                if (BackwardLinks[verylessContent].Contains(omega)) {
-                                    var omegaNode = new ProofNode(omega, nextDepth, current, i, true);
-                                    newStack.Push(omegaNode);
-                                    exhaustive = false;
+                                foreach (var backwardLink in BackwardLinks[verylessContent]) {
+                                    if (backwardLink.HeadedBy(OMEGA)) {
+                                        var omegaNode = new ProofNode(backwardLink, nextDepth, current, i, true);
+                                        newStack.Push(omegaNode);
+                                        exhaustive = false;
+                                    }
                                 }
                             }
-                        }
 
+                            var omegalessContent = verylessContent;
+                            var power = new Expression(OMEGA, VERY);
+                            while (omegalessContent.HeadedBy(OMEGA)) {
+                                var powerMinusOne = power.GetArgAsExpression(0);
+                                while (omegalessContent.HeadedBy(OMEGA) &&
+                                       omegalessContent.GetArgAsExpression(0).Equals(powerMinusOne)) {
+                                    omegalessContent = omegalessContent.GetArgAsExpression(1);
+                                }
+
+                                var powerPlusOne = new Expression(OMEGA, power);
+
+                                if (BackwardLinks.ContainsKey(omegalessContent)) {
+                                    if (BackwardLinks.ContainsKey(omegalessContent)) {
+                                        foreach (var backwardLink in BackwardLinks[omegalessContent]) {
+                                            var powerCounter = power;
+                                            var linkPowerCounter = backwardLink;
+                                            bool linkSupercedes = false;
+                                            while (linkPowerCounter.HeadedBy(OMEGA)) {
+                                                if (!powerCounter.HeadedBy(OMEGA)) {
+                                                    linkSupercedes = true;
+                                                    break;
+                                                }
+                                                powerCounter = powerCounter.GetArgAsExpression(0);
+                                                linkPowerCounter = linkPowerCounter.GetArgAsExpression(0);
+                                            }
+                                            // TODO 7/19
+                                            if (linkSupercedes) {
+                                                var powerPlusOneNode = new ProofNode(backwardLink, nextDepth, current, i, true);
+                                                newStack.Push(powerPlusOneNode);
+                                                exhaustive = false;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                power = powerPlusOne;
+                            }
+                        }
 
                         // END PREMISE-EXPANSIVE RULES
 
@@ -959,8 +1007,14 @@ public class MentalState : MonoBehaviour {
                 return false;
             }
 
-            if (knowledge.HeadedBy(VERY, OMEGA, KNOW, MAKE)) {
+            if (knowledge.HeadedBy(VERY, KNOW, MAKE)) {
                 var subclause = knowledge.GetArgAsExpression(0);
+                AddToKnowledgeBase(subclause, false);
+                AddBackwardLink(knowledge, subclause);
+            }
+
+            if (knowledge.HeadedBy(OMEGA)) {
+                var subclause = knowledge.GetArgAsExpression(1);
                 AddToKnowledgeBase(subclause, false);
                 AddBackwardLink(knowledge, subclause);
             }

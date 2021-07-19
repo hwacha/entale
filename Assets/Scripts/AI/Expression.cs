@@ -1020,7 +1020,7 @@ public class Expression : Argument, IComparable<Expression> {
     // very
     public static readonly Expression VERY  = new Expression(new Name(TRUTH_FUNCTION, "very"));
     // limit-ordinal: used to mark lexical priority
-    public static readonly Expression OMEGA = new Expression(new Name(TRUTH_FUNCTION, "omega"));
+    public static readonly Expression OMEGA = new Expression(new Name(TRUTH_FUNCTOR, "omega"));
 
     // higher-order variables
     public static readonly Expression FTF  = new Expression(new Variable(TRUTH_FUNCTION, 0));
