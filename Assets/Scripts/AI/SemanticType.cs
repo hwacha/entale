@@ -45,7 +45,6 @@ public abstract class SemanticType : IComparable<SemanticType> {
     // references to the atomic types.
     public static readonly AtomicType TIME = new I();
     public static readonly AtomicType INDIVIDUAL = new E();
-    public static readonly AtomicType SOURCE = new S();
     public static readonly AtomicType TRUTH_VALUE = new T();
     public static readonly AtomicType CONFORMITY_VALUE = new C();
     public static readonly AtomicType ASSERTION = new A();
