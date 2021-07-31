@@ -67,8 +67,55 @@ public class Testing : MonoBehaviour {
             }
             omega = omega.GetArgAsExpression(0);
         }
+        var zero = new Expression(GOOD, p);
+        var minusZero = new Expression(GOOD, new Expression(NOT, p));
+        var one = new Expression(VERY, zero);
+        var minusOne = new Expression(VERY, minusZero);
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), p))));
+        var five = zero;
+        var minusFive = minusZero;
+
+        for (int i = 1; i <= 5; i++) {
+            five = new Expression(VERY, five);
+            minusFive = new Expression(VERY, minusFive);
+        }
+
+        var w = new Expression(OMEGA, VERY, zero);
+        var minusW = new Expression(OMEGA, VERY, minusZero);
+
+        var wSquared = new Expression(OMEGA, new Expression(OMEGA, VERY), zero);
+        var wCubed = new Expression(OMEGA, new Expression(OMEGA, new Expression(OMEGA, VERY)), zero);
+
+        var wSquaredPlusOne = new Expression(VERY, wSquared);
+
+        // TestConvertToValue(zero);
+        // TestConvertToValue(minusZero);
+        // TestConvertToValue(one);
+        // TestConvertToValue(minusOne);
+        // TestConvertToValue(five);
+        // TestConvertToValue(minusFive);
+
+        TestConvertToValue(w);
+        TestConvertToValue(minusW);
+
+        TestConvertToValue(wSquared);
+        TestConvertToValue(wCubed);
+        TestConvertToValue(wSquaredPlusOne);
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), p))));
+        
+    }
+
+    public static void TestConvertToValue(Expression e) {
+        var eAsNumber = MentalState.ConvertToValue(e);
+
+        StringBuilder s = new StringBuilder();
+
+        foreach (var placeValue in eAsNumber.Item2) {
+            s.Append(placeValue + ", ");
+        }
+
+        Debug.Log((eAsNumber.Item1 ? "+" : "-") + s.ToString());
     }
 
     public static IEnumerator Assert(MentalState m, Expression content, Expression speaker) {

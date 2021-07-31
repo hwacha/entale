@@ -242,6 +242,48 @@ public class MentalState : MonoBehaviour {
         return new Expression(new Expression(e.Head), timestampedArgs);
     }
 
+    public static Tuple<bool, List<int>> ConvertToValue(Expression e) {
+        bool sign = true;
+        List<int> value = new List<int>{0};
+        var cur = e;
+
+        // @Note we assume the numeric e is coming in
+        // canonical form, where the modifiers are ordered
+        // from least to greatest.
+        
+        while (cur.HeadedBy(VERY)) {
+            value[0]++;
+            cur = cur.GetArgAsExpression(0);
+        }
+
+        while (cur.HeadedBy(OMEGA)) {
+            int place = 0;
+            Expression modifier = cur;
+            while (modifier.HeadedBy(OMEGA)) {
+                place++;
+                if (value.Count <= place) {
+                    value.Add(0);
+                }
+                modifier = modifier.GetArgAsExpression(0);
+            }
+            value[place]++;
+            cur = cur.GetArgAsExpression(1);
+        }
+
+        if (!cur.HeadedBy(GOOD)) {
+            return null;
+        }
+
+        cur = cur.GetArgAsExpression(0);
+
+        while (cur.HeadedBy(NOT)) {
+            sign = !sign;
+            cur = cur.GetArgAsExpression(0);
+        }
+
+        return new Tuple<bool, List<int>>(sign, value);
+    }
+
     // this should just be temporary,
     // as the tensed query seems untenable.
     public enum Tense {
@@ -1221,7 +1263,7 @@ public class MentalState : MonoBehaviour {
                 // we'll also want to use FindMostSpecificConjunction
                 // instead of the proximate entailments for 'and' chains
                 //
-                // we want each conjunct to be one the same proxmity
+                // we want each conjunct to be on the same proximity
                 // level, independently of how the conjuncts are associated
                 // 
                 // similarly for any other associative entailments
