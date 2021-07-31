@@ -1219,7 +1219,7 @@ public class MentalState : MonoBehaviour {
                 // and sum them
                 // 
                 // we'll also want to use FindMostSpecificConjunction
-                // instead of the proxmiate entailments for and chains
+                // instead of the proximate entailments for 'and' chains
                 //
                 // we want each conjunct to be one the same proxmity
                 // level, independently of how the conjuncts are associated

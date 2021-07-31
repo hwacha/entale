@@ -380,6 +380,7 @@ public class FunctionalType : SemanticType {
     }
 }
 
+// time
 public class I : AtomicType {
     public override string ToString() {
         return "i";
@@ -397,13 +398,6 @@ public class E : AtomicType {
 public class T : AtomicType {
     public override string ToString() {
         return "t";
-    }
-}
-
-// factive source
-public class S : AtomicType {
-    public override string ToString() {
-        return "s";
     }
 }
 
