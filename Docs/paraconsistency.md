@@ -1,4 +1,5 @@
-Paraconsistency in the Knowledge State
+# Paraconsistency in the Knowledge State
+
   For a mental state M, The knowledge base KB = {Ki} such that each sentence Ki, and every sentence entailed by KB constitute all the propositions known in M.
 
   If a sentence S is not contained within or is not entailed by KB, it is assumed not to be known in M. If a sentence's negation \~S is also not known in M, then neither S nor \~S is known in M. That is, the question of whether or not S is left open. In this way, the knowledge state is K-paracomplete.
