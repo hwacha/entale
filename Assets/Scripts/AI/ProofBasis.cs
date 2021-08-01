@@ -32,10 +32,17 @@ public class ProofBasis {
     // all formulas in this proof.
     public Substitution Substitution;
 
+    public List<int> MaxValue {get; protected set;}
+
     public ProofBasis(List<Expression> premises,
         Substitution substitution) {
         Premises = premises;
         Substitution = substitution;
+
+        MaxValue = null;
+        foreach (var premise in premises) {
+            MaxValue = MentalState.MaxValue(MaxValue, MentalState.ConvertToValue(premise));
+        }
     }
 
     public ProofBasis() : this(new List<Expression>(),
@@ -54,11 +61,13 @@ public class ProofBasis {
 
         Premises = productPremises;
         Substitution = productSubstitution;
+        MaxValue = MentalState.MaxValue(a.MaxValue, b.MaxValue);
     }
 
     // simple
     public void AddPremise(Expression premise) {
         Premises.Add(premise);
+        MaxValue = MentalState.MaxValue(MaxValue, MentalState.ConvertToValue(premise));
     }
 
     // composes two substitutions together a * b,
@@ -152,6 +161,7 @@ public class ProofBasis {
 
 public class ProofBases {
     private HashSet<ProofBasis> ProofBasisCollection;
+    public List<int> MaxValue {get; protected set;}
 
     public ProofBases() {
         ProofBasisCollection = new HashSet<ProofBasis>();
@@ -171,10 +181,12 @@ public class ProofBases {
 
     public void Add(ProofBasis basis) {
         ProofBasisCollection.Add(basis);
+        MaxValue = MentalState.MaxValue(MaxValue, basis.MaxValue);
     }
 
     public void Add(ProofBases bases) {
         ProofBasisCollection.UnionWith(bases.ProofBasisCollection);
+        MaxValue = MentalState.MaxValue(MaxValue, bases.MaxValue);
     }
 
     // corresponds to the sum of two proofs:
@@ -183,6 +195,7 @@ public class ProofBases {
         ProofBases ret = new ProofBases();
         ret.ProofBasisCollection.UnionWith(a.ProofBasisCollection);
         ret.ProofBasisCollection.UnionWith(b.ProofBasisCollection);
+        ret.MaxValue = MentalState.MaxValue(a.MaxValue, b.MaxValue);
         return ret;
     }
 
@@ -196,6 +209,15 @@ public class ProofBases {
                 ret.Add(new ProofBasis(aBasis, bBasis));
             }
         }
+        // @Note it's not exactly right to maximize the value
+        // and pass it this way. Instead, we only want to
+        // pass down the max value we find if it is some
+        // augmented version (with omegas and verys) of the
+        // content we want to ultimately prove.
+        // 
+        // To do this right, I think we'd have to return
+        // full proof trees and inspect it after we've got it.
+        ret.MaxValue = MentalState.MaxValue(a.MaxValue, b.MaxValue);
         return ret;
     }
 

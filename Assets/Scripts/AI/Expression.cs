@@ -1053,7 +1053,7 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression WOULD = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "would"));
 
     // individual-truth relations
-    public static readonly Expression ABLE      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
+    public static readonly Expression ABLE  = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
 
     // FACTIVES
     // evidentials

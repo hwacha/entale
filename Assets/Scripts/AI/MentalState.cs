@@ -242,9 +242,8 @@ public class MentalState : MonoBehaviour {
         return new Expression(new Expression(e.Head), timestampedArgs);
     }
 
-    public static Tuple<bool, List<int>> ConvertToValue(Expression e) {
-        bool sign = true;
-        List<int> value = new List<int>{0};
+    public static List<int> ConvertToValue(Expression e) {
+        List<int> value = new List<int>{1};
         var cur = e;
 
         // @Note we assume the numeric e is coming in
@@ -274,14 +273,34 @@ public class MentalState : MonoBehaviour {
             return null;
         }
 
-        cur = cur.GetArgAsExpression(0);
+        return value;
+    }
 
-        while (cur.HeadedBy(NOT)) {
-            sign = !sign;
-            cur = cur.GetArgAsExpression(0);
+    public static List<int> MaxValue(List<int> a, List<int> b) {
+        if (a == null) {
+            return b;
+        }
+        if (b == null) {
+            return a;
         }
 
-        return new Tuple<bool, List<int>>(sign, value);
+        if (a.Count > b.Count) {
+            return a;
+        }
+        if (b.Count > a.Count) {
+            return b;
+        }
+
+        for (int i = a.Count - 1; i >= 0; i--) {
+            if (a[i] > b[i]) {
+                return a;
+            }
+            if (b[i] > a[i]) {
+                return b;
+            }
+        }
+
+        return a;
     }
 
     // this should just be temporary,
@@ -1229,59 +1248,113 @@ public class MentalState : MonoBehaviour {
         return conjunction;
     }
 
-    // TODO 7/10
-    public IEnumerator FindValueOf(Expression e, int[] value, Container<bool> done) {
-        var benefitBases = new ProofBases();
-        var benefitDone = new Container<bool>(false);
-
-        StartCoroutine(StreamProofs(benefitBases, new Expression(GOOD, e), benefitDone));
-
-        while (!benefitDone.Item) {
-            yield return null;
+    public static List<int> Plus(List<int> a, List<int> b) {
+        if (a == null) {
+            return b;
+        }
+        if (b == null) {
+            return a;
+        }
+        var sum = new List<int>();
+        int maxCount = a.Count > b.Count ? a.Count : b.Count;
+        for (int i = 0; i < maxCount; i++) {
+            sum.Add(0);
+            if (i < a.Count) {
+                sum[i] += a[i];
+            }
+            if (i < b.Count) {
+                sum[i] += b.Count;
+            }
         }
 
-        if (!benefitBases.IsEmpty()) {
-            // TODO: go through the proof basis and
-            // determine the highest value given.
-        } else {
-            var costBases = new ProofBases();
-            var costDone = new Container<bool>(false);
+        // remove leading zeros
+        for (int i = sum.Count - 1; i >= 0; i--) {
+            if (sum[i] != 0) {
+                break;
+            }
+            sum.RemoveAt(i);
+        }
+        return sum;
+    }
 
-            StartCoroutine(StreamProofs(costBases, new Expression(GOOD, new Expression(NOT, e)), costDone));
+    // TODO 7/10
+    public IEnumerator FindValueOf(Expression e, List<int> value, Container<bool> done) {
 
-            while (!costDone.Item) {
+        var queue = new Queue<Expression>();
+        queue.Enqueue(e);
+
+        List<int> curValue = null;
+
+        while (queue.Count > 0) {
+            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
+                yield return null;
+            }
+            var cur = queue.Dequeue();
+
+            var benefitBases = new ProofBases();
+            var benefitDone = new Container<bool>(false);
+
+            StartCoroutine(StreamProofs(benefitBases, new Expression(GOOD, cur), benefitDone));
+
+            while (!benefitDone.Item) {
                 yield return null;
             }
 
-            if (!costBases.IsEmpty()) {
-                // TODO same as above, except we multiply by -1
+            if (!benefitBases.IsEmpty()) {
+                curValue = Plus(curValue, benefitBases.MaxValue);
             } else {
-                // otherwise, we recur on all the
-                // proximate forward entailments
-                // and sum them
-                // 
-                // we'll also want to use FindMostSpecificConjunction
-                // instead of the proximate entailments for 'and' chains
-                //
-                // we want each conjunct to be on the same proximity
-                // level, independently of how the conjuncts are associated
-                // 
-                // similarly for any other associative entailments
-                //
-                
-                // rules: here, we recur on the consequent of
-                // each applicable inference rule and sum the results
+                var costBases = new ProofBases();
+                var costDone = new Container<bool>(false);
 
+                StartCoroutine(StreamProofs(costBases, new Expression(GOOD, new Expression(NOT, cur)), costDone));
 
+                while (!costDone.Item) {
+                    yield return null;
+                }
 
-                // very -
-                // M |- very(P) => M |- P
-                if (e.HeadedBy(VERY)) {
-                    // var vv = FindValueOf(e.GetArgAsExpression(0));
-                    // value += vv;
+                if (!costBases.IsEmpty()) {
+                    // same as above, except we multiply by -1
+                    var val = new List<int>(costBases.MaxValue);
+
+                    for (int i = 0; i < val.Count; i++) {
+                        val[i] *= -1;
+                    }
+
+                    curValue = Plus(curValue, val);
+                } else {
+                    // otherwise, we recur on all the
+                    // proximate forward entailments
+                    // and sum them
+                    // 
+                    // we'll also want to use FindMostSpecificConjunction
+                    // instead of the proximate entailments for 'and' chains
+                    //
+                    // we want each conjunct to be on the same proximity
+                    // level, independently of how the conjuncts are associated
+                    // 
+                    // similarly for any other associative entailments
+                    //
+                    
+                    // rules: here, we recur on the consequent of
+                    // each applicable inference rule and sum the results
+
+                    // very -
+                    if (cur.HeadedBy(VERY)) {
+                        queue.Enqueue(cur.GetArgAsExpression(0));
+                    }
+                    // factive -
+                    if (cur.HeadedBy(KNOW, SEE, RECALL, INFORM, MAKE)) {
+                        queue.Enqueue(cur.GetArgAsExpression(0));
+                        queue.Enqueue(new Expression(DF, cur));
+                    }
+
+                    // TODO 7/31: conjunction and disjunction
                 }
             }
         }
+
+        value.AddRange(curValue);
+        yield break;
     }
 
     // @Note accessibility for testing purposes

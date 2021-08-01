@@ -111,11 +111,11 @@ public class Testing : MonoBehaviour {
 
         StringBuilder s = new StringBuilder();
 
-        foreach (var placeValue in eAsNumber.Item2) {
+        foreach (var placeValue in eAsNumber) {
             s.Append(placeValue + ", ");
         }
 
-        Debug.Log((eAsNumber.Item1 ? "+" : "-") + s.ToString());
+        Debug.Log(s.ToString());
     }
 
     public static IEnumerator Assert(MentalState m, Expression content, Expression speaker) {
