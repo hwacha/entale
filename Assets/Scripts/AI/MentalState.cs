@@ -47,6 +47,7 @@ public class MentalState : MonoBehaviour {
     private SortedSet<Expression> KnowledgeBase;
     private Dictionary<Expression, HashSet<Expression>> ForwardLinks;
     private Dictionary<Expression, HashSet<Expression>> BackwardLinks;
+    private Dictionary<Expression, HashSet<Expression>> ValueForwardLinks;
 
     // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
@@ -79,6 +80,7 @@ public class MentalState : MonoBehaviour {
         KnowledgeBase = new SortedSet<Expression>();
         ForwardLinks = new Dictionary<Expression, HashSet<Expression>>();
         BackwardLinks = new Dictionary<Expression, HashSet<Expression>>();
+        ValueForwardLinks = new Dictionary<Expression, HashSet<Expression>>();
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
             AddToKnowledgeBase(initialKnowledge[i]);
@@ -243,7 +245,7 @@ public class MentalState : MonoBehaviour {
     }
 
     public static List<int> ConvertToValue(Expression e) {
-        List<int> value = new List<int>{1};
+        List<int> value = new List<int>{0};
         var cur = e;
 
         // @Note we assume the numeric e is coming in
@@ -271,6 +273,12 @@ public class MentalState : MonoBehaviour {
 
         if (!cur.HeadedBy(GOOD)) {
             return null;
+        }
+
+        // we should increment the value by 1
+        // if there are no omega (limit) modifiers
+        if (value.Count == 1) {
+            value[0]++;
         }
 
         return value;
@@ -1058,6 +1066,14 @@ public class MentalState : MonoBehaviour {
         }
     }
 
+    private void AddValueForwardLink(Expression premise, Expression conclusion) {
+        if (ValueForwardLinks.ContainsKey(premise)) {
+            ValueForwardLinks[premise].Add(conclusion);
+        } else {
+            ValueForwardLinks.Add(premise, new HashSet<Expression>{conclusion});
+        }
+    }
+
     // @Note: this should be private ultimately.
     // public for testing purposes.
     public bool AddToKnowledgeBase(Expression knowledge, bool firstCall = true, bool isForward = false) {
@@ -1164,6 +1180,21 @@ public class MentalState : MonoBehaviour {
             AddForwardLink(b, knowledge);
         }
 
+        if (knowledge.HeadedBy(GOOD)) {
+            var content = knowledge.GetArgAsExpression(0);
+
+            if (content.HeadedBy(OR)) {
+                var a = content.GetArgAsExpression(0);
+                var b = content.GetArgAsExpression(1);
+
+                AddToKnowledgeBase(new Expression(GOOD, a), false, true);
+                AddToKnowledgeBase(new Expression(GOOD, b), false, true);
+
+                AddValueForwardLink(a, content);
+                AddValueForwardLink(b, content);
+            }
+        }
+
         return true;
     }
 
@@ -1263,7 +1294,7 @@ public class MentalState : MonoBehaviour {
                 sum[i] += a[i];
             }
             if (i < b.Count) {
-                sum[i] += b.Count;
+                sum[i] += b[i];
             }
         }
 
@@ -1277,13 +1308,41 @@ public class MentalState : MonoBehaviour {
         return sum;
     }
 
-    // TODO 7/10
+    // 
+    // gives us what e is worth in the current knowledge state.
+    // 
+    // based around the idea that the estimates for value flow
+    // from more specific conditions to less specific.
+    // 
+    // Propositions that are semantically stronger than others
+    // are closer to the true preference ordering of worlds.
+    // 
+    // However, if the value of a specific proposition is unknown,
+    // it can be estimated by the values of propositions it entails
+    // by making certain assumptions:
+    // - If the value of A & B is not known, but the value of A
+    //   and the value of B is, a 'close-world assumption' applies,
+    //   and the value of A and B are presumed to be independent of
+    //   one another.
+    // - If the values of A and B are independent, their values should
+    //   sum: if the value of them taken together is greater or less than
+    //   their sum, that means their values must not be independent.
+    //   Otherwise they should just stack together.
+    // - If the value of A is not explicitly known, and can't be otherwise
+    //   estimated, it is supposed to be value-neutral (have a value of 0).
+    // 
+    // In proof terms, if the value of A is not explicitly defined in M,
+    // but A |- Bi for some set of propositions Bi,
+    // then the value of A can be estimated by adding together all of the Bi.
+    // So on, recursively, for the values of Bi, until value is explicitly
+    // defined for one of them.
+    // 
     public IEnumerator FindValueOf(Expression e, List<int> value, Container<bool> done) {
 
         var queue = new Queue<Expression>();
         queue.Enqueue(e);
 
-        List<int> curValue = null;
+        List<int> curValue = new List<int>{};
 
         while (queue.Count > 0) {
             if (FrameTimer.FrameDuration >= TIME_BUDGET) {
@@ -1332,7 +1391,12 @@ public class MentalState : MonoBehaviour {
                     // we want each conjunct to be on the same proximity
                     // level, independently of how the conjuncts are associated
                     // 
-                    // similarly for any other associative entailments
+                    // similarly for any other entailments that are
+                    // associative, commutative, idempotent
+                    // 
+                    // or, in general, if two propositions are equivalent,
+                    // there needs to be a way of assigning the same value
+                    // to them. Some sort of reduction procedure.
                     //
                     
                     // rules: here, we recur on the consequent of
@@ -1348,12 +1412,42 @@ public class MentalState : MonoBehaviour {
                         queue.Enqueue(new Expression(DF, cur));
                     }
 
-                    // TODO 7/31: conjunction and disjunction
+                    // 
+                    // NOTE: the and and or rules aren't exactly
+                    // right, because they won't take into account
+                    // the value of certain subconjunctions or
+                    // be able to provide value for certain
+                    // subdisjunctions.
+                    // 
+                    // For example A & (B & C) won't take (A & C)
+                    // into account at this stage (which it should)
+                    // 
+                    // nor will A v C take into account A v (B v C)
+                    // 
+                    // FindMostSpecificConjunction() provides an
+                    // efficient way to handle these cases, assuming
+                    // the conjunction is in a reduced, sorted form
+                    // 
+                    // Can the same be done for disjunction?
+                    // 
+
+                    // and -
+                    if (cur.HeadedBy(AND)) {
+                        queue.Enqueue(cur.GetArgAsExpression(0));
+                        queue.Enqueue(cur.GetArgAsExpression(1));
+                    }
+                    // or +
+                    if (ValueForwardLinks.ContainsKey(cur)){
+                        foreach (var valueForwardLink in ValueForwardLinks[cur]) {
+                            queue.Enqueue(valueForwardLink);
+                        }
+                    }
                 }
             }
         }
 
         value.AddRange(curValue);
+        done.Item = true;
         yield break;
     }
 

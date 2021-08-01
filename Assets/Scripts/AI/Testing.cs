@@ -25,85 +25,27 @@ public class Testing : MonoBehaviour {
         var q = new Expression(new Name(TRUTH_VALUE, "Q"));
         var r = new Expression(new Name(TRUTH_VALUE, "R"));
 
+        var a = new Expression(new Name(TRUTH_VALUE, "A"));
+        var b = new Expression(new Name(TRUTH_VALUE, "B"));
+        // var b = new Expression(new Name(TRUTH_VALUE), "B");
+
         MentalState.Initialize(new Expression[]{
-            // new Expression(KNOW, new Expression(RED, ALICE), BOB),
-            // new Expression(KNOW, new Expression(KNOW, new Expression(RED, ALICE), BOB), CHARLIE),
-            // // new Expression(PAST, new Expression(SEE, p, SELF)),
-            // p,
-            // new Expression(IF, q, p),
-            // new Expression(IF, r, q),
-            
-            // new Expression(AND, p, new Expression(AND, q, r)),
-
-            // new Expression(OR, p, new Expression(OR, q, r)),
-            new Expression(VERY, new Expression(VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), p))),
-
-            // new Expression(SEE, new Expression(BLUE, SELF), SELF),
-
-            // new Expression(ABLE, new Expression(GREEN, SELF), SELF),
+            new Expression(GOOD, p),
+            new Expression(VERY, new Expression(GOOD, new Expression(NOT, q))),
+            new Expression(OMEGA, VERY, new Expression(GOOD, r)),
+            new Expression(VERY, new Expression(OMEGA, VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), new Expression(GOOD, r)))),
+            new Expression(VERY, new Expression(VERY, new Expression(VERY, new Expression(GOOD, new Expression(RED, SELF))))),
+            new Expression(VERY, new Expression(OMEGA, VERY, new Expression(GOOD, new Expression(OR, a, b)))),
         });
 
-        // MentalState.RemoveFromKnowledgeBase(new Expression(AND, p, new Expression(AND, q, r)));
-        // MentalState.RemoveFromKnowledgeBase(new Expression(OR, p, new Expression(OR, q, r)));
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF)));
-
-        // StartCoroutine(Assert(MentalState, new Expression(NOT, new Expression(BLUE, SELF)), BOB));
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF), Plan));
-
-        var ovp = p;
-        var omega = VERY;
-        for (int i = 1; i <= 2; i++) {
-            omega = new Expression(OMEGA, omega);
-        }
-
-        while (true) {
-            for (int i = 1; i <= 3; i++) {
-                ovp = new Expression(omega, ovp);
-            }
-            if (!omega.HeadedBy(OMEGA)) {
-                break;
-            }
-            omega = omega.GetArgAsExpression(0);
-        }
-        var zero = new Expression(GOOD, p);
-        var minusZero = new Expression(GOOD, new Expression(NOT, p));
-        var one = new Expression(VERY, zero);
-        var minusOne = new Expression(VERY, minusZero);
-
-        var five = zero;
-        var minusFive = minusZero;
-
-        for (int i = 1; i <= 5; i++) {
-            five = new Expression(VERY, five);
-            minusFive = new Expression(VERY, minusFive);
-        }
-
-        var w = new Expression(OMEGA, VERY, zero);
-        var minusW = new Expression(OMEGA, VERY, minusZero);
-
-        var wSquared = new Expression(OMEGA, new Expression(OMEGA, VERY), zero);
-        var wCubed = new Expression(OMEGA, new Expression(OMEGA, new Expression(OMEGA, VERY)), zero);
-
-        var wSquaredPlusOne = new Expression(VERY, wSquared);
-
-        // TestConvertToValue(zero);
-        // TestConvertToValue(minusZero);
-        // TestConvertToValue(one);
-        // TestConvertToValue(minusOne);
-        // TestConvertToValue(five);
-        // TestConvertToValue(minusFive);
-
-        TestConvertToValue(w);
-        TestConvertToValue(minusW);
-
-        TestConvertToValue(wSquared);
-        TestConvertToValue(wCubed);
-        TestConvertToValue(wSquaredPlusOne);
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), p))));
-        
+        StartCoroutine(TestFindValueOf(MentalState, p));
+        // StartCoroutine(TestFindValueOf(MentalState, q));
+        StartCoroutine(TestFindValueOf(MentalState, r));
+        // StartCoroutine(TestFindValueOf(MentalState, new Expression(VERY, new Expression(RED, SELF))));
+        StartCoroutine(TestFindValueOf(MentalState, new Expression(OR, a, b)));
+        StartCoroutine(TestFindValueOf(MentalState, a));
+        StartCoroutine(TestFindValueOf(MentalState, b));
+        StartCoroutine(TestFindValueOf(MentalState, new Expression(AND, a, b)));
     }
 
     public static void TestConvertToValue(Expression e) {
@@ -138,6 +80,48 @@ public class Testing : MonoBehaviour {
         }
 
         Log(s.ToString());
+    }
+
+    public static IEnumerator TestFindValueOf(MentalState m, Expression e) {
+        var value = new List<int>();
+        var done = new Container<bool>(false);
+        m.StartCoroutine(m.FindValueOf(e, value, done));
+
+        while (!done.Item) {
+            yield return null;
+        }
+
+        StringBuilder s = new StringBuilder();
+
+        s.Append(e + " has a value of: ");
+        if (value == null) {
+            s.Append("undefined");
+        } else if (value.Count == 0) {
+            s.Append("0");
+        } else {
+            for (int i = value.Count - 1; i >= 1; i--) {
+                if (value[i] != 0) {
+                    if (value[i] < 0) {
+                        s.Append("-");
+                    }
+                    s.Append("w");
+                    if (i != 1) {
+                        s.Append("^" + i);
+                    }
+                    if (value[i] != 1) {
+                        s.Append(" * " + value[i]);
+                    }
+                    s.Append(" + ");
+                }
+            }
+            if (value[0] < 0) {
+                s.Append("-");
+            }
+            s.Append(value[0]);
+        }
+
+
+        Debug.Log(s.ToString());
     }
 
     public static String Verbose(Expression e) {
