@@ -1578,7 +1578,7 @@ public class MentalState : MonoBehaviour {
             evaluativeBase.Add(assignment);
         }
 
-        int bestTotalValue = 0;
+        List<int> bestTotalValue = new List<int>{0};
         List<Expression> bestPlan = new List<Expression>{new Expression(WILL, NEUTRAL)};
 
         foreach (var good in evaluativeBase) {
@@ -1599,23 +1599,15 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
+            // we have a feasible plan. So, we take
+            // the joint value of making all the
+            // resolutions come true.
             if (!planBases.IsEmpty()) {
+                var bestValueForThisGood = new List<int>();
+                var bestPlanForThisGood = new List<Expression>();
                 foreach (var basis in planBases) {
-                    List<Expression> benefitConjunction = new List<Expression>();
-                    List<Expression> resolutions = new List<Expression>();
-
-                    // @Note the assumption here is that, because the goal
-                    // is good, bringing it about should automatically
-                    // confer some value. This isn't true, however, if
-                    // the plan contains a resolution which _entails_
-                    // the goal but is itself disvalued.
-                    // 
-                    // Currently, that confers an overall value of 0,
-                    // as the positive and negative are both counted.
-                    // However, it should count as -1.
-                    // 
-                    // TODO figure out how to check for this case
-                    int localBestValue = 1;
+                    var benefitConjunction = new List<Expression>();
+                    var resolutions = new List<Expression>();
                     
                     foreach (var premise in basis.Premises) {
                         if (premise.Type.Equals(CONFORMITY_VALUE)) {
@@ -1631,67 +1623,30 @@ public class MentalState : MonoBehaviour {
                         }
                     }
 
-                    var benefitResult = new List<List<Expression>>();
-                    var benefitDone = new Container<bool>(false);
-                    StartCoroutine(FindMostSpecificConjunction(benefitConjunction, benefitResult, benefitDone));
+                    // we find the value of this plan
+                    // by finding the value of the conjunction
+                    // consisting of all the resolutions in the form
+                    // make(_, self). This includes consideration
+                    // (or appropriate disregarding) of
+                    // the goal's value, since it will be entailed
+                    // by one of the resolutions.
+                    var valueForThisPlan = new List<int>();
+                    var valueDone = new Container<bool>(false);
+                    StartCoroutine(FindValueOf(Conjunctify(benefitConjunction), valueForThisPlan, valueDone));
 
-                    while (!benefitDone.Item) {
+                    while (!valueDone.Item) {
                         yield return null;
                     }
 
-                    
-                    // sum up the value of the most specific subconjunctions for this plan.
-                    int benefitValue = 0;
-                    foreach (var conjunction in benefitResult) {
-                        var conjunctIndex = 0;
-                        bool isNegation = false;
-
-                        // here, we check if the subconjunction we found
-                        // contradicts the resolution.
-                        foreach (var benefitConjunct in benefitConjunction) {
-                            var benefitContent = benefitConjunct;
-                            bool benefitParity = true;
-                            if (benefitConjunct.HeadedBy(NOT)) {
-                                benefitContent = benefitConjunct.GetArgAsExpression(0);
-                                benefitParity = false;
-                            }
-
-                            var conjunct = conjunction[conjunctIndex];
-                            var conjunctContent = conjunct;
-                            bool conjunctParity = true;
-                            if (conjunct.HeadedBy(NOT)) {
-                                conjunctContent = conjunct.GetArgAsExpression(0);
-                                conjunctParity = false;
-                            }
-
-                            if (benefitContent.Equals(conjunctContent)) {
-                                if (benefitParity == conjunctParity) {
-                                    ++conjunctIndex;
-                                    if (conjunctIndex >= conjunction.Count) {
-                                        break;
-                                    }
-                                    continue;
-                                } else {
-                                    isNegation = true;
-                                    break;
-                                }
-                            }
-                        }
-                        // @Note this should ultimately be a different
-                        // aggregation w/ preferences/utilities.
-                        if (isNegation) {
-                            --benefitValue;
-                        } else {
-                            ++benefitValue;
-                        }
+                    bestValueForThisGood = MaxValue(bestValueForThisGood, valueForThisPlan);
+                    if (bestValueForThisGood == valueForThisPlan) {
+                        bestPlanForThisGood = resolutions;
                     }
+                }
 
-                    localBestValue += benefitValue;
-
-                    if (localBestValue > bestTotalValue) {
-                        bestPlan = resolutions;
-                        bestTotalValue = localBestValue;
-                    }
+                bestTotalValue = MaxValue(bestTotalValue, bestValueForThisGood);
+                if (bestTotalValue == bestValueForThisGood) {
+                    bestPlan = bestPlanForThisGood;
                 }
             }
         }
