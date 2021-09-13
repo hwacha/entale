@@ -117,131 +117,52 @@ public class MentalState : MonoBehaviour {
         return param;
     }
 
-    private static Expression Reduce(Expression e) {
-        // @Note this is only to prevent problems.
-        // This should be souped-up later to
-        // account for Geaches, etc.
-        if (!e.Type.Equals(TRUTH_VALUE)) {
+    private Expression Reduce(Expression e) {
+        // we reduce identical names to the least
+        // (this approach assumes all identities
+        // are directly provable, which isn't a
+        // safe assumption)
+        if (e.Type.Equals(INDIVIDUAL)) {
+            var idLowerBound = new Expression(IDENTITY, new Expression(new Bottom(INDIVIDUAL)), e);
+            var idUpperBound = new Expression(IDENTITY, new Expression(new Top(INDIVIDUAL)), e);
+            // we assume identity stores the
+            // lesser argument to the left
+            var lesserIdenticals = KnowledgeBase.GetViewBetween(idLowerBound, idUpperBound);
+
+            Expression leastIdentical = null;
+            foreach (var lesserIdentical in lesserIdenticals) {
+                var fullyreducedLesserIdentical = Reduce(lesserIdentical);
+                if (leastIdentical != null || fullyreducedLesserIdentical < leastIdentical) {
+                    leastIdentical = fullyreducedLesserIdentical;
+                }
+            }
+            return leastIdentical;
+        } else if (e.Type.Equals(TRUTH_VALUE)) {
+            if (e.HeadedBy(TRULY)) {
+                return Reduce(e);
+            }
+
+            if (e.HeadedBy(NOT)) {
+                var subclause = e.GetArgAsExpression(0);
+                if (subclause.HeadedBy(NOT)) {
+                    return Reduce(subclause.GetArgAsExpression(0));
+                }
+            }
+
+            // @Note we'll want to 
+            var reducedArgs = new Argument[e.NumArgs];
+            for (int i = 0; i < e.NumArgs; i++) {
+                if (e.GetArg(i) is Empty) {
+                    reducedArgs[i] = e.GetArg(i);
+                } else {
+                    reducedArgs[i] = Reduce(e.GetArgAsExpression(i));
+                }
+            }
+
+            return new Expression(new Expression(e.Head), reducedArgs);
+        } else {
             return e;
         }
-        if (e.HeadedBy(TRULY)) {
-            return Reduce(e);
-        }
-        if (e.HeadedBy(NOT)) {
-            var subclause = e.GetArgAsExpression(0);
-            if (subclause.HeadedBy(NOT)) {
-                return Reduce(subclause.GetArgAsExpression(0));
-            }
-        }
-
-        var reducedArgs = new Argument[e.NumArgs];
-        for (int i = 0; i < e.NumArgs; i++) {
-            if (e.GetArg(i) is Empty) {
-                reducedArgs[i] = e.GetArg(i);
-            } else {
-                reducedArgs[i] = Reduce(e.GetArgAsExpression(i));
-            }
-        }
-
-        return new Expression(new Expression(e.Head), reducedArgs);
-    }
-
-    private static Expression Tensify(Expression e, bool lockTense = false) {
-        if (!e.Type.Equals(TRUTH_VALUE)) {
-            return e;
-        }
-
-        bool newLockTense = false;
-        bool dontTenseTopLevel = false;
-
-        if (e.HeadedBy(ABLE, GOOD)) {
-            return e;
-        }
-
-        if (e.HeadedBy(PAST, PRESENT, FUTURE, WHEN,
-            GEACH_E_TRUTH_FUNCTION, GEACH_T_TRUTH_FUNCTION)) {
-            newLockTense = true;
-            dontTenseTopLevel = true;
-        }
-
-        if (e.HeadedBy(VERY)) {
-            newLockTense = true;
-        }
-
-        if (e.HeadedBy(AND, OR, IF, SOME, ALL, NOT)) {
-            dontTenseTopLevel = true;
-        }
-
-        Argument[] tensedArgs = new Argument[e.NumArgs];
-        for (int i = 0; i < e.NumArgs; i++) {
-            var arg = e.GetArg(i);
-            if (arg is Empty) {
-                tensedArgs[i] = arg;
-            } else {
-                tensedArgs[i] = Tensify(arg as Expression, newLockTense);
-            }
-        }
-        var content = new Expression(new Expression(e.Head), tensedArgs);
-
-        // @Note we may want to implement 'sticky tense' in which
-        // we would keep the tense the same for subclauses until
-        // stated otherwise. This may be most intuitive.
-        return lockTense || dontTenseTopLevel ? content : new Expression(PRESENT, content);
-    }
-
-    private static Expression Timeify(Expression e) {
-        if (e.HeadedBy(PAST, PRESENT, FUTURE)) {
-            var timeifiedArg = Timeify(e.GetArgAsExpression(0));
-
-            var head = WHEN;
-            if (e.HeadedBy(PAST)) {
-                head = BEFORE;
-            }
-            if (e.HeadedBy(FUTURE)) {
-                head = AFTER;
-            }
-            return new Expression(head, timeifiedArg,
-                new Expression(GetUnusedVariable(TIME, timeifiedArg.GetVariables())));
-        }
-
-        Argument[] timeifiedArgs = new Argument[e.NumArgs];
-        for (int i = 0; i < e.NumArgs; i++) {
-            var arg = e.GetArg(i);
-            if (arg is Empty) {
-                timeifiedArgs[i] = arg;
-            } else {
-                timeifiedArgs[i] = Timeify(arg as Expression);
-            }
-        }
-        return new Expression(new Expression(e.Head), timeifiedArgs);
-    }
-
-    private Expression AddCurrentTimestamp(Expression e) {
-        if (e.HeadedBy(PAST, PRESENT, FUTURE)) {
-            var timestampedArg = AddCurrentTimestamp(e.GetArgAsExpression(0));
-
-            var head = WHEN;
-            if (e.HeadedBy(PAST)) {
-                head = BEFORE;
-            }
-            if (e.HeadedBy(FUTURE)) {
-                head = AFTER;
-            }
-            return new Expression(head,
-                timestampedArg,
-                new Expression(new Parameter(TIME, Timestamp)));
-        }
-
-        Argument[] timestampedArgs = new Argument[e.NumArgs];
-        for (int i = 0; i < e.NumArgs; i++) {
-            var arg = e.GetArg(i);
-            if (arg is Empty) {
-                timestampedArgs[i] = arg;
-            } else {
-                timestampedArgs[i] = AddCurrentTimestamp(arg as Expression);
-            }
-        }
-        return new Expression(new Expression(e.Head), timestampedArgs);
     }
 
     public static List<int> ConvertToValue(Expression e) {

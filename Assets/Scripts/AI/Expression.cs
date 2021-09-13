@@ -947,6 +947,13 @@ public class Expression : Argument, IComparable<Expression> {
         return 0;
     }
 
+    public static bool operator <(Expression a, Expression b) {
+        return a.CompareTo(b) < 0;
+    }
+
+    public static bool operator >(Expression a, Expression b) {
+        return a.CompareTo(b) > 0;
+    }
 
     // Individual constants
     // function words
