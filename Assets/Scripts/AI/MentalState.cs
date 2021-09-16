@@ -117,29 +117,36 @@ public class MentalState : MonoBehaviour {
         return param;
     }
 
-    private Expression Reduce(Expression e) {
+
+    // this method reduces an expression to
+    // an equivalent, but more compact or canonical form.
+    // 
+    // sentences inserted into the mental state should
+    // take their reduced form.
+    public Expression Reduce(Expression e) {
         // we reduce identical names to the least
         // (this approach assumes all identities
         // are directly provable, which isn't a
         // safe assumption)
         if (e.Type.Equals(INDIVIDUAL)) {
-            var idLowerBound = new Expression(IDENTITY, new Expression(new Bottom(INDIVIDUAL)), e);
-            var idUpperBound = new Expression(IDENTITY, new Expression(new Top(INDIVIDUAL)), e);
+            var idLowerBound = new Expression(IDENTITY, e, new Expression(new Bottom(INDIVIDUAL)));
+            var idUpperBound = new Expression(IDENTITY, e, new Expression(new Top(INDIVIDUAL)));
             // we assume identity stores the
             // lesser argument to the left
-            var lesserIdenticals = KnowledgeBase.GetViewBetween(idLowerBound, idUpperBound);
+            var lesserIdentities = KnowledgeBase.GetViewBetween(idLowerBound, idUpperBound);
 
-            Expression leastIdentical = null;
-            foreach (var lesserIdentical in lesserIdenticals) {
+            Expression leastIdentical = e;
+            foreach (var lesserIdentity in lesserIdentities) {
+                var lesserIdentical = lesserIdentity.GetArgAsExpression(1);
                 var fullyreducedLesserIdentical = Reduce(lesserIdentical);
-                if (leastIdentical != null || fullyreducedLesserIdentical < leastIdentical) {
+                if (fullyreducedLesserIdentical < leastIdentical) {
                     leastIdentical = fullyreducedLesserIdentical;
                 }
             }
             return leastIdentical;
         } else if (e.Type.Equals(TRUTH_VALUE)) {
             if (e.HeadedBy(TRULY)) {
-                return Reduce(e);
+                return Reduce(e.GetArgAsExpression(0));
             }
 
             if (e.HeadedBy(NOT)) {
@@ -149,7 +156,19 @@ public class MentalState : MonoBehaviour {
                 }
             }
 
-            // @Note we'll want to 
+            // TODO: reduce logical expressions
+            // to a canonical form
+            // 
+            // will also involve arranging the sentences
+            // and reassociating them
+            if (e.HeadedBy(AND)) {
+
+            }
+
+            if (e.HeadedBy(OR)) {
+
+            }
+
             var reducedArgs = new Argument[e.NumArgs];
             for (int i = 0; i < e.NumArgs; i++) {
                 if (e.GetArg(i) is Empty) {
@@ -158,7 +177,6 @@ public class MentalState : MonoBehaviour {
                     reducedArgs[i] = Reduce(e.GetArgAsExpression(i));
                 }
             }
-
             return new Expression(new Expression(e.Head), reducedArgs);
         } else {
             return e;

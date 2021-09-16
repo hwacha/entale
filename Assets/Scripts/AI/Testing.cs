@@ -28,8 +28,12 @@ public class Testing : MonoBehaviour {
         var a = new Expression(new Name(TRUTH_VALUE, "A"));
         var b = new Expression(new Name(TRUTH_VALUE, "B"));
         // var b = new Expression(new Name(TRUTH_VALUE), "B");
+        
+        var item1 = new Expression(new Name(INDIVIDUAL, "item1"));
+        var item2 = new Expression(new Name(INDIVIDUAL, "item2"));
 
         MentalState.Initialize(new Expression[]{
+            new Expression(IDENTITY, item2, item1),
             new Expression(GOOD, p),
             new Expression(VERY, new Expression(GOOD, new Expression(NOT, q))),
             new Expression(OMEGA, VERY, new Expression(GOOD, r)),
@@ -46,6 +50,16 @@ public class Testing : MonoBehaviour {
         StartCoroutine(TestFindValueOf(MentalState, a));
         StartCoroutine(TestFindValueOf(MentalState, b));
         StartCoroutine(TestFindValueOf(MentalState, new Expression(AND, a, b)));
+
+        Log(MentalState.Reduce(item2));
+        Log(MentalState.Reduce(new Expression(AT, ALICE, item2)));
+        Log(MentalState.Reduce(
+            new Expression(NOT,
+                new Expression(NOT,
+                    new Expression(NOT,
+                        new Expression(NOT,
+                            new Expression(TRULY,
+                                new Expression(TRULY, new Expression(GREEN, SELF)))))))));
     }
 
     public static void TestConvertToValue(Expression e) {
