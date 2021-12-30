@@ -60,6 +60,23 @@ public class Testing : MonoBehaviour {
                         new Expression(NOT,
                             new Expression(TRULY,
                                 new Expression(TRULY, new Expression(GREEN, SELF)))))))));
+        Log(MentalState.Reduce(
+            new Expression(NOT,
+                new Expression(NOT,
+                    new Expression(NOT,
+                        new Expression(TRULY,
+                            new Expression(NOT,
+                                new Expression(TRULY, new Expression(GREEN, SELF)))))))));
+
+        Log(MentalState.Reduce(
+            new Expression(NOT,
+                new Expression(NOT,
+                    new Expression(NOT,
+                        new Expression(TRULY,
+                            new Expression(NOT,
+                                new Expression(NOT,
+                                    new Expression(TRULY, new Expression(GREEN, SELF))))))))));
+
     }
 
     public static void TestConvertToValue(Expression e) {

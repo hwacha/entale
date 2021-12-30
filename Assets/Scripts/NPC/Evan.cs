@@ -6,7 +6,6 @@ using static Expression;
 
 public class Evan : Agent
 {
-    // Start is called before the first frame update
     protected override void Start()
     {
         MentalState.Initialize(

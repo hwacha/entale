@@ -48,6 +48,7 @@ public class MentalState : MonoBehaviour {
     private Dictionary<Expression, HashSet<Expression>> ForwardLinks;
     private Dictionary<Expression, HashSet<Expression>> BackwardLinks;
     private Dictionary<Expression, HashSet<Expression>> ValueForwardLinks;
+    private Dictionary<Expression, HashSet<Expression>> ValueBackwardLinks;
 
     // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
@@ -80,7 +81,12 @@ public class MentalState : MonoBehaviour {
         KnowledgeBase = new SortedSet<Expression>();
         ForwardLinks = new Dictionary<Expression, HashSet<Expression>>();
         BackwardLinks = new Dictionary<Expression, HashSet<Expression>>();
+        
+        // we have a separate list of value links
+        // because we may value a coverable
+        // proposition that we don't currently know
         ValueForwardLinks = new Dictionary<Expression, HashSet<Expression>>();
+        ValueBackwardLinks = new Dictionary<Expression, HashSet<Expression>>();
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
             AddToKnowledgeBase(initialKnowledge[i]);
@@ -123,7 +129,7 @@ public class MentalState : MonoBehaviour {
     // 
     // sentences inserted into the mental state should
     // take their reduced form.
-    public Expression Reduce(Expression e) {
+    public Expression Reduce(Expression e, bool parity = true) {
         // we reduce identical names to the least
         // (this approach assumes all identities
         // are directly provable, which isn't a
@@ -138,7 +144,7 @@ public class MentalState : MonoBehaviour {
             Expression leastIdentical = e;
             foreach (var lesserIdentity in lesserIdentities) {
                 var lesserIdentical = lesserIdentity.GetArgAsExpression(1);
-                var fullyreducedLesserIdentical = Reduce(lesserIdentical);
+                var fullyreducedLesserIdentical = Reduce(lesserIdentical, parity);
                 if (fullyreducedLesserIdentical < leastIdentical) {
                     leastIdentical = fullyreducedLesserIdentical;
                 }
@@ -146,14 +152,11 @@ public class MentalState : MonoBehaviour {
             return leastIdentical;
         } else if (e.Type.Equals(TRUTH_VALUE)) {
             if (e.HeadedBy(TRULY)) {
-                return Reduce(e.GetArgAsExpression(0));
+                return Reduce(e.GetArgAsExpression(0), parity);
             }
 
             if (e.HeadedBy(NOT)) {
-                var subclause = e.GetArgAsExpression(0);
-                if (subclause.HeadedBy(NOT)) {
-                    return Reduce(subclause.GetArgAsExpression(0));
-                }
+                return Reduce(e.GetArgAsExpression(0), !parity);
             }
 
             // TODO: reduce logical expressions
@@ -161,6 +164,14 @@ public class MentalState : MonoBehaviour {
             // 
             // will also involve arranging the sentences
             // and reassociating them
+            // 
+            // Ideas: use Quine-McCluskey algorithm to
+            // get reduced form.
+            // 
+            // Also can represent a truth-table as
+            // a pair: [A, B, C], 11011000
+            // of relevant sentences and the
+            // truth function they're inputs of
             if (e.HeadedBy(AND)) {
 
             }
@@ -174,10 +185,11 @@ public class MentalState : MonoBehaviour {
                 if (e.GetArg(i) is Empty) {
                     reducedArgs[i] = e.GetArg(i);
                 } else {
-                    reducedArgs[i] = Reduce(e.GetArgAsExpression(i));
+                    reducedArgs[i] = Reduce(e.GetArgAsExpression(i), true);
                 }
             }
-            return new Expression(new Expression(e.Head), reducedArgs);
+            var reducedArgsExpression = new Expression(new Expression(e.Head), reducedArgs);
+            return parity ? reducedArgsExpression : new Expression(NOT, e);
         } else {
             return e;
         }
@@ -989,15 +1001,31 @@ public class MentalState : MonoBehaviour {
         return param;
     }
 
-    private void AddForwardLink(Expression premise, Expression conclusion) {
-        if (ForwardLinks.ContainsKey(premise)) {
-            ForwardLinks[premise].Add(conclusion);
+    private void AddForwardLink(Expression premise, Expression conclusion, bool isValue) {
+        if (isValue) {
+            if (ValueForwardLinks.ContainsKey(premise)) {
+                ValueForwardLinks[premise].Add(conclusion);
+            } else {
+                ValueForwardLinks.Add(premise, new HashSet<Expression>{conclusion});
+            }
         } else {
-            ForwardLinks.Add(premise, new HashSet<Expression>{conclusion});
+            if (ForwardLinks.ContainsKey(premise)) {
+                ForwardLinks[premise].Add(conclusion);
+            } else {
+                ForwardLinks.Add(premise, new HashSet<Expression>{conclusion});
+            }
         }
+
     }
 
-    private void AddBackwardLink(Expression premise, Expression conclusion) {
+    private void AddBackwardLink(Expression premise, Expression conclusion, bool isValue) {
+        if (isValue) {
+            if (ValueBackwardLinks.ContainsKey(conclusion)) {
+                ValueBackwardLinks[conclusion].Add(premise);
+            } else {
+                ValueBackwardLinks.Add(conclusion, new HashSet<Expression>{premise});
+            }            
+        }
         if (BackwardLinks.ContainsKey(conclusion)) {
             BackwardLinks[conclusion].Add(premise);
         } else {
@@ -1005,18 +1033,14 @@ public class MentalState : MonoBehaviour {
         }
     }
 
-    private void AddValueForwardLink(Expression premise, Expression conclusion) {
-        if (ValueForwardLinks.ContainsKey(premise)) {
-            ValueForwardLinks[premise].Add(conclusion);
-        } else {
-            ValueForwardLinks.Add(premise, new HashSet<Expression>{conclusion});
-        }
-    }
-
     // @Note: this should be private ultimately.
     // public for testing purposes.
-    public bool AddToKnowledgeBase(Expression knowledge, bool firstCall = true, bool isForward = false) {
+    public bool AddToKnowledgeBase(Expression knowledge, bool firstCall = true, bool isForward = false, bool isValue = false) {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
+
+        if (knowledge.HeadedBy(GOOD)) {
+            return AddToKnowledgeBase(knowledge.GetArgAsExpression(0), false, isForward, true);
+        }
 
         if (!isForward) {
             if (KnowledgeBase.Contains(knowledge)) {
@@ -1026,13 +1050,13 @@ public class MentalState : MonoBehaviour {
             if (knowledge.HeadedBy(VERY, KNOW, MAKE)) {
                 var subclause = knowledge.GetArgAsExpression(0);
                 AddToKnowledgeBase(subclause, false);
-                AddBackwardLink(knowledge, subclause);
+                AddBackwardLink(knowledge, subclause, isValue);
             }
 
             if (knowledge.HeadedBy(OMEGA)) {
                 var subclause = knowledge.GetArgAsExpression(1);
                 AddToKnowledgeBase(subclause, false);
-                AddBackwardLink(knowledge, subclause);
+                AddBackwardLink(knowledge, subclause, isValue);
             }
 
             if (knowledge.HeadedBy(SEE, INFORM)) {
@@ -1043,7 +1067,7 @@ public class MentalState : MonoBehaviour {
                 // made to be a conditional on was(B) to conclude A.
                 // 
                 // We're making it factive. It's ampliatively assumed
-                // we we add a factive event into the knowledge base.
+                // we add a factive event into the knowledge base.
                 // 
                 // M <- see(P, x)
                 // M <- since(P, see(P, x)) which entails both
@@ -1055,7 +1079,7 @@ public class MentalState : MonoBehaviour {
                     return false;
                 }
                 
-                // AddBackwardLink(knowledge, pSinceSawP);
+                // AddBackwardLink(knowledge, pSinceSawP, isValue);
             }
             
             if (knowledge.HeadedBy(AND)) {
@@ -1065,8 +1089,8 @@ public class MentalState : MonoBehaviour {
                 AddToKnowledgeBase(a, false);
                 AddToKnowledgeBase(b, false);
 
-                AddBackwardLink(knowledge, a);
-                AddBackwardLink(knowledge, b);
+                AddBackwardLink(knowledge, a, isValue);
+                AddBackwardLink(knowledge, b, isValue);
             }
 
             if (knowledge.HeadedBy(NOT)) {
@@ -1078,14 +1102,14 @@ public class MentalState : MonoBehaviour {
                     AddToKnowledgeBase(notA, false);
                     AddToKnowledgeBase(notB, false);
 
-                    AddBackwardLink(knowledge, notA);
-                    AddBackwardLink(knowledge, notB);
+                    AddBackwardLink(knowledge, notA, isValue);
+                    AddBackwardLink(knowledge, notB, isValue);
                 }
             }
 
             if (knowledge.HeadedBy(IF, ABLE)) {
-                var consequent = knowledge.GetArgAsExpression(0);            
-                AddBackwardLink(knowledge, consequent);
+                var consequent = knowledge.GetArgAsExpression(0);
+                AddBackwardLink(knowledge, consequent, isValue);
             }
 
             if (knowledge.HeadedBy(SINCE)) {
@@ -1095,8 +1119,8 @@ public class MentalState : MonoBehaviour {
                 AddToKnowledgeBase(topic, false);
                 AddToKnowledgeBase(anchor, false);
 
-                AddBackwardLink(knowledge, topic);
-                AddBackwardLink(knowledge, anchor);
+                AddBackwardLink(knowledge, topic, isValue);
+                AddBackwardLink(knowledge, anchor, isValue);
             }
 
             if (knowledge.Depth > MaxDepth) {
@@ -1115,23 +1139,8 @@ public class MentalState : MonoBehaviour {
             AddToKnowledgeBase(a, false, true);
             AddToKnowledgeBase(b, false, true);
 
-            AddForwardLink(a, knowledge);
-            AddForwardLink(b, knowledge);
-        }
-
-        if (knowledge.HeadedBy(GOOD)) {
-            var content = knowledge.GetArgAsExpression(0);
-
-            if (content.HeadedBy(OR)) {
-                var a = content.GetArgAsExpression(0);
-                var b = content.GetArgAsExpression(1);
-
-                AddToKnowledgeBase(new Expression(GOOD, a), false, true);
-                AddToKnowledgeBase(new Expression(GOOD, b), false, true);
-
-                AddValueForwardLink(a, content);
-                AddValueForwardLink(b, content);
-            }
+            AddForwardLink(a, knowledge, isValue);
+            AddForwardLink(b, knowledge, isValue);
         }
 
         return true;
@@ -1369,12 +1378,27 @@ public class MentalState : MonoBehaviour {
                     // 
                     // Can the same be done for disjunction?
                     // 
+                    // IDEA: include backward traversal for value
+                    // covering, too.
+                    // 
+                    // e.g. A & (B & C) to be covered by (A & B) and C.
+                    // Recur as normal on A and (B & C), but for A,
+                    // also check backward value links.
+                    // (or just recur on backward rules)
+                    // 
+                    // If any sentences have explicitly defined value
+                    // and entail A, then we just check if that sentence
+                    // is entailed by A & (B & C). If it is, this becomes
+                    // the best cover, and we then again recur backward
+                    // to see if there's a more specific cover.
+                    // 
 
                     // and -
                     if (cur.HeadedBy(AND)) {
                         queue.Enqueue(cur.GetArgAsExpression(0));
                         queue.Enqueue(cur.GetArgAsExpression(1));
                     }
+
                     // or +
                     if (ValueForwardLinks.ContainsKey(cur)){
                         foreach (var valueForwardLink in ValueForwardLinks[cur]) {
@@ -1553,11 +1577,8 @@ public class MentalState : MonoBehaviour {
                             resolutions.Add(premise);
 
                             var collateral = premise.GetArgAsExpression(0);
-
-                            var benefit = collateral;
                             var makeBenefit = new Expression(MAKE, collateral, SELF);
 
-                            benefitConjunction.Add(benefit);
                             benefitConjunction.Add(makeBenefit);
                         }
                     }

@@ -49,10 +49,51 @@ public class Actuator : MonoBehaviour {
                 Agent.MentalState.ReceiveAssertion(
                     utterance.GetArgAsExpression(0),
                     speaker);
+
+                var negativeProofs = new ProofBases();
+                var doneNegative = new Container<bool>(false);
+
+                Agent.MentalState.StartCoroutine(
+                    Agent.MentalState.StreamProofs(
+                        negativeProofs,
+                        new Expression(NOT, utterance.GetArgAsExpression(0)),
+                        doneNegative));
+
+                while (!doneNegative.Item) {
+                    yield return new WaitForSeconds(0.5f);
+                }
+
+                if (negativeProofs.IsEmpty()) {
+                    StartCoroutine(Say(YES, 5));
+                    yield break;
+                } else {
+                    StartCoroutine(Say(NO, 5));
+                }
+
+                
             }
             if (utterance.Head.Equals(DENY.Head)) {
                 Agent.MentalState.ReceiveAssertion(
                     new Expression(NOT, utterance.GetArgAsExpression(0)), speaker);
+
+                var positiveProofs = new ProofBases();
+                var donePositive = new Container<bool>(false);
+
+                Agent.MentalState.StartCoroutine(
+                    Agent.MentalState.StreamProofs(
+                        positiveProofs,
+                        new Expression(NOT, utterance.GetArgAsExpression(0)),
+                        donePositive));
+
+                while (!donePositive.Item) {
+                    yield return new WaitForSeconds(0.5f);
+                }
+
+                if (positiveProofs.IsEmpty()) {
+                    StartCoroutine(Say(NO, 5));
+                } else {
+                    StartCoroutine(Say(YES, 5));
+                }
             }
             yield break;
         }
@@ -187,8 +228,6 @@ public class Actuator : MonoBehaviour {
 
             yield return null;
         }
-        yield break;
-        // TODO stub
     }
 
 }
