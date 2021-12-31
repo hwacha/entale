@@ -10,23 +10,20 @@ public class Evan : Agent
     {
         MentalState.Initialize(
             new Expression[]{
-                new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
-                new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
+                // new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
+                // new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
             }
         );
 
-        var banana = GameObject.Find("Banana");
-        var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
-
         var tomato = GameObject.Find("Tomato");
         var tomatoParam = MentalState.ConstructPercept(TOMATO, tomato.transform.position);
+        MentalState.AddToKnowledgeBase(new Expression(GOOD, new Expression(AT, SELF, tomatoParam)));
+        MentalState.AddToKnowledgeBase(new Expression(ABLE, new Expression(AT, SELF, tomatoParam), SELF));
 
-        // var bob = GameObject.Find("Bob");
-        // MentalState.Locations[BOB] = bob.transform.position;
-
-        // MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER, new Expression(AT, SELF, bananaParam), NEUTRAL)));
-        // MentalState.StartCoroutine(MentalState.Assert(new Expression(BETTER, new Expression(AT, SELF, tomatoParam),
-        //     new Expression(AT, SELF, bananaParam))));
+        var banana = GameObject.Find("Banana");
+        var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
+        MentalState.AddToKnowledgeBase(new Expression(VERY, new Expression(GOOD, new Expression(AT, SELF, bananaParam))));
+        MentalState.AddToKnowledgeBase(new Expression(ABLE, new Expression(AT, SELF, bananaParam), SELF));
 
         base.Start();
     }

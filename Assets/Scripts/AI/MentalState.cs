@@ -444,7 +444,7 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // I can say anything.
-                        if (currentLemma.HeadedBy(ABLE) &&
+                        if (current.Parity && currentLemma.HeadedBy(ABLE) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
                             currentLemma.GetArgAsExpression(0).HeadedBy(INFORM) &&
                             currentLemma.GetArgAsExpression(0).GetArgAsExpression(2).Equals(SELF)) {
@@ -454,7 +454,7 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // I can go anywhere.
-                        if (currentLemma.HeadedBy(ABLE) &&
+                        if (current.Parity && currentLemma.HeadedBy(ABLE) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
                             currentLemma.GetArgAsExpression(0).HeadedBy(AT) &&
                             currentLemma.GetArgAsExpression(0).GetArgAsExpression(0).Equals(SELF)) {
@@ -465,7 +465,7 @@ public class MentalState : MonoBehaviour {
 
                         // if a and b are within 5 meters
                         // of each other, then M |- at(a, b).
-                        if (currentLemma.HeadedBy(AT)) {
+                        if (current.Parity && currentLemma.HeadedBy(AT)) {
                             var a = currentLemma.GetArgAsExpression(0);
                             var b = currentLemma.GetArgAsExpression(1);
 
@@ -606,17 +606,21 @@ public class MentalState : MonoBehaviour {
 
                         // here, we check against rules that
                         // would otherwise be premise-expansive.
+                        // 
+                        // TODO integrate with variables.
+                        // (How?)
                         HashSet<Expression> backwardLinks = null;
 
                         if (current.Parity) {
                             if (BackwardLinks.ContainsKey(currentLemma)) {
-                                backwardLinks = BackwardLinks[currentLemma];    
+                                backwardLinks = BackwardLinks[currentLemma];
                             }
                         } else if (BackwardLinks.ContainsKey(new Expression(NOT, currentLemma))) {
                             backwardLinks = BackwardLinks[new Expression(NOT, currentLemma)];
                         }
 
                         if (backwardLinks != null) {
+
                             foreach (var backwardLink in backwardLinks) {
                                 // M |- factive(P) => M |- P
                                 // factive - (1)
@@ -1024,12 +1028,13 @@ public class MentalState : MonoBehaviour {
                 ValueBackwardLinks[conclusion].Add(premise);
             } else {
                 ValueBackwardLinks.Add(conclusion, new HashSet<Expression>{premise});
-            }            
-        }
-        if (BackwardLinks.ContainsKey(conclusion)) {
-            BackwardLinks[conclusion].Add(premise);
+            }
         } else {
-            BackwardLinks.Add(conclusion, new HashSet<Expression>{premise});
+            if (BackwardLinks.ContainsKey(conclusion)) {
+                BackwardLinks[conclusion].Add(premise);
+            } else {
+                BackwardLinks.Add(conclusion, new HashSet<Expression>{premise});
+            }
         }
     }
 
@@ -1039,7 +1044,7 @@ public class MentalState : MonoBehaviour {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
 
         if (knowledge.HeadedBy(GOOD)) {
-            return AddToKnowledgeBase(knowledge.GetArgAsExpression(0), false, isForward, true);
+            AddToKnowledgeBase(knowledge.GetArgAsExpression(0), false, isForward, true);
         }
 
         if (!isForward) {
@@ -1049,13 +1054,13 @@ public class MentalState : MonoBehaviour {
 
             if (knowledge.HeadedBy(VERY, KNOW, MAKE)) {
                 var subclause = knowledge.GetArgAsExpression(0);
-                AddToKnowledgeBase(subclause, false);
+                AddToKnowledgeBase(subclause, false, isForward, isValue);
                 AddBackwardLink(knowledge, subclause, isValue);
             }
 
             if (knowledge.HeadedBy(OMEGA)) {
                 var subclause = knowledge.GetArgAsExpression(1);
-                AddToKnowledgeBase(subclause, false);
+                AddToKnowledgeBase(subclause, false, isForward, isValue);
                 AddBackwardLink(knowledge, subclause, isValue);
             }
 
@@ -1074,7 +1079,7 @@ public class MentalState : MonoBehaviour {
                 // P and was(see(P, x))
                 // 
                 if (firstCall) {
-                    return AddToKnowledgeBase(pSinceSawP, true);
+                    return AddToKnowledgeBase(pSinceSawP, true, isForward, isValue);
                 } else {
                     return false;
                 }
@@ -1086,8 +1091,8 @@ public class MentalState : MonoBehaviour {
                 var a = knowledge.GetArgAsExpression(0);
                 var b = knowledge.GetArgAsExpression(1);
                 
-                AddToKnowledgeBase(a, false);
-                AddToKnowledgeBase(b, false);
+                AddToKnowledgeBase(a, false, isForward, isValue);
+                AddToKnowledgeBase(b, false, isForward, isValue);
 
                 AddBackwardLink(knowledge, a, isValue);
                 AddBackwardLink(knowledge, b, isValue);
@@ -1099,8 +1104,8 @@ public class MentalState : MonoBehaviour {
                     var notA = new Expression(NOT, subclause.GetArgAsExpression(0));
                     var notB = new Expression(NOT, subclause.GetArgAsExpression(1));
 
-                    AddToKnowledgeBase(notA, false);
-                    AddToKnowledgeBase(notB, false);
+                    AddToKnowledgeBase(notA, false, isForward, isValue);
+                    AddToKnowledgeBase(notB, false, isForward, isValue);
 
                     AddBackwardLink(knowledge, notA, isValue);
                     AddBackwardLink(knowledge, notB, isValue);
@@ -1116,8 +1121,8 @@ public class MentalState : MonoBehaviour {
                 var topic = knowledge.GetArgAsExpression(0);
                 var anchor = new Expression(PAST, knowledge.GetArgAsExpression(1));
 
-                AddToKnowledgeBase(topic, false);
-                AddToKnowledgeBase(anchor, false);
+                AddToKnowledgeBase(topic, false, isForward, isValue);
+                AddToKnowledgeBase(anchor, false, isForward, isValue);
 
                 AddBackwardLink(knowledge, topic, isValue);
                 AddBackwardLink(knowledge, anchor, isValue);
@@ -1136,8 +1141,8 @@ public class MentalState : MonoBehaviour {
             var a = knowledge.GetArgAsExpression(0);
             var b = knowledge.GetArgAsExpression(1);
 
-            AddToKnowledgeBase(a, false, true);
-            AddToKnowledgeBase(b, false, true);
+            AddToKnowledgeBase(a, false, true, isValue);
+            AddToKnowledgeBase(b, false, true, isValue);
 
             AddForwardLink(a, knowledge, isValue);
             AddForwardLink(b, knowledge, isValue);
@@ -1545,6 +1550,7 @@ public class MentalState : MonoBehaviour {
         List<Expression> bestPlan = new List<Expression>{new Expression(WILL, NEUTRAL)};
 
         foreach (var good in evaluativeBase) {
+            Debug.Log(good);
             var proofBases = new ProofBases();
             var proofDone = new Container<bool>(false);
             StartCoroutine(StreamProofs(proofBases, good, proofDone, Proof));

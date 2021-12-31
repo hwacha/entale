@@ -37,6 +37,12 @@ public class WorkspaceController : MonoBehaviour
     RadialMenu RadialMenu;
     GameObject HighlightPoint;
     public GameObject Pointer;
+
+    public AudioSource MenuOpen;
+    public AudioSource MenuClose;
+    public AudioSource Error;
+    public AudioSource PlaceExpression;
+    public AudioSource CombineExpression;
     #endregion
 
     #region Fields
@@ -74,6 +80,7 @@ public class WorkspaceController : MonoBehaviour
     }
 
     public void SpawnWord(Constant word) {
+        PlaceExpression.Play();
         SpawnExpression(new Expression(word));
     }
 
@@ -176,6 +183,8 @@ public class WorkspaceController : MonoBehaviour
         // Need to implement scroll and zoom.
         Debug.Log("no more room :'(");
 
+        Error.Play();
+
         // TODO 12/30
 
         for (int i = 0; i < slotsY; i++) {
@@ -227,8 +236,14 @@ public class WorkspaceController : MonoBehaviour
                 RadialMenu.enabled = true;
                 // do stuff with the radial menu
                 RadialMenu.HandleMenuOpen();
+                // play menu open sound
+                MenuOpen.Play();
             } else if (!IsRadialMenuActive) {
                 // the workspace isn't open yet
+                if (EquippedExpression != null) {
+                    SpawnExpression(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression);
+                    Destroy(EquippedExpression);
+                }
 
                 // lock the player's movement
                 PlayerMovement.enabled = false;
@@ -238,6 +253,9 @@ public class WorkspaceController : MonoBehaviour
                 // set the workspace to active
                 IsWorkspaceActive = true;
                 Workspace.SetActive(true);
+
+                // play menu open sound
+                MenuOpen.Play();
             }
         }
 
@@ -578,6 +596,7 @@ public class WorkspaceController : MonoBehaviour
 
                     Pointer.SetActive(false);
 
+                    CombineExpression.Play();
                     SpawnExpression(combinedExpression);
 
                     // TODO: make this more efficient
@@ -675,15 +694,25 @@ public class WorkspaceController : MonoBehaviour
                 RadialMenu.enabled = false;
                 IsRadialMenuActive = false;
                 IsWorkspaceActive = true;
+                MenuClose.Play();
             } else if (SelectedExpression != null) {
                 SetPointerPosition(SelectedExpression);
                 SelectedExpression = null;
-            } else {
+                MenuClose.Play();
+            } else if (IsWorkspaceActive) {
                 IsWorkspaceActive = false;
                 Workspace.SetActive(false);
                 PlayerMovement.enabled = true;
                 MouseLook.enabled = true;
+                MenuClose.Play();
             }
+
+            if (!IsWorkspaceActive && !IsRadialMenuActive && EquippedExpression != null) {
+                // SpawnExpression(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression);
+                Destroy(EquippedExpression);
+                MenuClose.Play();
+            }
+            
             // HighlightPoint.SetActive(true);
         }
     }

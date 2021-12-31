@@ -13,7 +13,8 @@ public class RadialMenu : MonoBehaviour {
     public Camera playerCamera;
     MouseLook playerMouseLook;
     const double INITIAL_ANGLE_OFFSET = Math.PI / 2f;
-    const double RADIUS = 150;
+    const double RADIUS = 400;
+    const float ITEM_SCALE = 4;
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
 
     public Dictionary<SemanticType, HashSet<Name>> Lexicon =
@@ -105,7 +106,7 @@ public class RadialMenu : MonoBehaviour {
 
     public void HandleMenuOpen() {
         if (!typeMenuOpen && !constantMenuOpen) {
-            OpenSemanticMenu();
+            OpenTypeMenu();
             // Cursor.lockState = CursorLockMode.None;
         }
     }
@@ -118,7 +119,7 @@ public class RadialMenu : MonoBehaviour {
         Cursor.lockState = CursorLockMode.Locked;
     }
 
-    void OpenSemanticMenu() {
+    void OpenTypeMenu() {
         typeMenuOpen = true;
         double sliceTheta = 2f * Math.PI / Lexicon.Count;
         double theta = INITIAL_ANGLE_OFFSET;
@@ -130,6 +131,7 @@ public class RadialMenu : MonoBehaviour {
                 (float)(Math.Cos(theta) * RADIUS),
                 (float)(Math.Sin(theta) * RADIUS)
             );
+            radialMenuItem.transform.localScale *= new Vector2(ITEM_SCALE, ITEM_SCALE);
             radialMenuItem.Type = semanticType;
             radialMenuItem.SetTypeIcon();
             radialMenuItem.gameObject.GetComponent<CanvasRenderer>().SetColor(RenderingOptions.ColorsByType[semanticType]);
@@ -158,6 +160,7 @@ public class RadialMenu : MonoBehaviour {
                 (float)(Math.Cos(theta) * RADIUS),
                 (float)(Math.Sin(theta) * RADIUS)
             );
+            radialMenuItem.transform.localScale *= new Vector2(ITEM_SCALE, ITEM_SCALE);
             radialMenuItem.Name = name;
             radialMenuItem.SetIcon(name);
             radialMenuItems.Add(radialMenuItem);
