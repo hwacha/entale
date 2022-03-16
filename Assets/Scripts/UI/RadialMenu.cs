@@ -78,10 +78,10 @@ public class RadialMenu : MonoBehaviour {
                 // BELIEVE.Head as Name,
                 KNOW.Head as Name,
             },
-            // [QUANTIFIER] = new HashSet<Name>(){
-            //     SOME.Head as Name,
-            //     ALL.Head as Name
-            // }
+            [QUANTIFIER] = new HashSet<Name>(){
+                SOME.Head as Name,
+                ALL.Head as Name
+            }
         };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
 

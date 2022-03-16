@@ -17,13 +17,13 @@ public class Evan : Agent
 
         var tomato = GameObject.Find("Tomato");
         var tomatoParam = MentalState.ConstructPercept(TOMATO, tomato.transform.position);
-        MentalState.AddToKnowledgeBase(new Expression(GOOD, new Expression(AT, SELF, tomatoParam)));
-        MentalState.AddToKnowledgeBase(new Expression(ABLE, new Expression(AT, SELF, tomatoParam), SELF));
+        // MentalState.AddToKnowledgeBase(new Expression(GOOD, new Expression(AT, SELF, tomatoParam)));
+        // MentalState.AddToKnowledgeBase(new Expression(ABLE, new Expression(AT, SELF, tomatoParam), SELF));
 
         var banana = GameObject.Find("Banana");
         var bananaParam = MentalState.ConstructPercept(BANANA, banana.transform.position);
-        MentalState.AddToKnowledgeBase(new Expression(VERY, new Expression(GOOD, new Expression(AT, SELF, bananaParam))));
-        MentalState.AddToKnowledgeBase(new Expression(ABLE, new Expression(AT, SELF, bananaParam), SELF));
+        // MentalState.AddToKnowledgeBase(new Expression(VERY, new Expression(GOOD, new Expression(AT, SELF, bananaParam))));
+        // MentalState.AddToKnowledgeBase(new Expression(ABLE, new Expression(AT, SELF, bananaParam), SELF));
 
         base.Start();
     }

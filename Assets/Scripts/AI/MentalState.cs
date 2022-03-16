@@ -378,6 +378,8 @@ public class MentalState : MonoBehaviour {
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
+                    Debug.Log(currentLemma);
+
                     // the bases we get from directly
                     // querying the knowledge base.
                     var searchBases = new ProofBases();
@@ -622,6 +624,10 @@ public class MentalState : MonoBehaviour {
                         if (backwardLinks != null) {
 
                             foreach (var backwardLink in backwardLinks) {
+                                if (backwardLink.Equals(currentLemma)) {
+                                    continue;
+                                }
+
                                 // M |- factive(P) => M |- P
                                 // factive - (1)
                                 if (backwardLink.HeadedBy(KNOW, SEE, MAKE, VERY, AND, SINCE)) {
@@ -1038,8 +1044,6 @@ public class MentalState : MonoBehaviour {
         }
     }
 
-    // @Note: this should be private ultimately.
-    // public for testing purposes.
     public bool AddToKnowledgeBase(Expression knowledge, bool firstCall = true, bool isForward = false, bool isValue = false) {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
 
@@ -1052,16 +1056,8 @@ public class MentalState : MonoBehaviour {
                 return false;
             }
 
-            if (knowledge.HeadedBy(VERY, KNOW, MAKE)) {
-                var subclause = knowledge.GetArgAsExpression(0);
-                AddToKnowledgeBase(subclause, false, isForward, isValue);
-                AddBackwardLink(knowledge, subclause, isValue);
-            }
-
-            if (knowledge.HeadedBy(OMEGA)) {
-                var subclause = knowledge.GetArgAsExpression(1);
-                AddToKnowledgeBase(subclause, false, isForward, isValue);
-                AddBackwardLink(knowledge, subclause, isValue);
+            if (knowledge.Depth > MaxDepth) {
+                MaxDepth = knowledge.Depth;
             }
 
             if (knowledge.HeadedBy(SEE, INFORM)) {
@@ -1078,13 +1074,36 @@ public class MentalState : MonoBehaviour {
                 // M <- since(P, see(P, x)) which entails both
                 // P and was(see(P, x))
                 // 
-                if (firstCall) {
+                if (firstCall  || !isValue) { // @Note delete right-hand side of disjunction if we query links by formula
                     return AddToKnowledgeBase(pSinceSawP, true, isForward, isValue);
                 } else {
                     return false;
                 }
                 
                 // AddBackwardLink(knowledge, pSinceSawP, isValue);
+            } else if (!isValue) {
+                // @Note we add each derived sentence to
+                // the base now, but remove this if we
+                // figure out to query the links by formula
+                KnowledgeBase.Add(knowledge);
+            }
+
+            if (firstCall) {
+                // we want to ensure a self-supporting premise isn't
+                // removed if other links to it are removed.
+                AddBackwardLink(knowledge, knowledge, isValue);
+            }
+
+            if (knowledge.HeadedBy(VERY, KNOW, MAKE)) {
+                var subclause = knowledge.GetArgAsExpression(0);
+                AddToKnowledgeBase(subclause, false, isForward, isValue);
+                AddBackwardLink(knowledge, subclause, isValue);
+            }
+
+            if (knowledge.HeadedBy(OMEGA)) {
+                var subclause = knowledge.GetArgAsExpression(1);
+                AddToKnowledgeBase(subclause, false, isForward, isValue);
+                AddBackwardLink(knowledge, subclause, isValue);
             }
             
             if (knowledge.HeadedBy(AND)) {
@@ -1128,13 +1147,7 @@ public class MentalState : MonoBehaviour {
                 AddBackwardLink(knowledge, anchor, isValue);
             }
 
-            if (knowledge.Depth > MaxDepth) {
-                MaxDepth = knowledge.Depth;
-            }
 
-            if (firstCall) {
-                KnowledgeBase.Add(knowledge);
-            }
         }
 
         if (knowledge.HeadedBy(OR)) {
@@ -1155,6 +1168,7 @@ public class MentalState : MonoBehaviour {
     // associated with the expression 'knowledge'
     protected void RemoveLinks(Expression knowledge, bool forward) {
         var links = forward ? ForwardLinks : BackwardLinks;
+
         // if there is an expression that contains knowledge,
         // remove knowledge as a link.
         var toRemove = new List<Expression>();
@@ -1171,9 +1185,14 @@ public class MentalState : MonoBehaviour {
             links.Remove(remove);
             // if this is an intermediate link, then remove
             // all of what it links as well.
-            if (!KnowledgeBase.Contains(remove)) {
-                RemoveLinks(remove, forward);
-            }
+            
+            RemoveFromKnowledgeBase(remove);
+            // @Note remove above and uncomment below
+            // once we can query links by formula
+
+            // if (!KnowledgeBase.Contains(remove)) {
+            //     RemoveLinks(remove, forward);
+            // }
         }
     }
 
@@ -1550,7 +1569,6 @@ public class MentalState : MonoBehaviour {
         List<Expression> bestPlan = new List<Expression>{new Expression(WILL, NEUTRAL)};
 
         foreach (var good in evaluativeBase) {
-            Debug.Log(good);
             var proofBases = new ProofBases();
             var proofDone = new Container<bool>(false);
             StartCoroutine(StreamProofs(proofBases, good, proofDone, Proof));

@@ -43,7 +43,7 @@ Shader "Custom/Invert Colors"
             {
                 float ps = 1.0/1600.0;
 
-                fixed4 col = tex2D(_MainTex, i.uv - (i.uv % (5 * ps)));
+                fixed4 col = tex2D(_MainTex, i.uv); // - (i.uv % (5 * ps)));
 
                 // col.rgb = -8.0 * col.rgb;
                 // col.rgb += tex2D(_MainTex, i.uv + fixed2(0.0, ps)).rgb;
