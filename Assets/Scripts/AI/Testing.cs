@@ -40,26 +40,48 @@ public class Testing : MonoBehaviour {
             new Expression(VERY, new Expression(OMEGA, VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), new Expression(GOOD, r)))),
             new Expression(VERY, new Expression(VERY, new Expression(VERY, new Expression(GOOD, new Expression(RED, SELF))))),
             new Expression(VERY, new Expression(OMEGA, VERY, new Expression(GOOD, new Expression(OR, a, b)))),
+            new Expression(SEE, new Expression(RED, ALICE), SELF),
+            new Expression(SEE, new Expression(TREE, ALICE), SELF),
+            new Expression(IF, new Expression(BLUE, ALICE), new Expression(RED, ALICE)),
         });
 
         StartCoroutine(TestFindValueOf(MentalState, p));
-        // StartCoroutine(TestFindValueOf(MentalState, q));
+        StartCoroutine(TestFindValueOf(MentalState, q));
         StartCoroutine(TestFindValueOf(MentalState, r));
-        // StartCoroutine(TestFindValueOf(MentalState, new Expression(VERY, new Expression(RED, SELF))));
+        StartCoroutine(TestFindValueOf(MentalState, new Expression(VERY, new Expression(RED, SELF))));
         StartCoroutine(TestFindValueOf(MentalState, new Expression(OR, a, b)));
         StartCoroutine(TestFindValueOf(MentalState, a));
         StartCoroutine(TestFindValueOf(MentalState, b));
         StartCoroutine(TestFindValueOf(MentalState, new Expression(AND, a, b)));
 
-        Log(MentalState.Reduce(item2));
-        Log(MentalState.Reduce(new Expression(AT, ALICE, item2)));
-        Log(MentalState.Reduce(
-            new Expression(NOT,
-                new Expression(NOT,
-                    new Expression(NOT,
-                        new Expression(NOT,
-                            new Expression(TRULY,
-                                new Expression(TRULY, new Expression(GREEN, SELF)))))))));
+        // Log(MentalState.Reduce(item2));
+        // Log(MentalState.Reduce(new Expression(AT, ALICE, item2)));
+        // Log(MentalState.Reduce(
+        //     new Expression(NOT,
+        //         new Expression(NOT,
+        //             new Expression(NOT,
+        //                 new Expression(NOT,
+        //                     new Expression(TRULY,
+        //                         new Expression(TRULY, new Expression(GREEN, SELF)))))))));
+        // Log(MentalState.Reduce(
+        //     new Expression(NOT,
+        //         new Expression(NOT,
+        //             new Expression(NOT,
+        //                 new Expression(TRULY,
+        //                     new Expression(NOT,
+        //                         new Expression(TRULY, new Expression(GREEN, SELF)))))))));
+
+        // Log(MentalState.Reduce(
+        //     new Expression(NOT,
+        //         new Expression(NOT,
+        //             new Expression(NOT,
+        //                 new Expression(TRULY,
+        //                     new Expression(NOT,
+        //                         new Expression(NOT,
+        //                             new Expression(TRULY, new Expression(GREEN, SELF))))))))));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, TREE, RED)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, ALICE)));
     }
 
     public static void TestConvertToValue(Expression e) {

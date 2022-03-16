@@ -49,10 +49,51 @@ public class Actuator : MonoBehaviour {
                 Agent.MentalState.ReceiveAssertion(
                     utterance.GetArgAsExpression(0),
                     speaker);
+
+                var negativeProofs = new ProofBases();
+                var doneNegative = new Container<bool>(false);
+
+                Agent.MentalState.StartCoroutine(
+                    Agent.MentalState.StreamProofs(
+                        negativeProofs,
+                        new Expression(NOT, utterance.GetArgAsExpression(0)),
+                        doneNegative));
+
+                while (!doneNegative.Item) {
+                    yield return new WaitForSeconds(0.5f);
+                }
+
+                if (negativeProofs.IsEmpty()) {
+                    StartCoroutine(Say(YES, 5));
+                    yield break;
+                } else {
+                    StartCoroutine(Say(NO, 5));
+                }
+
+                
             }
             if (utterance.Head.Equals(DENY.Head)) {
                 Agent.MentalState.ReceiveAssertion(
                     new Expression(NOT, utterance.GetArgAsExpression(0)), speaker);
+
+                var positiveProofs = new ProofBases();
+                var donePositive = new Container<bool>(false);
+
+                Agent.MentalState.StartCoroutine(
+                    Agent.MentalState.StreamProofs(
+                        positiveProofs,
+                        new Expression(NOT, utterance.GetArgAsExpression(0)),
+                        donePositive));
+
+                while (!donePositive.Item) {
+                    yield return new WaitForSeconds(0.5f);
+                }
+
+                if (positiveProofs.IsEmpty()) {
+                    StartCoroutine(Say(NO, 5));
+                } else {
+                    StartCoroutine(Say(YES, 5));
+                }
             }
             yield break;
         }
@@ -134,15 +175,12 @@ public class Actuator : MonoBehaviour {
                 yield return null;
             }
 
-            // Debug.Log(plan);
-
             foreach (Expression action in plan) {
                 if (!action.Head.Equals(WILL.Head)) {
                     throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
                 }
 
-                // Debug.Log(action);
-
+                Debug.Log(action);
                 // StartCoroutine(Say(action, 1));
 
                 var content = action.GetArgAsExpression(0);
@@ -157,17 +195,27 @@ public class Actuator : MonoBehaviour {
                     // assumption: if we find this in a plan,
                     // then the location of X should be known.
                     var location = Agent.MentalState.Locations[destination];
-                    NavMeshPath path = new NavMeshPath();
 
-                    NavMeshAgent.CalculatePath(location, path);
+                    NavMeshAgent.SetDestination(location);
 
-                    if (path.status != NavMeshPathStatus.PathPartial) {
-                        NavMeshAgent.SetPath(path);
-                        while (NavMeshAgent.remainingDistance > 1.9f) {
-                            yield return null;
-                        }
-                        NavMeshAgent.ResetPath();
+                    while (Vector3.Distance(transform.position, location) > NavMeshAgent.stoppingDistance + 1) {
+                        yield return null;
                     }
+
+                    // NavMeshPath path = new NavMeshPath();
+                    // Debug.Log(path.status);
+                    // NavMeshAgent.CalculatePath(location, path);
+
+                    // Debug.Log(path.status);
+
+                    // if (path.status != NavMeshPathStatus.PathPartial) {
+                    //     Debug.Log("here");
+                    //     NavMeshAgent.SetPath(path);
+                    //     while (NavMeshAgent.remainingDistance > 1.9f) {
+                    //         yield return null;
+                    //     }
+                    //     NavMeshAgent.ResetPath();
+                    // }
                 }
 
                 else if (content.Head.Equals(INFORM.Head) && content.GetArgAsExpression(2).Equals(SELF)) {
@@ -187,8 +235,6 @@ public class Actuator : MonoBehaviour {
 
             yield return null;
         }
-        yield break;
-        // TODO stub
     }
 
 }

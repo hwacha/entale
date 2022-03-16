@@ -37,6 +37,12 @@ public class WorkspaceController : MonoBehaviour
     RadialMenu RadialMenu;
     GameObject HighlightPoint;
     public GameObject Pointer;
+
+    public AudioSource MenuOpen;
+    public AudioSource MenuClose;
+    public AudioSource Error;
+    public AudioSource PlaceExpression;
+    public AudioSource CombineExpression;
     #endregion
 
     #region Fields
@@ -48,17 +54,33 @@ public class WorkspaceController : MonoBehaviour
     OpenArgumentInfo[,] openArgumentSlots = new OpenArgumentInfo[slotsY, slotsX];
     int cursorX = 0;
     int cursorY = 0;
-    
-    float timeBetweenSteps = 0.1f;
-    float lastStepHorizontal = 0.0f;
-    float lastStepVertical = 0.0f;
+
+    float prevAxisX = 0;
+    float prevAxisY = 0;
 
     GameObject SelectedExpression = null;
     GameObject EquippedExpression = null;
 
     #endregion
 
+    void SetPointerPosition(GameObject obj) {
+        Pointer.transform.parent = obj.transform;
+
+        var y = 0.5f + 0.3f / obj.GetComponent<ArgumentContainer>().Height;
+
+        Pointer.transform.localPosition = new Vector3(0, y, 0);
+        Pointer.transform.parent = Workspace.transform;
+
+    }
+
+    void SetPointerPosition(int x, int y) {
+        var pointerX = 0.9375f * (-0.5f + 1 / 16.0f + 0.125f * x);
+        var pointerY = 0.9375f * ((0.5f + 1 / 16.0f) - 0.125f * y) - 0.03f;
+        Pointer.transform.localPosition = new Vector3(pointerX, pointerY, -0.02f);
+    }
+
     public void SpawnWord(Constant word) {
+        PlaceExpression.Play();
         SpawnExpression(new Expression(word));
     }
 
@@ -76,8 +98,7 @@ public class WorkspaceController : MonoBehaviour
         int width = wordContainerScript.Width;
         int height = wordContainerScript.Height;
 
-        wordContainer.transform.localScale =
-            new Vector3(0.125f * 0.875f * width, 0.125f * 0.875f * height, 1);
+        wordContainer.transform.localScale = new Vector3(0.125f * 0.875f * width, 0.125f * 0.875f * height, 1);
 
         // find the next available slot that
         // can accommodate the expression
@@ -138,12 +159,11 @@ public class WorkspaceController : MonoBehaviour
 
                     // if no pointer is active on the workspace, we set the pointer active
                     // to this expression.
-                    if (!Pointer.active) {
-                        Pointer.active = true;
-                        Pointer.transform.localPosition =
-                            new Vector3(wordContainer.transform.localPosition.x,
-                                wordContainer.transform.localPosition.y + (3.0f * height / 32.0f),
-                                -0.01f);
+                    if (!Pointer.activeSelf) {
+                        cursorX = j;
+                        cursorY = i;
+                        Pointer.SetActive(true);
+                        SetPointerPosition(wordContainer);
                     }
 
                     // fill the slots in the grid with the ID
@@ -158,12 +178,27 @@ public class WorkspaceController : MonoBehaviour
             }
         }
         Destroy(wordContainer);
-        return null;
-
         // @NOTE the workspace should expand when there's
         // no room for another word.
         // Need to implement scroll and zoom.
         Debug.Log("no more room :'(");
+
+        Error.Play();
+
+        // TODO 12/30
+
+        for (int i = 0; i < slotsY; i++) {
+            for (int j = 0; j < slotsX; j++) {
+                if (slots[i, j] != null) {
+                    cursorX = j;
+                    cursorY = i;
+                    goto LoopEnd;
+                }
+            }
+        }
+        LoopEnd:
+            SetPointerPosition(cursorX, cursorY);
+            return null;
     }
 
     // Start is called before the first frame update
@@ -180,12 +215,14 @@ public class WorkspaceController : MonoBehaviour
         PlayerMovement = GetComponent<PlayerMovement>();
         MouseLook = GameObject.Find("Main Camera").GetComponent<MouseLook>();
         RadialMenu = GameObject.Find("RadialMenu Canvas").GetComponent<RadialMenu>();
-        HighlightPoint = GameObject.Find("Highlight Point");
+        HighlightPoint = GameObject.Find("Highlight Pointer");
 
         RadialMenu.setWordSelectCallback(SpawnWord);
         RadialMenu.enabled = false;
-        Pointer.active = false;
+        Pointer.SetActive(false);
     }
+
+
 
     // Update is called once per frame
     void Update()
@@ -195,11 +232,18 @@ public class WorkspaceController : MonoBehaviour
             // the workspace is already open
             if (IsWorkspaceActive) {
                 IsRadialMenuActive = true;
+                IsWorkspaceActive = false;
                 RadialMenu.enabled = true;
                 // do stuff with the radial menu
                 RadialMenu.HandleMenuOpen();
-            } else {
+                // play menu open sound
+                MenuOpen.Play();
+            } else if (!IsRadialMenuActive) {
                 // the workspace isn't open yet
+                if (EquippedExpression != null) {
+                    SpawnExpression(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression);
+                    Destroy(EquippedExpression);
+                }
 
                 // lock the player's movement
                 PlayerMovement.enabled = false;
@@ -209,8 +253,20 @@ public class WorkspaceController : MonoBehaviour
                 // set the workspace to active
                 IsWorkspaceActive = true;
                 Workspace.SetActive(true);
+
+                // play menu open sound
+                MenuOpen.Play();
             }
         }
+
+        var axisX = Input.GetAxis("Horizontal");
+        var axisY = Input.GetAxis("Vertical");
+
+        bool newAxisX = System.Math.Sign(axisX) != System.Math.Sign(prevAxisX);
+        bool newAxisY = System.Math.Sign(axisY) != System.Math.Sign(prevAxisY);
+
+        prevAxisX = axisX;
+        prevAxisY = axisY;
 
         // @NOTE: for each of cursor movements, the traversal should
         // be different from how it is. It should follow a zig-zag
@@ -219,8 +275,7 @@ public class WorkspaceController : MonoBehaviour
 
         // move the cursor to the expression to the right
         // of the current expression
-        if (Input.GetAxis("Horizontal") > 0 && Time.time - lastStepHorizontal > timeBetweenSteps) {
-            lastStepHorizontal = Time.time;
+        if (IsWorkspaceActive && newAxisX && Input.GetAxis("Horizontal") > 0) {
 
             int bestX = -1;
             int bestY = -1;
@@ -253,11 +308,7 @@ public class WorkspaceController : MonoBehaviour
                     cursorX = bestX;
                     cursorY = bestY;
                 
-                    Pointer.transform.localPosition =
-                        new Vector3(bestObject.transform.localPosition.x,
-                            bestObject.transform.localPosition.y +
-                            (3.0f * bestObject.GetComponent<ArgumentContainer>().Height / 32.0f),
-                            -0.01f);
+                    SetPointerPosition(bestObject);
                 }
             } else {
                 for (int i = 0; i < slotsY; i++) {
@@ -284,17 +335,14 @@ public class WorkspaceController : MonoBehaviour
                     cursorX = bestX;
                     cursorY = bestY;
 
-                    Pointer.transform.localPosition =
-                        new Vector3(0.95f * (-0.5f + 1 / 16.0f + 0.125f * cursorX),
-                            0.95f * ((0.5f + 1 / 16.0f) - 0.125f * cursorY), -0.02f);
+                    SetPointerPosition(cursorX, cursorY);
                 }
             }
         }
 
         // move the cursor to the expression to the left
         // of the current expression
-        if (Input.GetAxis("Horizontal") < 0 && Time.time - lastStepHorizontal > timeBetweenSteps) {
-            lastStepHorizontal = Time.time;
+        if (IsWorkspaceActive && newAxisX && Input.GetAxis("Horizontal") < 0) {
             
             int bestX = -1;
             int bestY = -1;
@@ -327,17 +375,17 @@ public class WorkspaceController : MonoBehaviour
                     cursorX = bestX;
                     cursorY = bestY;
                 
-                    Pointer.transform.localPosition =
-                        new Vector3(bestObject.transform.localPosition.x,
-                            bestObject.transform.localPosition.y +
-                            (3.0f * bestObject.GetComponent<ArgumentContainer>().Height / 32.0f),
-                            -0.01f);
+                    SetPointerPosition(bestObject);
                 }
             } else {
                 for (int i = 0; i < slotsY; i++) {
                     for (int j = 0; j < cursorX; j++) {
                         if (openArgumentSlots[i, j] == null ||
-                            !openArgumentSlots[i, j].Type.Equals(SelectedExpression.GetComponent<ArgumentContainer>().Argument.Type)) {
+                            !openArgumentSlots[i, j].Type
+                                .Equals(
+                                    SelectedExpression
+                                    .GetComponent<ArgumentContainer>()
+                                    .Argument.Type)) {
                             continue;
                         }
 
@@ -358,18 +406,14 @@ public class WorkspaceController : MonoBehaviour
                     cursorX = bestX;
                     cursorY = bestY;
 
-                    Pointer.transform.localPosition =
-                        new Vector3(0.95f * (-0.5f + 1 / 16.0f + 0.125f * cursorX),
-                            0.95f * ((0.5f + 1 / 16.0f) - 0.125f * cursorY), -0.02f);
+                    SetPointerPosition(cursorX, cursorY);
                 }
             }
         }
 
         // move the cursor to the expression downard
         // from the current expression
-        if (Input.GetAxis("Vertical") < 0 && Time.time - lastStepVertical > timeBetweenSteps) {
-            lastStepVertical = Time.time;
-
+        if (IsWorkspaceActive && newAxisY && Input.GetAxis("Vertical") < 0) {
             int bestX = -1;
             int bestY = -1;
             int bestNorm = int.MaxValue;
@@ -401,11 +445,7 @@ public class WorkspaceController : MonoBehaviour
                     cursorX = bestX;
                     cursorY = bestY;
                 
-                    Pointer.transform.localPosition =
-                        new Vector3(bestObject.transform.localPosition.x,
-                            bestObject.transform.localPosition.y +
-                            (3.0f * bestObject.GetComponent<ArgumentContainer>().Height / 32.0f),
-                            -0.01f);
+                    SetPointerPosition(bestObject);
                 }
             } else {
                 for (int i = cursorY + 1; i < slotsY; i++) {
@@ -432,17 +472,14 @@ public class WorkspaceController : MonoBehaviour
                     cursorX = bestX;
                     cursorY = bestY;
 
-                    Pointer.transform.localPosition =
-                        new Vector3(0.95f * (-0.5f + 1 / 16.0f + 0.125f * cursorX),
-                            0.95f * ((0.5f + 1 / 16.0f) - 0.125f * cursorY), -0.02f);
+                    SetPointerPosition(cursorX, cursorY);
                 }
             }
         }
 
         // move the cursor to the expression upward
         // from the current expression
-        if (Input.GetAxis("Vertical") > 0 && Time.time - lastStepVertical > timeBetweenSteps) {
-            lastStepVertical = Time.time;
+        if (IsWorkspaceActive && newAxisY && Input.GetAxis("Vertical") > 0) {
 
             int bestX = -1;
             int bestY = -1;
@@ -475,11 +512,7 @@ public class WorkspaceController : MonoBehaviour
                     cursorX = bestX;
                     cursorY = bestY;
                 
-                    Pointer.transform.localPosition =
-                        new Vector3(bestObject.transform.localPosition.x,
-                            bestObject.transform.localPosition.y +
-                            (3.0f * bestObject.GetComponent<ArgumentContainer>().Height / 32.0f),
-                            -0.01f);
+                    SetPointerPosition(bestObject);
                 }
             } else {
                 for (int i = 0; i < cursorY; i++) {
@@ -506,14 +539,12 @@ public class WorkspaceController : MonoBehaviour
                     cursorX = bestX;
                     cursorY = bestY;
 
-                    Pointer.transform.localPosition =
-                        new Vector3(0.95f * (-0.5f + 1 / 16.0f + 0.125f * cursorX),
-                            0.95f * ((0.5f + 1 / 16.0f) - 0.125f * cursorY), -0.02f);
+                    SetPointerPosition(cursorX, cursorY);
                 }
             }
         }
 
-        if (Input.GetButtonDown("Submit") && IsWorkspaceActive) {
+        if (IsWorkspaceActive && Input.GetButtonDown("Select")) {
             if (SelectedExpression == null) {
                 SelectedExpression = slots[cursorY, cursorX];
 
@@ -536,9 +567,7 @@ public class WorkspaceController : MonoBehaviour
                             cursorY = i;
                         }
 
-                        Pointer.transform.localPosition =
-                            new Vector3(0.95f * (-0.5f + 1 / 16.0f + 0.125f * j),
-                                0.95f * ((0.5f + 1 / 16.0f) - 0.125f * i), -0.02f);
+                        SetPointerPosition(j, i);
 
                         oneOpenSlot = true;
                         break;
@@ -562,15 +591,13 @@ public class WorkspaceController : MonoBehaviour
                     var combinedExpression =
                         new Expression(parentContainerScript.Argument as Expression,
                             openArgumentSlot.Arguments);
-                    
+
                     Destroy(openArgumentSlot.ParentContainer);
-                    
-                    var o = SpawnExpression(combinedExpression);
-                    
-                    Pointer.transform.localPosition =
-                        new Vector3(o.transform.localPosition.x,
-                            o.transform.localPosition.y + (3.0f * o.GetComponent<ArgumentContainer>().Height / 32.0f),
-                            -0.01f);
+
+                    Pointer.SetActive(false);
+
+                    CombineExpression.Play();
+                    SpawnExpression(combinedExpression);
 
                     // TODO: make this more efficient
                     for (int i = 0; i < slotsY; i++) {
@@ -588,7 +615,10 @@ public class WorkspaceController : MonoBehaviour
 
         if (Input.GetButtonDown("Use")) {
             if (IsWorkspaceActive) {
-                if (SelectedExpression != null && !IsRadialMenuActive) {
+                if (SelectedExpression == null) {
+                    SelectedExpression = slots[cursorY, cursorX];
+                }
+                if (SelectedExpression != null) {
                     // set expression to center of screen
                     SelectedExpression.transform.SetParent(Workspace.transform.parent);
                     SelectedExpression.transform.localPosition = new Vector3(0, 0, 0.5f);
@@ -602,11 +632,30 @@ public class WorkspaceController : MonoBehaviour
                     PlayerMovement.enabled = true;
                     MouseLook.enabled = true;
 
+                    bool foundNewExpression = false;
+                    for (int i = 0; i < slotsY; i++) {
+                        for (int j = 0; j < slotsX; j++) {
+                            if (slots[i, j] == SelectedExpression) {
+                                slots[i, j] = null;
+                            } else if (!foundNewExpression && slots[i, j] != null) {
+                                cursorX = j;
+                                cursorY = i;
+                                foundNewExpression = true;
+                            }
+                        }
+                    }
+
                     // set equipped expression
                     EquippedExpression = SelectedExpression;
                     SelectedExpression = null;
+
+                    if (foundNewExpression) {
+                        SetPointerPosition(slots[cursorY, cursorX]);
+                    } else {
+                        Pointer.SetActive(false);
+                    }
                 }
-            } else {
+            } else if (!IsRadialMenuActive) {
                 if (EquippedExpression != null) {
                     // Raycast
                     RaycastHit hit;                    
@@ -628,13 +677,6 @@ public class WorkspaceController : MonoBehaviour
                         var targetedActuator = targetedObject.GetComponent<Actuator>();
 
                         if (targetedMentalState != null && targetedActuator != null) {
-                            // TODO uncomment this when you have the ability
-                            // to make a polymorphic functional expression.
-
-                            // targetedMentalState.StartCoroutine(targetedMentalState.Assert(
-                            //     new Expression(Expression.SAY, Expression.CHARLIE,
-                            //     EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression)));
-                            
                             targetedActuator.StartCoroutine(
                                 targetedActuator.RespondTo(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression, Expression.CHARLIE));
 
@@ -646,24 +688,31 @@ public class WorkspaceController : MonoBehaviour
             }
         }
 
-        if (Input.GetButtonDown("Cancel") && IsWorkspaceActive) {
+        if (Input.GetButtonDown("Cancel")) {
             if (IsRadialMenuActive) {
                 RadialMenu.ExitMenu();
                 RadialMenu.enabled = false;
                 IsRadialMenuActive = false;
+                IsWorkspaceActive = true;
+                MenuClose.Play();
             } else if (SelectedExpression != null) {
-                Pointer.transform.localPosition =
-                    new Vector3(SelectedExpression.transform.localPosition.x,
-                        SelectedExpression.transform.localPosition.y +
-                        (3.0f * SelectedExpression.GetComponent<ArgumentContainer>().Height / 32.0f),
-                        -0.01f);
+                SetPointerPosition(SelectedExpression);
                 SelectedExpression = null;
-            } else {
+                MenuClose.Play();
+            } else if (IsWorkspaceActive) {
                 IsWorkspaceActive = false;
                 Workspace.SetActive(false);
                 PlayerMovement.enabled = true;
                 MouseLook.enabled = true;
+                MenuClose.Play();
             }
+
+            if (!IsWorkspaceActive && !IsRadialMenuActive && EquippedExpression != null) {
+                // SpawnExpression(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression);
+                Destroy(EquippedExpression);
+                MenuClose.Play();
+            }
+            
             // HighlightPoint.SetActive(true);
         }
     }

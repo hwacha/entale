@@ -13,7 +13,8 @@ public class RadialMenu : MonoBehaviour {
     public Camera playerCamera;
     MouseLook playerMouseLook;
     const double INITIAL_ANGLE_OFFSET = Math.PI / 2f;
-    const double RADIUS = 150;
+    const double RADIUS = 400;
+    const float ITEM_SCALE = 4;
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
 
     public Dictionary<SemanticType, HashSet<Name>> Lexicon =
@@ -77,51 +78,49 @@ public class RadialMenu : MonoBehaviour {
                 // BELIEVE.Head as Name,
                 KNOW.Head as Name,
             },
-            // [QUANTIFIER] = new HashSet<Name>(){
-            //     SOME.Head as Name,
-            //     ALL.Head as Name
-            // }
+            [QUANTIFIER] = new HashSet<Name>(){
+                SOME.Head as Name,
+                ALL.Head as Name
+            }
         };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
 
     int currentSliceIndex = -1;
-    bool semanticMenuOpen = false;
+    bool typeMenuOpen = false;
     bool constantMenuOpen = false;
 
     public delegate void WordCallback(Name name); 
     public event WordCallback wordCallback = null;
 
-    // Start is called before the first frame update
     void Start() {
         playerMouseLook = playerCamera.GetComponent<MouseLook>();
     }
 
-    // Update is called once per frame
     void Update() {
         HandleMenuOpen();
-        if (semanticMenuOpen || constantMenuOpen) {
+        if (typeMenuOpen || constantMenuOpen) {
             HighlightMenuItems();
             HandleMenuItemClick();
         }
     }
 
     public void HandleMenuOpen() {
-        if (!semanticMenuOpen && !constantMenuOpen) {
-            OpenSemanticMenu();
-            Cursor.lockState = CursorLockMode.None;
+        if (!typeMenuOpen && !constantMenuOpen) {
+            OpenTypeMenu();
+            // Cursor.lockState = CursorLockMode.None;
         }
     }
 
     public void ExitMenu() {
-        CloseSemanticMenu();
+        CloseTypeMenu();
         CloseConstantMenu();
         Cursor.lockState = CursorLockMode.None;
         Cursor.lockState = CursorLockMode.Confined;
         Cursor.lockState = CursorLockMode.Locked;
     }
 
-    void OpenSemanticMenu() {
-        semanticMenuOpen = true;
+    void OpenTypeMenu() {
+        typeMenuOpen = true;
         double sliceTheta = 2f * Math.PI / Lexicon.Count;
         double theta = INITIAL_ANGLE_OFFSET;
         foreach (SemanticType semanticType in Lexicon.Keys) {
@@ -132,6 +131,7 @@ public class RadialMenu : MonoBehaviour {
                 (float)(Math.Cos(theta) * RADIUS),
                 (float)(Math.Sin(theta) * RADIUS)
             );
+            radialMenuItem.transform.localScale *= new Vector2(ITEM_SCALE, ITEM_SCALE);
             radialMenuItem.Type = semanticType;
             radialMenuItem.SetTypeIcon();
             radialMenuItem.gameObject.GetComponent<CanvasRenderer>().SetColor(RenderingOptions.ColorsByType[semanticType]);
@@ -140,8 +140,8 @@ public class RadialMenu : MonoBehaviour {
         }
     }
 
-    void CloseSemanticMenu() {
-        semanticMenuOpen = false;
+    void CloseTypeMenu() {
+        typeMenuOpen = false;
         foreach(var rmi in radialMenuItems) {
             Destroy(rmi.gameObject);
         }
@@ -160,6 +160,7 @@ public class RadialMenu : MonoBehaviour {
                 (float)(Math.Cos(theta) * RADIUS),
                 (float)(Math.Sin(theta) * RADIUS)
             );
+            radialMenuItem.transform.localScale *= new Vector2(ITEM_SCALE, ITEM_SCALE);
             radialMenuItem.Name = name;
             radialMenuItem.SetIcon(name);
             radialMenuItems.Add(radialMenuItem);
@@ -176,7 +177,16 @@ public class RadialMenu : MonoBehaviour {
     }
 
     void HighlightMenuItems() {
-        int sliceIndex = GetSliceIndex(radialMenuItems.Count, INITIAL_ANGLE_OFFSET, GetMouseAngle());
+        var (r, theta) = GetMousePolar();
+
+        if (r == 0) {
+            foreach(var rmi in radialMenuItems) {
+                rmi.Unhighlight();
+            }
+            return;
+        }
+
+        int sliceIndex = GetSliceIndex(radialMenuItems.Count, INITIAL_ANGLE_OFFSET, theta);
         if (sliceIndex != currentSliceIndex) {
             foreach(var rmi in radialMenuItems) {
                 rmi.Unhighlight();
@@ -187,27 +197,40 @@ public class RadialMenu : MonoBehaviour {
     }
 
     void HandleMenuItemClick() {
-        if (Input.GetMouseButtonDown(0)) {
-            int sliceIndex = GetSliceIndex(radialMenuItems.Count, INITIAL_ANGLE_OFFSET, GetMouseAngle());
+        if (Input.GetButtonDown("Select")) {
+            var (r, theta) = GetMousePolar();
+
+            if (r == 0) {
+                return; 
+            }
+
+            int sliceIndex = GetSliceIndex(radialMenuItems.Count, INITIAL_ANGLE_OFFSET, theta);
             var rmi = radialMenuItems[currentSliceIndex];
-            if (semanticMenuOpen) {
-                CloseSemanticMenu();
+            if (typeMenuOpen) {
+                CloseTypeMenu();
                 OpenConstantMenu(rmi.Type);
             } else {
-                // Debug.Log(rmi.constant);
                 if (wordCallback != null) {
                     wordCallback(rmi.Name);
                 }
-                ExitMenu();
+                CloseConstantMenu();
+                // ExitMenu();
             }
         }
     }
 
     // Returns the mouse angle from the cetner of the screen relative to the x axis in counter clockwise
-    double GetMouseAngle() {
-        Vector2 mousePosition = GetMousePosition(); 
+    (double, double) GetMousePolar() {
+        Vector2 mousePosition = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        // if (mousePosition.x == 0f && mousePosition.y == 0f) {
+        //     mousePosition = GetMousePosition();     
+        // }
+        double magnitude = mousePosition.magnitude;
         double angle = Mathf.Atan2(mousePosition.y, mousePosition.x);
-        return angle > 0 ? angle : ((2f * Math.PI) + angle);
+        if (angle < 0) {
+            angle += 2f * Math.PI;
+        }
+        return (magnitude, angle);
     }
 
     // Returns the mouse position from the center of the screen normalized by the screen's size
