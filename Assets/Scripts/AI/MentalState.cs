@@ -45,10 +45,7 @@ public class MentalState : MonoBehaviour {
     public int Timestamp = 0; // public for testing purposes
 
     private SortedSet<Expression> KnowledgeBase;
-    private Dictionary<Expression, HashSet<Expression>> ForwardLinks;
-    private Dictionary<Expression, HashSet<Expression>> BackwardLinks;
-    private Dictionary<Expression, HashSet<Expression>> ValueForwardLinks;
-    private Dictionary<Expression, HashSet<Expression>> ValueBackwardLinks;
+    private Dictionary<Expression, HashSet<Expression>> Links;
 
     // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
@@ -79,14 +76,7 @@ public class MentalState : MonoBehaviour {
             throw new Exception("Initialize: mental state already initialized.");
         }
         KnowledgeBase = new SortedSet<Expression>();
-        ForwardLinks = new Dictionary<Expression, HashSet<Expression>>();
-        BackwardLinks = new Dictionary<Expression, HashSet<Expression>>();
-        
-        // we have a separate list of value links
-        // because we may value a coverable
-        // proposition that we don't currently know
-        ValueForwardLinks = new Dictionary<Expression, HashSet<Expression>>();
-        ValueBackwardLinks = new Dictionary<Expression, HashSet<Expression>>();
+        Links = new Dictionary<Expression, HashSet<Expression>>();
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
             AddToKnowledgeBase(initialKnowledge[i]);
@@ -325,6 +315,8 @@ public class MentalState : MonoBehaviour {
         Container<bool> done, ProofType pt = Proof) {
         // we can only prove sentences.
         Debug.Assert(conclusion.Type.Equals(TRUTH_VALUE));
+
+        Debug.Log(conclusion);
         // we're going to do a depth-first search
         // with successively higher bounds on the
         // depth allowed.
@@ -378,7 +370,7 @@ public class MentalState : MonoBehaviour {
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
-                    Debug.Log(currentLemma);
+                    // Debug.Log(currentLemma);
 
                     // the bases we get from directly
                     // querying the knowledge base.
@@ -614,11 +606,11 @@ public class MentalState : MonoBehaviour {
                         HashSet<Expression> backwardLinks = null;
 
                         if (current.Parity) {
-                            if (BackwardLinks.ContainsKey(currentLemma)) {
-                                backwardLinks = BackwardLinks[currentLemma];
+                            if (Links.ContainsKey(currentLemma)) {
+                                backwardLinks = Links[currentLemma];
                             }
-                        } else if (BackwardLinks.ContainsKey(new Expression(NOT, currentLemma))) {
-                            backwardLinks = BackwardLinks[new Expression(NOT, currentLemma)];
+                        } else if (Links.ContainsKey(new Expression(NOT, currentLemma))) {
+                            backwardLinks = Links[new Expression(NOT, currentLemma)];
                         }
 
                         if (backwardLinks != null) {
@@ -681,8 +673,8 @@ public class MentalState : MonoBehaviour {
                                 verylessContent = verylessContent.GetArgAsExpression(0);
                             }
 
-                            if (BackwardLinks.ContainsKey(verylessContent)) {
-                                foreach (var backwardLink in BackwardLinks[verylessContent]) {
+                            if (Links.ContainsKey(verylessContent)) {
+                                foreach (var backwardLink in Links[verylessContent]) {
                                     if (backwardLink.HeadedBy(OMEGA)) {
                                         var omegaNode = new ProofNode(backwardLink, nextDepth, current, i, true);
                                         newStack.Push(omegaNode);
@@ -702,9 +694,9 @@ public class MentalState : MonoBehaviour {
 
                                 var powerPlusOne = new Expression(OMEGA, power);
 
-                                if (BackwardLinks.ContainsKey(omegalessContent)) {
-                                    if (BackwardLinks.ContainsKey(omegalessContent)) {
-                                        foreach (var backwardLink in BackwardLinks[omegalessContent]) {
+                                if (Links.ContainsKey(omegalessContent)) {
+                                    if (Links.ContainsKey(omegalessContent)) {
+                                        foreach (var backwardLink in Links[omegalessContent]) {
                                             var powerCounter = power;
                                             var linkPowerCounter = backwardLink;
                                             bool linkSupercedes = false;
@@ -1011,154 +1003,108 @@ public class MentalState : MonoBehaviour {
         return param;
     }
 
-    private void AddForwardLink(Expression premise, Expression conclusion, bool isValue) {
-        if (isValue) {
-            if (ValueForwardLinks.ContainsKey(premise)) {
-                ValueForwardLinks[premise].Add(conclusion);
-            } else {
-                ValueForwardLinks.Add(premise, new HashSet<Expression>{conclusion});
-            }
+    private void AddLink(Expression premise, Expression conclusion) {
+        if (Links.ContainsKey(conclusion)) {
+            Links[conclusion].Add(premise);
         } else {
-            if (ForwardLinks.ContainsKey(premise)) {
-                ForwardLinks[premise].Add(conclusion);
-            } else {
-                ForwardLinks.Add(premise, new HashSet<Expression>{conclusion});
-            }
-        }
-
-    }
-
-    private void AddBackwardLink(Expression premise, Expression conclusion, bool isValue) {
-        if (isValue) {
-            if (ValueBackwardLinks.ContainsKey(conclusion)) {
-                ValueBackwardLinks[conclusion].Add(premise);
-            } else {
-                ValueBackwardLinks.Add(conclusion, new HashSet<Expression>{premise});
-            }
-        } else {
-            if (BackwardLinks.ContainsKey(conclusion)) {
-                BackwardLinks[conclusion].Add(premise);
-            } else {
-                BackwardLinks.Add(conclusion, new HashSet<Expression>{premise});
-            }
+            Links.Add(conclusion, new HashSet<Expression>{premise});
         }
     }
 
-    public bool AddToKnowledgeBase(Expression knowledge, bool firstCall = true, bool isForward = false, bool isValue = false) {
+    public bool AddToKnowledgeBase(Expression knowledge, bool firstCall = true) {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
 
-        if (knowledge.HeadedBy(GOOD)) {
-            AddToKnowledgeBase(knowledge.GetArgAsExpression(0), false, isForward, true);
+        if (KnowledgeBase.Contains(knowledge)) {
+            return false;
         }
 
-        if (!isForward) {
-            if (KnowledgeBase.Contains(knowledge)) {
+        if (knowledge.Depth > MaxDepth) {
+            MaxDepth = knowledge.Depth;
+        }
+
+        if (knowledge.HeadedBy(SEE, INFORM)) {
+            var p = knowledge.GetArgAsExpression(0);
+            var pSinceSawP = new Expression(SINCE, p, knowledge);
+
+            // @Note: since(A, B) as a logical operator is typically
+            // made to be a conditional on was(B) to conclude A.
+            // 
+            // We're making it factive. It's ampliatively assumed
+            // we add a factive event into the knowledge base.
+            // 
+            // M <- see(P, x)
+            // M <- since(P, see(P, x)) which entails both
+            // P and was(see(P, x))
+            // 
+            if (firstCall) {
+                return AddToKnowledgeBase(pSinceSawP, true);
+            } else {
                 return false;
             }
-
-            if (knowledge.Depth > MaxDepth) {
-                MaxDepth = knowledge.Depth;
-            }
-
-            if (knowledge.HeadedBy(SEE, INFORM)) {
-                var p = knowledge.GetArgAsExpression(0);
-                var pSinceSawP = new Expression(SINCE, p, knowledge);
-
-                // @Note: since(A, B) as a logical operator is typically
-                // made to be a conditional on was(B) to conclude A.
-                // 
-                // We're making it factive. It's ampliatively assumed
-                // we add a factive event into the knowledge base.
-                // 
-                // M <- see(P, x)
-                // M <- since(P, see(P, x)) which entails both
-                // P and was(see(P, x))
-                // 
-                if (firstCall  || !isValue) { // @Note delete right-hand side of disjunction if we query links by formula
-                    return AddToKnowledgeBase(pSinceSawP, true, isForward, isValue);
-                } else {
-                    return false;
-                }
-                
-                // AddBackwardLink(knowledge, pSinceSawP, isValue);
-            } else if (!isValue) {
-                // @Note we add each derived sentence to
-                // the base now, but remove this if we
-                // figure out to query the links by formula
-                KnowledgeBase.Add(knowledge);
-            }
-
-            if (firstCall) {
-                // we want to ensure a self-supporting premise isn't
-                // removed if other links to it are removed.
-                AddBackwardLink(knowledge, knowledge, isValue);
-            }
-
-            if (knowledge.HeadedBy(VERY, KNOW, MAKE)) {
-                var subclause = knowledge.GetArgAsExpression(0);
-                AddToKnowledgeBase(subclause, false, isForward, isValue);
-                AddBackwardLink(knowledge, subclause, isValue);
-            }
-
-            if (knowledge.HeadedBy(OMEGA)) {
-                var subclause = knowledge.GetArgAsExpression(1);
-                AddToKnowledgeBase(subclause, false, isForward, isValue);
-                AddBackwardLink(knowledge, subclause, isValue);
-            }
-            
-            if (knowledge.HeadedBy(AND)) {
-                var a = knowledge.GetArgAsExpression(0);
-                var b = knowledge.GetArgAsExpression(1);
-                
-                AddToKnowledgeBase(a, false, isForward, isValue);
-                AddToKnowledgeBase(b, false, isForward, isValue);
-
-                AddBackwardLink(knowledge, a, isValue);
-                AddBackwardLink(knowledge, b, isValue);
-            }
-
-            if (knowledge.HeadedBy(NOT)) {
-                var subclause = knowledge.GetArgAsExpression(0);
-                if (subclause.HeadedBy(OR)) {
-                    var notA = new Expression(NOT, subclause.GetArgAsExpression(0));
-                    var notB = new Expression(NOT, subclause.GetArgAsExpression(1));
-
-                    AddToKnowledgeBase(notA, false, isForward, isValue);
-                    AddToKnowledgeBase(notB, false, isForward, isValue);
-
-                    AddBackwardLink(knowledge, notA, isValue);
-                    AddBackwardLink(knowledge, notB, isValue);
-                }
-            }
-
-            if (knowledge.HeadedBy(IF, ABLE)) {
-                var consequent = knowledge.GetArgAsExpression(0);
-                AddBackwardLink(knowledge, consequent, isValue);
-            }
-
-            if (knowledge.HeadedBy(SINCE)) {
-                var topic = knowledge.GetArgAsExpression(0);
-                var anchor = new Expression(PAST, knowledge.GetArgAsExpression(1));
-
-                AddToKnowledgeBase(topic, false, isForward, isValue);
-                AddToKnowledgeBase(anchor, false, isForward, isValue);
-
-                AddBackwardLink(knowledge, topic, isValue);
-                AddBackwardLink(knowledge, anchor, isValue);
-            }
-
-
+        } else {
+            // @Note we add each derived sentence to
+            // the base now, but remove this if we
+            // figure out to query the links by formula
+            KnowledgeBase.Add(knowledge);
         }
 
-        if (knowledge.HeadedBy(OR)) {
+        if (firstCall) {
+            // we want to ensure a self-supporting premise isn't
+            // removed if other links to it are removed.
+            AddLink(knowledge, knowledge);
+        }
+
+        if (knowledge.HeadedBy(VERY, KNOW, MAKE)) {
+            var subclause = knowledge.GetArgAsExpression(0);
+            AddToKnowledgeBase(subclause, false);
+            AddLink(knowledge, subclause);
+        }
+
+        if (knowledge.HeadedBy(OMEGA)) {
+            var subclause = knowledge.GetArgAsExpression(1);
+            AddToKnowledgeBase(subclause, false);
+            AddLink(knowledge, subclause);
+        }
+        
+        if (knowledge.HeadedBy(AND)) {
             var a = knowledge.GetArgAsExpression(0);
             var b = knowledge.GetArgAsExpression(1);
+            
+            AddToKnowledgeBase(a, false);
+            AddToKnowledgeBase(b, false);
 
-            AddToKnowledgeBase(a, false, true, isValue);
-            AddToKnowledgeBase(b, false, true, isValue);
+            AddLink(knowledge, a);
+            AddLink(knowledge, b);
+        }
 
-            AddForwardLink(a, knowledge, isValue);
-            AddForwardLink(b, knowledge, isValue);
+        if (knowledge.HeadedBy(NOT)) {
+            var subclause = knowledge.GetArgAsExpression(0);
+            if (subclause.HeadedBy(OR)) {
+                var notA = new Expression(NOT, subclause.GetArgAsExpression(0));
+                var notB = new Expression(NOT, subclause.GetArgAsExpression(1));
+
+                AddToKnowledgeBase(notA, false);
+                AddToKnowledgeBase(notB, false);
+
+                AddLink(knowledge, notA);
+                AddLink(knowledge, notB);
+            }
+        }
+
+        if (knowledge.HeadedBy(IF, ABLE)) {
+            var consequent = knowledge.GetArgAsExpression(0);
+            AddLink(knowledge, consequent);
+        }
+
+        if (knowledge.HeadedBy(SINCE)) {
+            var topic = knowledge.GetArgAsExpression(0);
+            var anchor = new Expression(PAST, knowledge.GetArgAsExpression(1));
+
+            AddToKnowledgeBase(topic, false);
+            AddToKnowledgeBase(anchor, false);
+
+            AddLink(knowledge, topic);
+            AddLink(knowledge, anchor);
         }
 
         return true;
@@ -1166,8 +1112,8 @@ public class MentalState : MonoBehaviour {
 
     // we remove the chain of backward links
     // associated with the expression 'knowledge'
-    protected void RemoveLinks(Expression knowledge, bool forward) {
-        var links = forward ? ForwardLinks : BackwardLinks;
+    protected void RemoveLinks(Expression knowledge) {
+        var links = Links;
 
         // if there is an expression that contains knowledge,
         // remove knowledge as a link.
@@ -1198,8 +1144,7 @@ public class MentalState : MonoBehaviour {
 
     public bool RemoveFromKnowledgeBase(Expression knowledge) {
         if (KnowledgeBase.Remove(knowledge)) {
-            RemoveLinks(knowledge, forward: true);
-            RemoveLinks(knowledge, forward: false);
+            RemoveLinks(knowledge);
             return true;
         }
         return false;
@@ -1280,273 +1225,94 @@ public class MentalState : MonoBehaviour {
         return sum;
     }
 
-    // 
-    // gives us what e is worth in the current knowledge state.
-    // 
-    // based around the idea that the estimates for value flow
-    // from more specific conditions to less specific.
-    // 
-    // Propositions that are semantically stronger than others
-    // are closer to the true preference ordering of worlds.
-    // 
-    // However, if the value of a specific proposition is unknown,
-    // it can be estimated by the values of propositions it entails
-    // by making certain assumptions:
-    // - If the value of A & B is not known, but the value of A
-    //   and the value of B is, a 'close-world assumption' applies,
-    //   and the value of A and B are presumed to be independent of
-    //   one another.
-    // - If the values of A and B are independent, their values should
-    //   sum: if the value of them taken together is greater or less than
-    //   their sum, that means their values must not be independent.
-    //   Otherwise they should just stack together.
-    // - If the value of A is not explicitly known, and can't be otherwise
-    //   estimated, it is supposed to be value-neutral (have a value of 0).
-    // 
-    // In proof terms, if the value of A is not explicitly defined in M,
-    // but A |- Bi for some set of propositions Bi,
-    // then the value of A can be estimated by adding together all of the Bi.
-    // So on, recursively, for the values of Bi, until value is explicitly
-    // defined for one of them.
-    // 
-    public IEnumerator FindValueOf(Expression e, List<int> value, Container<bool> done) {
+    public IEnumerator EstimateValueFor(
+        Expression goal, List<Expression> goods,
+        List<Expression> estimates, Container<bool> done) {
+        // first, we get all the goods we can prove from
+        // our goal. These are in the running to approximate
+        // the value of the goal.
+        List<Expression> goodsFromGoal = new List<Expression>();
+        foreach (var good in goods) {
+            var goodFromGoalBases = new ProofBases();
+            var goodFromGoalDone  = new Container<bool>(false);
 
-        var queue = new Queue<Expression>();
-        queue.Enqueue(e);
+            StartCoroutine(StreamProofs(goodFromGoalBases, new Expression(IF, goal, good), goodFromGoalDone));
 
-        List<int> curValue = new List<int>{};
-
-        while (queue.Count > 0) {
-            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                yield return null;
-            }
-            var cur = queue.Dequeue();
-
-            var benefitBases = new ProofBases();
-            var benefitDone = new Container<bool>(false);
-
-            StartCoroutine(StreamProofs(benefitBases, new Expression(GOOD, cur), benefitDone));
-
-            while (!benefitDone.Item) {
+            while (!goodFromGoalDone.Item) {
                 yield return null;
             }
 
-            if (!benefitBases.IsEmpty()) {
-                curValue = Plus(curValue, benefitBases.MaxValue);
-            } else {
-                var costBases = new ProofBases();
-                var costDone = new Container<bool>(false);
+            if (!goodFromGoalBases.IsEmpty()) {
+                goodsFromGoal.Add(good);
+            }
+        }
 
-                StartCoroutine(StreamProofs(costBases, new Expression(GOOD, new Expression(NOT, cur)), costDone));
+        // now that we have the goods that are in the running,
+        // we compare them to each other. If A and B are goods
+        // and A |- B, then we throw away A. If neither entail
+        // the other, we keep both.
+        List<Expression> oldInfimums = new List<Expression>();
+        List<Expression> newInfimums = new List<Expression>();
+        foreach (var good in goodsFromGoal) {
+            bool isInfimumSoFar = true;
+            foreach (var oldInfimum in oldInfimums) {
+                if (!isInfimumSoFar) {
+                    newInfimums.Add(oldInfimum);
+                    continue;
+                }
+                // @note here, we assume that they are not equivalent.
+                // that should be handled at the insertion of a
+                // GOOD sentence since equivalent propositions
+                // can't be assigned different values.
 
-                while (!costDone.Item) {
+                // first, we check if our new good
+                // beats any of the old prospective infimums.
+                // If it does, then we remove the old infimum
+                // from the set of infimums.
+                var infFromGoodBases = new ProofBases();
+                var infFromGoodDone  = new Container<bool>(false);
+
+                StartCoroutine(StreamProofs(infFromGoodBases, new Expression(IF, good, oldInfimum), infFromGoodDone));
+
+                while (!infFromGoodDone.Item) {
                     yield return null;
                 }
 
-                if (!costBases.IsEmpty()) {
-                    // same as above, except we multiply by -1
-                    var val = new List<int>(costBases.MaxValue);
+                if (!infFromGoodBases.IsEmpty()) {
+                    continue;
+                }
 
-                    for (int i = 0; i < val.Count; i++) {
-                        val[i] *= -1;
-                    }
+                // we add the old infimum back in, since it was
+                // not supplanted this round.
+                newInfimums.Add(oldInfimum);
 
-                    curValue = Plus(curValue, val);
-                } else {
-                    // otherwise, we recur on all the
-                    // proximate forward entailments
-                    // and sum them
-                    // 
-                    // we'll also want to use FindMostSpecificConjunction
-                    // instead of the proximate entailments for 'and' chains
-                    //
-                    // we want each conjunct to be on the same proximity
-                    // level, independently of how the conjuncts are associated
-                    // 
-                    // similarly for any other entailments that are
-                    // associative, commutative, idempotent
-                    // 
-                    // or, in general, if two propositions are equivalent,
-                    // there needs to be a way of assigning the same value
-                    // to them. Some sort of reduction procedure.
-                    //
-                    
-                    // rules: here, we recur on the consequent of
-                    // each applicable inference rule and sum the results
+                // next we see if the old beats the good at issue.
+                // if it does, then we stop checking, as this
+                // good will not be used in our estimation.
+                var goodFromInfBases = new ProofBases();
+                var goodFromInfDone  = new Container<bool>(false);
 
-                    // very -
-                    if (cur.HeadedBy(VERY)) {
-                        queue.Enqueue(cur.GetArgAsExpression(0));
-                    }
-                    // factive -
-                    if (cur.HeadedBy(KNOW, SEE, RECALL, INFORM, MAKE)) {
-                        queue.Enqueue(cur.GetArgAsExpression(0));
-                        queue.Enqueue(new Expression(DF, cur));
-                    }
+                StartCoroutine(StreamProofs(goodFromInfBases, new Expression(IF, oldInfimum, good), goodFromInfDone));
 
-                    // 
-                    // NOTE: the and and or rules aren't exactly
-                    // right, because they won't take into account
-                    // the value of certain subconjunctions or
-                    // be able to provide value for certain
-                    // subdisjunctions.
-                    // 
-                    // For example A & (B & C) won't take (A & C)
-                    // into account at this stage (which it should)
-                    // 
-                    // nor will A v C take into account A v (B v C)
-                    // 
-                    // FindMostSpecificConjunction() provides an
-                    // efficient way to handle these cases, assuming
-                    // the conjunction is in a reduced, sorted form
-                    // 
-                    // Can the same be done for disjunction?
-                    // 
-                    // IDEA: include backward traversal for value
-                    // covering, too.
-                    // 
-                    // e.g. A & (B & C) to be covered by (A & B) and C.
-                    // Recur as normal on A and (B & C), but for A,
-                    // also check backward value links.
-                    // (or just recur on backward rules)
-                    // 
-                    // If any sentences have explicitly defined value
-                    // and entail A, then we just check if that sentence
-                    // is entailed by A & (B & C). If it is, this becomes
-                    // the best cover, and we then again recur backward
-                    // to see if there's a more specific cover.
-                    // 
+                while (!goodFromInfDone.Item) {
+                    yield return null;
+                }
 
-                    // and -
-                    if (cur.HeadedBy(AND)) {
-                        queue.Enqueue(cur.GetArgAsExpression(0));
-                        queue.Enqueue(cur.GetArgAsExpression(1));
-                    }
-
-                    // or +
-                    if (ValueForwardLinks.ContainsKey(cur)){
-                        foreach (var valueForwardLink in ValueForwardLinks[cur]) {
-                            queue.Enqueue(valueForwardLink);
-                        }
-                    }
+                if (!goodFromInfBases.IsEmpty()) {
+                    isInfimumSoFar = false;
                 }
             }
-        }
 
-        value.AddRange(curValue);
-        done.Item = true;
-        yield break;
-    }
-
-    // @Note accessibility for testing purposes
-    public IEnumerator FindMostSpecificConjunction(List<Expression> conjunction,  List<List<Expression>> result, Container<bool> done) {
-        var currentGeneration =
-            new List<KeyValuePair<int, List<Expression>>>{
-                new KeyValuePair<int, List<Expression>>(0, conjunction)};
-
-        while (currentGeneration.Count > 0) {
-            var nextGeneration = new List<KeyValuePair<int, List<Expression>>>();
-            foreach (var generation in currentGeneration) {
-                int lastRemovedIndex = generation.Key;
-                var subconjunction   = generation.Value;
-
-                // we have to generate all combinations of negations
-                // of each conjunct in the subconjunction.
-                var currentNegationList = new List<List<Expression>>{subconjunction};
-                var nextNegationList = new List<List<Expression>>();
-                for (int i = 0; i < subconjunction.Count; i++) {
-                    foreach (var cur in currentNegationList) {
-                        var subconjunct = cur[i];
-
-                        Expression negation;
-                        if (subconjunct.HeadedBy(NOT)) {
-                            negation = subconjunct.GetArgAsExpression(0);
-                        } else {
-                            negation = new Expression(NOT, subconjunct);
-                        }
-                        var neg = new List<Expression>(cur);
-                        neg[i] = negation;
-
-                        nextNegationList.Add(cur);
-                        nextNegationList.Add(neg);
-                    }
-                    currentNegationList = nextNegationList;
-                    nextNegationList = new List<List<Expression>>();
-                }
-
-                bool lockNextGen = false;
-                foreach (var subconjunctionNegation in currentNegationList) {
-                    bool isSubset = false;
-                    foreach (var res in result) {
-                        if (!subconjunctionNegation.Except(res).Any()) {
-                            isSubset = true;
-                            break;
-                        }
-                    }
-
-                    if (isSubset) {
-                        // we have a more specific conjunction in the result
-                        // already, so we want to stop searching for this
-                        // negation set altogether.
-                        break;
-                    } else {
-                        var subconjunctionNegationBases = new ProofBases();
-                        var subconjunctionNegationDone = new Container<bool>(false);                    
-
-                        StartCoroutine(StreamProofs(
-                            subconjunctionNegationBases,
-                            new Expression(GOOD, Conjunctify(subconjunctionNegation)),
-                            subconjunctionNegationDone));
-
-                        while (!subconjunctionNegationDone.Item) {
-                            yield return null;
-                        }
-
-                        if (!subconjunctionNegationBases.IsEmpty()) {
-                            result.Add(subconjunctionNegation);
-
-                            // remove from the next generation any potential
-                            // subconjunctions of this conjunction, if they
-                            // were already added.
-                            for (int i = 0; i < lastRemovedIndex; i++) {
-                                var removeOne = new List<Expression>(subconjunction);
-                                removeOne.RemoveAt(i);
-                                
-                                KeyValuePair<int, List<Expression>> toRemoveFromNextGeneration =
-                                    default(KeyValuePair<int, List<Expression>>);
-
-                                foreach (var info in nextGeneration) {
-                                    if (info.Value.SequenceEqual(removeOne)) {
-                                        toRemoveFromNextGeneration = info;
-                                        break;    
-                                    }
-                                }
-
-                                if (!toRemoveFromNextGeneration.Equals(default(KeyValuePair<int, List<Expression>>))) {
-                                    nextGeneration.Remove(toRemoveFromNextGeneration);
-                                }
-                            }
-                            // these alternatives are all mutually incompatible,
-                            // so if we found it, we break out of this loop.
-                            break;
-                        } else if (!lockNextGen) {
-                            for (int i = lastRemovedIndex; i < subconjunction.Count; i++) {
-                                var removeOne = new List<Expression>(subconjunction);
-                                removeOne.RemoveAt(i);
-                                if (removeOne.Count > 0) {
-                                    nextGeneration.Add(new KeyValuePair<int, List<Expression>>(i, removeOne));    
-                                }
-                            }
-                            lockNextGen = true;
-                        }
-                    }
-                }
+            if (isInfimumSoFar) {
+                newInfimums.Add(good);
             }
-            currentGeneration = nextGeneration;
+
+            oldInfimums = newInfimums;
+            newInfimums = new List<Expression>();
         }
 
+        estimates.AddRange(oldInfimums);
         done.Item = true;
-        yield break;
     }
 
     public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
@@ -1559,16 +1325,25 @@ public class MentalState : MonoBehaviour {
             yield return null;
         }
 
-        List<Expression> evaluativeBase = new List<Expression>();
+        var evaluativeBase = new Dictionary<Expression, List<int>>();
+        var goods = new List<Expression>();
         foreach (var goodProof in goodProofs) {
             var assignment = goodProof.Substitution[ST.Head as Variable];
-            evaluativeBase.Add(assignment);
+            goods.Add(assignment);
+            if (evaluativeBase.ContainsKey(assignment)) {
+                evaluativeBase[assignment] = MaxValue(goodProof.MaxValue, evaluativeBase[assignment]);
+            } else {
+                evaluativeBase.Add(assignment, goodProof.MaxValue);
+            }
         }
 
         List<int> bestTotalValue = new List<int>{0};
         List<Expression> bestPlan = new List<Expression>{new Expression(WILL, NEUTRAL)};
 
-        foreach (var good in evaluativeBase) {
+        foreach (var goodAndValueOfGood in evaluativeBase) {
+            var good = goodAndValueOfGood.Key;
+            var valueOfGood = goodAndValueOfGood.Value;
+
             var proofBases = new ProofBases();
             var proofDone = new Container<bool>(false);
             StartCoroutine(StreamProofs(proofBases, good, proofDone, Proof));
@@ -1607,19 +1382,19 @@ public class MentalState : MonoBehaviour {
                         }
                     }
 
-                    // we find the value of this plan
-                    // by finding the value of the conjunction
-                    // consisting of all the resolutions in the form
-                    // make(_, self). This includes consideration
-                    // (or appropriate disregarding) of
-                    // the goal's value, since it will be entailed
-                    // by one of the resolutions.
-                    var valueForThisPlan = new List<int>();
-                    var valueDone = new Container<bool>(false);
-                    StartCoroutine(FindValueOf(Conjunctify(benefitConjunction), valueForThisPlan, valueDone));
+                    var estimates = new List<Expression>();
+                    var estimationDone = new Container<bool>(false);
 
-                    while (!valueDone.Item) {
+                    StartCoroutine(EstimateValueFor(Conjunctify(benefitConjunction), goods, estimates, estimationDone));
+
+                    while (!estimationDone.Item) {
                         yield return null;
+                    }
+
+                    var valueForThisPlan = new List<int>();
+
+                    foreach (var estimate in estimates) {
+                        valueForThisPlan = Plus(valueForThisPlan, evaluativeBase[estimate]);
                     }
 
                     bestValueForThisGood = MaxValue(bestValueForThisGood, valueForThisPlan);

@@ -27,61 +27,58 @@ public class Testing : MonoBehaviour {
 
         var a = new Expression(new Name(TRUTH_VALUE, "A"));
         var b = new Expression(new Name(TRUTH_VALUE, "B"));
-        // var b = new Expression(new Name(TRUTH_VALUE), "B");
-        
-        var item1 = new Expression(new Name(INDIVIDUAL, "item1"));
-        var item2 = new Expression(new Name(INDIVIDUAL, "item2"));
+        var c = new Expression(new Name(TRUTH_VALUE, "C"));
 
+        var d = new Expression(new Name(TRUTH_VALUE, "D"));
+        var e = new Expression(new Name(TRUTH_VALUE, "E"));
+        var f = new Expression(new Name(TRUTH_VALUE, "F"));
+        var g = new Expression(new Name(TRUTH_VALUE, "G"));
+        
+        // var item1 = new Expression(new Name(INDIVIDUAL, "item1"));
+        // var item2 = new Expression(new Name(INDIVIDUAL, "item2"));
+        
+        // 
         MentalState.Initialize(new Expression[]{
-            new Expression(IDENTITY, item2, item1),
-            new Expression(GOOD, p),
-            new Expression(VERY, new Expression(GOOD, new Expression(NOT, q))),
-            new Expression(OMEGA, VERY, new Expression(GOOD, r)),
-            new Expression(VERY, new Expression(OMEGA, VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), new Expression(GOOD, r)))),
-            new Expression(VERY, new Expression(VERY, new Expression(VERY, new Expression(GOOD, new Expression(RED, SELF))))),
-            new Expression(VERY, new Expression(OMEGA, VERY, new Expression(GOOD, new Expression(OR, a, b)))),
-            new Expression(SEE, new Expression(RED, ALICE), SELF),
-            new Expression(SEE, new Expression(TREE, ALICE), SELF),
-            new Expression(IF, new Expression(BLUE, ALICE), new Expression(RED, ALICE)),
+            new Expression(IF, p, q),
+            new Expression(IF, q, r),
+            new Expression(IF, p, r),
+
+            new Expression(IF, a, c),
+            new Expression(IF, b, c),
+
+            new Expression(IF, d, e),
+            new Expression(IF, d, f),
+            new Expression(IF, e, g),
+            new Expression(IF, f, g),
         });
 
-        StartCoroutine(TestFindValueOf(MentalState, p));
-        StartCoroutine(TestFindValueOf(MentalState, q));
-        StartCoroutine(TestFindValueOf(MentalState, r));
-        StartCoroutine(TestFindValueOf(MentalState, new Expression(VERY, new Expression(RED, SELF))));
-        StartCoroutine(TestFindValueOf(MentalState, new Expression(OR, a, b)));
-        StartCoroutine(TestFindValueOf(MentalState, a));
-        StartCoroutine(TestFindValueOf(MentalState, b));
-        StartCoroutine(TestFindValueOf(MentalState, new Expression(AND, a, b)));
+        var goods = new List<Expression>{p, q, r, a, b, c, d, e, f, g};
 
-        // Log(MentalState.Reduce(item2));
-        // Log(MentalState.Reduce(new Expression(AT, ALICE, item2)));
-        // Log(MentalState.Reduce(
-        //     new Expression(NOT,
-        //         new Expression(NOT,
-        //             new Expression(NOT,
-        //                 new Expression(NOT,
-        //                     new Expression(TRULY,
-        //                         new Expression(TRULY, new Expression(GREEN, SELF)))))))));
-        // Log(MentalState.Reduce(
-        //     new Expression(NOT,
-        //         new Expression(NOT,
-        //             new Expression(NOT,
-        //                 new Expression(TRULY,
-        //                     new Expression(NOT,
-        //                         new Expression(TRULY, new Expression(GREEN, SELF)))))))));
+        StartCoroutine(TestEstimateValueFor(MentalState, goods, p));
+        StartCoroutine(TestEstimateValueFor(MentalState, goods, q));
+        StartCoroutine(TestEstimateValueFor(MentalState, goods, r));
+        StartCoroutine(TestEstimateValueFor(MentalState, goods, a));
+        StartCoroutine(TestEstimateValueFor(MentalState, goods, b));
+        StartCoroutine(TestEstimateValueFor(MentalState, goods, c));
+        StartCoroutine(TestEstimateValueFor(MentalState, goods, d));
+        StartCoroutine(TestEstimateValueFor(MentalState, goods, e));
+        StartCoroutine(TestEstimateValueFor(MentalState, goods, f));
 
-        // Log(MentalState.Reduce(
-        //     new Expression(NOT,
-        //         new Expression(NOT,
-        //             new Expression(NOT,
-        //                 new Expression(TRULY,
-        //                     new Expression(NOT,
-        //                         new Expression(NOT,
-        //                             new Expression(TRULY, new Expression(GREEN, SELF))))))))));
+        // MentalState.Initialize(new Expression[]{
+        //     new Expression(IDENTITY, item2, item1),
+        //     new Expression(GOOD, p),
+        //     new Expression(VERY, new Expression(GOOD, new Expression(NOT, q))),
+        //     new Expression(OMEGA, VERY, new Expression(GOOD, r)),
+        //     new Expression(VERY, new Expression(OMEGA, VERY, new Expression(OMEGA, new Expression(OMEGA, VERY), new Expression(GOOD, r)))),
+        //     new Expression(VERY, new Expression(VERY, new Expression(VERY, new Expression(GOOD, new Expression(RED, SELF))))),
+        //     new Expression(VERY, new Expression(OMEGA, VERY, new Expression(GOOD, new Expression(OR, a, b)))),
+        //     new Expression(SEE, new Expression(RED, ALICE), SELF),
+        //     new Expression(SEE, new Expression(TREE, ALICE), SELF),
+        //     new Expression(IF, new Expression(BLUE, ALICE), new Expression(RED, ALICE)),
+        // });
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, TREE, RED)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, ALICE)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, ALICE)));
     }
 
     public static void TestConvertToValue(Expression e) {
@@ -101,63 +98,23 @@ public class Testing : MonoBehaviour {
         m.StartCoroutine(m.ReceiveAssertion(content, speaker));
     }
 
-    public static IEnumerator TestFindMostSpecificConjunction(MentalState m, List<Expression> conjunction) {
-        var result = new List<List<Expression>>();
-        var done   = new Container<bool>(false);
-        m.StartCoroutine(m.FindMostSpecificConjunction(conjunction, result, done));
-
-        while (!done.Item) {
-            yield return null;
-        }
-
-        StringBuilder s = new StringBuilder();
-        foreach (var c in result) {
-            s.Append(MentalState.Conjunctify(c) + "\n");
-        }
-
-        Log(s.ToString());
-    }
-
-    public static IEnumerator TestFindValueOf(MentalState m, Expression e) {
-        var value = new List<int>();
+    public static IEnumerator TestEstimateValueFor(MentalState m, List<Expression> goods, Expression goal) {
+        var estimates = new List<Expression>();
         var done = new Container<bool>(false);
-        m.StartCoroutine(m.FindValueOf(e, value, done));
+        m.StartCoroutine(m.EstimateValueFor(goal, goods, estimates, done));
 
         while (!done.Item) {
             yield return null;
         }
 
-        StringBuilder s = new StringBuilder();
-
-        s.Append(e + " has a value of: ");
-        if (value == null) {
-            s.Append("undefined");
-        } else if (value.Count == 0) {
-            s.Append("0");
-        } else {
-            for (int i = value.Count - 1; i >= 1; i--) {
-                if (value[i] != 0) {
-                    if (value[i] < 0) {
-                        s.Append("-");
-                    }
-                    s.Append("w");
-                    if (i != 1) {
-                        s.Append("^" + i);
-                    }
-                    if (value[i] != 1) {
-                        s.Append(" * " + value[i]);
-                    }
-                    s.Append(" + ");
-                }
-            }
-            if (value[0] < 0) {
-                s.Append("-");
-            }
-            s.Append(value[0]);
+        var str = new StringBuilder();
+        str.Append("u(" + goal + ") is estimated by: {\n");
+        foreach (var estimate in estimates) {
+            str.Append("\t" + estimate + "\n");
         }
+        str.Append("}");
 
-
-        Debug.Log(s.ToString());
+        Log(str.ToString());
     }
 
     public static String Verbose(Expression e) {
