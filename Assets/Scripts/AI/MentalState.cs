@@ -1184,16 +1184,40 @@ public class MentalState : MonoBehaviour {
     }
 
     public static Expression Conjunctify(List<Expression> set) {
-        Expression conjunction = null;
-        for (int i = set.Count - 1; i >= 0; i--) {
-            var conjunct = set[i];
-            if (conjunction == null) {
-                conjunction = conjunct;
-            } else {
-                conjunction = new Expression(AND, conjunct, conjunction);
-            }
+        if (set.Count == 0) {
+            return null;
         }
-        return conjunction;
+
+        if (set.Count == 1) {
+            return set[0];
+        }
+
+        int low  = 0;
+        int high = set.Count;
+
+        int mid  = high / 2;
+
+        var left = set.GetRange(low, mid);
+        foreach (var i in left) {
+            Debug.Log(i);
+        }
+        
+        var right = set.GetRange(mid, high - mid);
+        foreach (var i in right) {
+            Debug.Log(i);
+        }
+
+        var leftConjunct  = Conjunctify(left);
+        var rightConjunct = Conjunctify(right);
+
+        if (leftConjunct == null) {
+            return rightConjunct;
+        }
+        if (rightConjunct == null) {
+            return leftConjunct;
+        }
+
+        return new Expression(AND, leftConjunct, rightConjunct);
     }
 
     public static List<int> Plus(List<int> a, List<int> b) {

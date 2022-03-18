@@ -38,31 +38,33 @@ public class Testing : MonoBehaviour {
         // var item2 = new Expression(new Name(INDIVIDUAL, "item2"));
         
         // 
-        MentalState.Initialize(new Expression[]{
-            new Expression(IF, p, q),
-            new Expression(IF, q, r),
-            new Expression(IF, p, r),
+        // MentalState.Initialize(new Expression[]{
+        //     new Expression(IF, p, q),
+        //     new Expression(IF, q, r),
+        //     new Expression(IF, p, r),
 
-            new Expression(IF, a, c),
-            new Expression(IF, b, c),
+        //     new Expression(IF, a, c),
+        //     new Expression(IF, b, c),
 
-            new Expression(IF, d, e),
-            new Expression(IF, d, f),
-            new Expression(IF, e, g),
-            new Expression(IF, f, g),
-        });
+        //     new Expression(IF, d, e),
+        //     new Expression(IF, d, f),
+        //     new Expression(IF, e, g),
+        //     new Expression(IF, f, g),
+        // });
 
-        var goods = new List<Expression>{p, q, r, a, b, c, d, e, f, g};
+        // var goods = new List<Expression>{p, q, r, a, b, c, d, e, f, g};
+        
+        Debug.Log(MentalState.Conjunctify(new List<Expression>{a, b, c, d, e, f, g, p, q, r}));
 
-        StartCoroutine(TestEstimateValueFor(MentalState, goods, p));
-        StartCoroutine(TestEstimateValueFor(MentalState, goods, q));
-        StartCoroutine(TestEstimateValueFor(MentalState, goods, r));
-        StartCoroutine(TestEstimateValueFor(MentalState, goods, a));
-        StartCoroutine(TestEstimateValueFor(MentalState, goods, b));
-        StartCoroutine(TestEstimateValueFor(MentalState, goods, c));
-        StartCoroutine(TestEstimateValueFor(MentalState, goods, d));
-        StartCoroutine(TestEstimateValueFor(MentalState, goods, e));
-        StartCoroutine(TestEstimateValueFor(MentalState, goods, f));
+        // StartCoroutine(TestEstimateValueFor(MentalState, goods, p));
+        // StartCoroutine(TestEstimateValueFor(MentalState, goods, q));
+        // StartCoroutine(TestEstimateValueFor(MentalState, goods, r));
+        // StartCoroutine(TestEstimateValueFor(MentalState, goods, a));
+        // StartCoroutine(TestEstimateValueFor(MentalState, goods, b));
+        // StartCoroutine(TestEstimateValueFor(MentalState, goods, c));
+        // StartCoroutine(TestEstimateValueFor(MentalState, goods, d));
+        // StartCoroutine(TestEstimateValueFor(MentalState, goods, e));
+        // StartCoroutine(TestEstimateValueFor(MentalState, goods, f));
 
         // MentalState.Initialize(new Expression[]{
         //     new Expression(IDENTITY, item2, item1),
