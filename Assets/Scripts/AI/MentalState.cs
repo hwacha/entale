@@ -636,6 +636,16 @@ public class MentalState : MonoBehaviour {
                             exhaustive = false;
                         }
 
+                        // M |- banana(x) => M |- fruit(x)
+                        // M |- tomato(x) => M |- fruit(x)
+                        if (currentLemma.HeadedBy(FRUIT) && current.Parity) {
+                            var tomatoX = new Expression(TOMATO, currentLemma.GetArgAsExpression(0));
+                            var bananaX = new Expression(BANANA, currentLemma.GetArgAsExpression(0));
+                            newStack.Push(new ProofNode(tomatoX, current.KnowledgeState, nextDepth, current, i, current.Parity));
+                            newStack.Push(new ProofNode(bananaX, current.KnowledgeState, nextDepth, current, i, current.Parity));
+                            exhaustive = false;
+                        }
+
                         // PREMISE-EXPANSIVE RULES
 
                         // here, we check against rules that
@@ -913,6 +923,36 @@ public class MentalState : MonoBehaviour {
                                 }
                             }
                             sendBasis.Substitution = trimmedSubstitution;
+                        }
+
+                        // trim antecedents of conditionals.
+                        if (merge.Lemma.HeadedBy(IF)) {
+                            var antecedent = merge.Lemma.GetArgAsExpression(1);
+                            var trimmedBases = new ProofBases();
+
+                            foreach (var sendBasis in sendBases) {
+                                bool proofHasAntecedent = false;
+                                var trimmedBasis = new ProofBasis();
+                                foreach (var premise in sendBasis.Premises) {
+                                    if (premise.Equals(antecedent)) {
+                                        proofHasAntecedent = true;
+                                    } else {
+                                        trimmedBasis.AddPremise(premise);
+                                    }
+                                }
+                                if (proofHasAntecedent) {
+                                    trimmedBases.Add(trimmedBasis);
+                                }
+                            }
+                            
+                            if (!sendBases.IsEmpty()) {
+                                sendBases = trimmedBases;
+                                if (merge.Parent == null && merge.OlderSibling == null) {
+                                    // Debug.Log(merge.ChildBases + " -> " + sendBases);
+                                    merge.ChildBases.Clear();
+                                    merge.ChildBases.Add(sendBases);
+                                }
+                            }
                         }
 
                         // this is the fully assigned formula,
@@ -1473,3 +1513,4 @@ public class MentalState : MonoBehaviour {
         yield break;
     }
 }
+;
