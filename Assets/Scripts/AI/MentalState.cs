@@ -44,8 +44,25 @@ public class MentalState : MonoBehaviour {
     protected int ParameterID;
     public int Timestamp = 0; // public for testing purposes
 
-    private SortedSet<Expression> KnowledgeBase;
-    private Dictionary<Expression, HashSet<Expression>> Links;
+    public class KnowledgeState {
+        public SortedSet<Expression> Basis;
+        public Dictionary<Expression, HashSet<Expression>> Links;
+
+        public KnowledgeState(SortedSet<Expression> basis, Dictionary<Expression, HashSet<Expression>> links, bool copy = true) {
+            if (copy) {
+                Basis = new SortedSet<Expression>(basis);
+                Links = new Dictionary<Expression, HashSet<Expression>>();
+                foreach (var keyAndValue in Links) {
+                    Links.Add(keyAndValue.Key, new HashSet<Expression>(keyAndValue.Value));
+                }
+            } else {
+                Basis = basis;
+                Links = links;
+            }
+        }
+    }
+
+    private KnowledgeState KS;
 
     // @Note we may want to replace this with another 'private symbol' scheme like
     // the parameters, but for now, spatial/time points/intervals aren't represented
@@ -72,14 +89,13 @@ public class MentalState : MonoBehaviour {
         Timestamp = 0;
         Locations = new Dictionary<Expression, Vector3>();
 
-        if (KnowledgeBase != null) {
+        if (KS != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
-        KnowledgeBase = new SortedSet<Expression>();
-        Links = new Dictionary<Expression, HashSet<Expression>>();
+        KS = new KnowledgeState(new SortedSet<Expression>(), new Dictionary<Expression, HashSet<Expression>>(), false);
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
-            AddToKnowledgeBase(initialKnowledge[i]);
+            AddToKnowledgeState(KS, initialKnowledge[i]);
         }
 
     }
@@ -89,11 +105,11 @@ public class MentalState : MonoBehaviour {
         var bot = new Expression(iAmSeeing, new Expression(new Bottom(TRUTH_VALUE)));
         var top = new Expression(iAmSeeing, new Expression(new Top(TRUTH_VALUE)));
         
-        var range = KnowledgeBase.GetViewBetween(bot, top);
+        var range = KS.Basis.GetViewBetween(bot, top);
 
         foreach (var percept in range) {
-            RemoveFromKnowledgeBase(percept);
-            AddToKnowledgeBase(new Expression(PAST, percept));
+            RemoveFromKnowledgeState(KS, percept);
+            AddToKnowledgeState(KS, new Expression(PAST, percept));
         }
     }
 
@@ -129,7 +145,7 @@ public class MentalState : MonoBehaviour {
             var idUpperBound = new Expression(IDENTITY, e, new Expression(new Top(INDIVIDUAL)));
             // we assume identity stores the
             // lesser argument to the left
-            var lesserIdentities = KnowledgeBase.GetViewBetween(idLowerBound, idUpperBound);
+            var lesserIdentities = KS.Basis.GetViewBetween(idLowerBound, idUpperBound);
 
             Expression leastIdentical = e;
             foreach (var lesserIdentity in lesserIdentities) {
@@ -263,6 +279,7 @@ public class MentalState : MonoBehaviour {
     private class ProofNode {
         #region Parameters
         public readonly Expression Lemma;
+        public readonly KnowledgeState KnowledgeState;
         public readonly uint Depth;
         public readonly ProofNode Parent;
         public readonly int MeetBasisIndex;
@@ -279,7 +296,9 @@ public class MentalState : MonoBehaviour {
         public bool IsLastChild;
         #endregion
 
-        public ProofNode(Expression lemma, uint depth, ProofNode parent,
+        public ProofNode(Expression lemma,
+            KnowledgeState knowledgeState,
+            uint depth, ProofNode parent,
             int meetBasisIndex, bool parity,
             ProofNode olderSibling = null,
             Expression supplement = null,
@@ -287,6 +306,7 @@ public class MentalState : MonoBehaviour {
             bool isAssumption = false,
             Tense tense = Tense.Present) {
             Lemma = lemma;
+            KnowledgeState = knowledgeState;
             Depth = depth;
             Parent = parent;
             MeetBasisIndex = meetBasisIndex;
@@ -315,8 +335,6 @@ public class MentalState : MonoBehaviour {
         Container<bool> done, ProofType pt = Proof) {
         // we can only prove sentences.
         Debug.Assert(conclusion.Type.Equals(TRUTH_VALUE));
-
-        Debug.Log(conclusion);
         // we're going to do a depth-first search
         // with successively higher bounds on the
         // depth allowed.
@@ -341,7 +359,7 @@ public class MentalState : MonoBehaviour {
 
             // we set up our stack for DFS
             // with the intended
-            var root = new ProofNode(conclusion, 0, null, 0, true);
+            var root = new ProofNode(conclusion, KS, 0, null, 0, true);
             root.ChildBases = bases;
             root.IsLastChild = true;
             var stack = new Stack<ProofNode>();
@@ -369,8 +387,6 @@ public class MentalState : MonoBehaviour {
                     var youngerSiblingBasis = current.YoungerSiblingBases[i];
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
-
-                    // Debug.Log(currentLemma);
 
                     // the bases we get from directly
                     // querying the knowledge base.
@@ -405,7 +421,7 @@ public class MentalState : MonoBehaviour {
                         bottom = currentLemma.Substitute(bottomSubstitution);
                         top    = currentLemma.Substitute(topSubstitution);
 
-                        var range = KnowledgeBase.GetViewBetween(bottom, top);
+                        var range = current.KnowledgeState.Basis.GetViewBetween(bottom, top);
 
                         foreach (var e in range) {
                             bool sampleParity = !e.HeadedBy(NOT);
@@ -421,7 +437,7 @@ public class MentalState : MonoBehaviour {
                     // if there are no variables
                     // in the current expression, then simply
                     // see if the knowledge base contains the expression.
-                    } else if (KnowledgeBase.Contains(currentLemma)) {
+                    } else if (current.KnowledgeState.Basis.Contains(currentLemma)) {
                         searchBases.Add(new ProofBasis(new List<Expression>{currentLemma}, new Substitution()));
                     // these are some base cases that we run programatically.
                     } else {
@@ -514,7 +530,7 @@ public class MentalState : MonoBehaviour {
                         if (currentLemma.HeadedBy(TRULY)) {
                             var subclause = currentLemma.GetArgAsExpression(0);
                             newStack.Push(new ProofNode(
-                                subclause,
+                                subclause, current.KnowledgeState,
                                 nextDepth,
                                 current,
                                 i,
@@ -527,13 +543,13 @@ public class MentalState : MonoBehaviour {
                             var subclause = currentLemma.GetArgAsExpression(0);
                             // nonidentity assumption
                             if (subclause.HeadedBy(IDENTITY)) {
-                                newStack.Push(new ProofNode(subclause,
+                                newStack.Push(new ProofNode(subclause, current.KnowledgeState,
                                     nextDepth, current, i, current.Parity,
                                     isAssumption: true));
                                 exhaustive = false;
                             } else {
                                 newStack.Push(new ProofNode(
-                                    subclause, nextDepth, current, i, !current.Parity));
+                                    subclause, current.KnowledgeState, nextDepth, current, i, !current.Parity));
                                 exhaustive = false;
                             }
                         }
@@ -541,14 +557,14 @@ public class MentalState : MonoBehaviour {
                         // contraposed very +
                         if (currentLemma.HeadedBy(VERY) && !current.Parity) {
                             var subclause = currentLemma.GetArgAsExpression(0);
-                            newStack.Push(new ProofNode(subclause, nextDepth, current, i, current.Parity));
+                            newStack.Push(new ProofNode(subclause, current.KnowledgeState, nextDepth, current, i, current.Parity));
                             exhaustive = false;
                         }
 
                         // M |- A => M |- past(A)
                         if (currentLemma.HeadedBy(PAST) && current.Parity) {
                             var subclause = currentLemma.GetArgAsExpression(0);
-                            newStack.Push(new ProofNode(subclause, nextDepth, current, i, current.Parity));
+                            newStack.Push(new ProofNode(subclause, current.KnowledgeState, nextDepth, current, i, current.Parity));
                             exhaustive = false;
                         }
 
@@ -557,8 +573,8 @@ public class MentalState : MonoBehaviour {
                             currentLemma.HeadedBy(AND) && !current.Parity) {
                             var a = currentLemma.GetArgAsExpression(0);
                             var b = currentLemma.GetArgAsExpression(1);
-                            newStack.Push(new ProofNode(a, nextDepth, current, i, current.Parity));
-                            newStack.Push(new ProofNode(b, nextDepth, current, i, current.Parity));
+                            newStack.Push(new ProofNode(a,  current.KnowledgeState,nextDepth, current, i, current.Parity));
+                            newStack.Push(new ProofNode(b,  current.KnowledgeState,nextDepth, current, i, current.Parity));
                             exhaustive = false;
                         }
 
@@ -568,9 +584,9 @@ public class MentalState : MonoBehaviour {
                             var a = currentLemma.GetArgAsExpression(0);
                             var b = currentLemma.GetArgAsExpression(1);
 
-                            var bNode = new ProofNode(b, nextDepth, current, i, current.Parity,
+                            var bNode = new ProofNode(b,  current.KnowledgeState,nextDepth, current, i, current.Parity,
                                 hasYoungerSibling: true);
-                            var aNode = new ProofNode(a, nextDepth, current, i, current.Parity, bNode);
+                            var aNode = new ProofNode(a,  current.KnowledgeState,nextDepth, current, i, current.Parity, bNode);
 
                             newStack.Push(aNode);
                             newStack.Push(bNode);
@@ -587,12 +603,44 @@ public class MentalState : MonoBehaviour {
                             var fx = new Expression(f, x);
                             var gx = new Expression(g, x);
 
-                            var gxNode = new ProofNode(gx, nextDepth, current, i, current.Parity,
+                            var gxNode = new ProofNode(gx, current.KnowledgeState, nextDepth, current, i, current.Parity,
                                 hasYoungerSibling: true);
-                            var fxNode = new ProofNode(fx, nextDepth, current, i, current.Parity, gxNode);
+                            var fxNode = new ProofNode(fx, current.KnowledgeState, nextDepth, current, i, current.Parity, gxNode);
 
                             newStack.Push(fxNode);
                             newStack.Push(gxNode);
+                            exhaustive = false;
+                        }
+
+                        // conditional proof
+                        // 
+                        // NOTE: this is getting the right result but
+                        // the basis returned has the antecedent of the
+                        // conditional, not the conditional itself.
+                        // 
+                        // M, A |- B => M |- A -> B
+                        if (currentLemma.HeadedBy(IF) && current.Parity) {
+                            // @Note this is not a typo ---
+                            // antecedent is the second argument of the conditional
+                            var consequent = currentLemma.GetArgAsExpression(0);
+                            var antecedent = currentLemma.GetArgAsExpression(1);
+
+                            var newKnowledgeState = new KnowledgeState(current.KnowledgeState.Basis, current.KnowledgeState.Links);
+                            AddToKnowledgeState(newKnowledgeState, antecedent);
+
+                            var consequentNode = new ProofNode(consequent, newKnowledgeState, nextDepth, current, i, current.Parity);
+
+                            newStack.Push(consequentNode);
+                            exhaustive = false;
+                        }
+
+                        // M |- banana(x) => M |- fruit(x)
+                        // M |- tomato(x) => M |- fruit(x)
+                        if (currentLemma.HeadedBy(FRUIT) && current.Parity) {
+                            var tomatoX = new Expression(TOMATO, currentLemma.GetArgAsExpression(0));
+                            var bananaX = new Expression(BANANA, currentLemma.GetArgAsExpression(0));
+                            newStack.Push(new ProofNode(tomatoX, current.KnowledgeState, nextDepth, current, i, current.Parity));
+                            newStack.Push(new ProofNode(bananaX, current.KnowledgeState, nextDepth, current, i, current.Parity));
                             exhaustive = false;
                         }
 
@@ -606,11 +654,11 @@ public class MentalState : MonoBehaviour {
                         HashSet<Expression> backwardLinks = null;
 
                         if (current.Parity) {
-                            if (Links.ContainsKey(currentLemma)) {
-                                backwardLinks = Links[currentLemma];
+                            if (current.KnowledgeState.Links.ContainsKey(currentLemma)) {
+                                backwardLinks = current.KnowledgeState.Links[currentLemma];
                             }
-                        } else if (Links.ContainsKey(new Expression(NOT, currentLemma))) {
-                            backwardLinks = Links[new Expression(NOT, currentLemma)];
+                        } else if (current.KnowledgeState.Links.ContainsKey(new Expression(NOT, currentLemma))) {
+                            backwardLinks = current.KnowledgeState.Links[new Expression(NOT, currentLemma)];
                         }
 
                         if (backwardLinks != null) {
@@ -623,7 +671,7 @@ public class MentalState : MonoBehaviour {
                                 // M |- factive(P) => M |- P
                                 // factive - (1)
                                 if (backwardLink.HeadedBy(KNOW, SEE, MAKE, VERY, AND, SINCE)) {
-                                    var factiveNode = new ProofNode(backwardLink, nextDepth, current, i, true);
+                                    var factiveNode = new ProofNode(backwardLink, current.KnowledgeState, nextDepth, current, i, true);
                                     newStack.Push(factiveNode);
                                     exhaustive = false;
                                 }
@@ -631,9 +679,9 @@ public class MentalState : MonoBehaviour {
                                 // M |- B if A, M |- A => M |- B
                                 if (backwardLink.HeadedBy(IF)) {
                                     var antecedent = backwardLink.GetArgAsExpression(1);
-                                    var antecedentNode = new ProofNode(antecedent, nextDepth, current, i, true,
+                                    var antecedentNode = new ProofNode(antecedent, current.KnowledgeState, nextDepth, current, i, true,
                                         hasYoungerSibling: true);
-                                    var conditionalNode = new ProofNode(backwardLink, nextDepth, current, i, true,
+                                    var conditionalNode = new ProofNode(backwardLink, current.KnowledgeState, nextDepth, current, i, true,
                                         antecedentNode);
 
                                     newStack.Push(conditionalNode);
@@ -646,7 +694,7 @@ public class MentalState : MonoBehaviour {
                                     backwardLink.GetArgAsExpression(1).Equals(SELF) &&
                                     pt == ProofType.Plan) {
                                     var will = new Expression(WILL, backwardLink.GetArgAsExpression(0));
-                                    var ableNode = new ProofNode(backwardLink, nextDepth, current, i, true,
+                                    var ableNode = new ProofNode(backwardLink, current.KnowledgeState, nextDepth, current, i, true,
                                         supplement: will);
 
                                     newStack.Push(ableNode);
@@ -673,10 +721,10 @@ public class MentalState : MonoBehaviour {
                                 verylessContent = verylessContent.GetArgAsExpression(0);
                             }
 
-                            if (Links.ContainsKey(verylessContent)) {
-                                foreach (var backwardLink in Links[verylessContent]) {
+                            if (current.KnowledgeState.Links.ContainsKey(verylessContent)) {
+                                foreach (var backwardLink in current.KnowledgeState.Links[verylessContent]) {
                                     if (backwardLink.HeadedBy(OMEGA)) {
-                                        var omegaNode = new ProofNode(backwardLink, nextDepth, current, i, true);
+                                        var omegaNode = new ProofNode(backwardLink, current.KnowledgeState, nextDepth, current, i, true);
                                         newStack.Push(omegaNode);
                                         exhaustive = false;
                                     }
@@ -694,9 +742,9 @@ public class MentalState : MonoBehaviour {
 
                                 var powerPlusOne = new Expression(OMEGA, power);
 
-                                if (Links.ContainsKey(omegalessContent)) {
-                                    if (Links.ContainsKey(omegalessContent)) {
-                                        foreach (var backwardLink in Links[omegalessContent]) {
+                                if (current.KnowledgeState.Links.ContainsKey(omegalessContent)) {
+                                    if (current.KnowledgeState.Links.ContainsKey(omegalessContent)) {
+                                        foreach (var backwardLink in current.KnowledgeState.Links[omegalessContent]) {
                                             var powerCounter = power;
                                             var linkPowerCounter = backwardLink;
                                             bool linkSupercedes = false;
@@ -710,7 +758,7 @@ public class MentalState : MonoBehaviour {
                                             }
                                             // TODO 7/19
                                             if (linkSupercedes) {
-                                                var powerPlusOneNode = new ProofNode(backwardLink, nextDepth, current, i, true);
+                                                var powerPlusOneNode = new ProofNode(backwardLink, current.KnowledgeState, nextDepth, current, i, true);
                                                 newStack.Push(powerPlusOneNode);
                                                 exhaustive = false;
                                             }
@@ -724,11 +772,19 @@ public class MentalState : MonoBehaviour {
 
                         // END PREMISE-EXPANSIVE RULES
 
+                        
                         // M |- P => M |- know(P, self)
+                        // 
+                        // @Note: we only check the above rule
+                        // if we're proving something unconditionally.
+                        // 
                         // M |/- P => not(know(P, self))
-                        if (currentLemma.HeadedBy(KNOW) && currentLemma.GetArgAsExpression(1).Equals(SELF)) {
+                        if (currentLemma.HeadedBy(KNOW) &&
+                            currentLemma.GetArgAsExpression(1).Equals(SELF) &&
+                            (current.KnowledgeState == KS || !current.Parity)) {
                             newStack.Push(new ProofNode(
                                 currentLemma.GetArgAsExpression(0),
+                                current.KnowledgeState,
                                 nextDepth, current, i, true,
                                 isAssumption: !current.Parity));
                             exhaustive = false;
@@ -753,11 +809,11 @@ public class MentalState : MonoBehaviour {
                             
                             var f1xFormula = new Expression(new Expression(f1), f2xBinding[x1]);
                             
-                            var f1xNode = new ProofNode(f1xFormula,
+                            var f1xNode = new ProofNode(f1xFormula, current.KnowledgeState,
                                     nextDepth, current, i, current.Parity,
                                     hasYoungerSibling: true);
 
-                            var allNode = new ProofNode(allF1F2,
+                            var allNode = new ProofNode(allF1F2, current.KnowledgeState,
                                 nextDepth, current, i, current.Parity, f1xNode);
 
                             // newStack.Push(allNode);
@@ -782,7 +838,7 @@ public class MentalState : MonoBehaviour {
                                     tfxBinding[x1]);
 
                             // newStack.Push(new ProofNode(
-                            //     geachedTfx, nextDepth, current, i, current.Parity));
+                            //   geachedTfx, current.KnowledgeState, nextDepth, current, i, current.Parity));
 
                             exhaustive = false;
                         }
@@ -809,7 +865,7 @@ public class MentalState : MonoBehaviour {
                                     tf1tf2tBinding[t1]);
 
                             // newStack.Push(new ProofNode(
-                            //     geachedTf1tf2t,
+                            //     geachedTf1tf2t, current.KnowledgeState,
                             //     nextDepth, current, i, current.Parity));
 
                             exhaustive = false;
@@ -872,6 +928,36 @@ public class MentalState : MonoBehaviour {
                                 }
                             }
                             sendBasis.Substitution = trimmedSubstitution;
+                        }
+
+                        // trim antecedents of conditionals.
+                        if (merge.Lemma.HeadedBy(IF)) {
+                            var antecedent = merge.Lemma.GetArgAsExpression(1);
+                            var trimmedBases = new ProofBases();
+
+                            foreach (var sendBasis in sendBases) {
+                                bool proofHasAntecedent = false;
+                                var trimmedBasis = new ProofBasis(new List<Expression>(), new Substitution(sendBasis.Substitution));
+                                foreach (var premise in sendBasis.Premises) {
+                                    if (premise.Equals(antecedent)) {
+                                        proofHasAntecedent = true;
+                                    } else {
+                                        trimmedBasis.AddPremise(premise);
+                                    }
+                                }
+                                if (proofHasAntecedent) {
+                                    trimmedBases.Add(trimmedBasis);
+                                }
+                            }
+                            
+                            if (!sendBases.IsEmpty()) {
+                                sendBases = trimmedBases;
+                                if (merge.Parent == null && merge.OlderSibling == null) {
+                                    // Debug.Log(merge.ChildBases + " -> " + sendBases);
+                                    merge.ChildBases.Clear();
+                                    merge.ChildBases.Add(sendBases);
+                                }
+                            }
                         }
 
                         // this is the fully assigned formula,
@@ -946,6 +1032,10 @@ public class MentalState : MonoBehaviour {
                             sendBases = productBases;
                         }
 
+                        if (merge.Parent == null && merge.OlderSibling == null) {
+                            merge.ChildBases.Add(productBases);
+                        }
+
                         meetBasisIndex = merge.MeetBasisIndex;
 
                         merge = merge.Parent;
@@ -996,25 +1086,25 @@ public class MentalState : MonoBehaviour {
         // 
         // At least until time/events are figured out better.
         // 
-        RemoveFromKnowledgeBase(new Expression(PAST, percept));
+        RemoveFromKnowledgeState(KS, new Expression(PAST, percept));
         
-        AddToKnowledgeBase(percept);
+        AddToKnowledgeState(KS, percept);
 
         return param;
     }
 
-    private void AddLink(Expression premise, Expression conclusion) {
-        if (Links.ContainsKey(conclusion)) {
-            Links[conclusion].Add(premise);
+    private void AddLink(KnowledgeState knowledgeState, Expression premise, Expression conclusion) {
+        if (knowledgeState.Links.ContainsKey(conclusion)) {
+            knowledgeState.Links[conclusion].Add(premise);
         } else {
-            Links.Add(conclusion, new HashSet<Expression>{premise});
+            knowledgeState.Links.Add(conclusion, new HashSet<Expression>{premise});
         }
     }
 
-    public bool AddToKnowledgeBase(Expression knowledge, bool firstCall = true) {
+    public bool AddToKnowledgeState(KnowledgeState knowledgeState, Expression knowledge, bool firstCall = true) {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
 
-        if (KnowledgeBase.Contains(knowledge)) {
+        if (knowledgeState.Basis.Contains(knowledge)) {
             return false;
         }
 
@@ -1037,7 +1127,7 @@ public class MentalState : MonoBehaviour {
             // P and was(see(P, x))
             // 
             if (firstCall) {
-                return AddToKnowledgeBase(pSinceSawP, true);
+                return AddToKnowledgeState(knowledgeState, pSinceSawP, true);
             } else {
                 return false;
             }
@@ -1045,36 +1135,36 @@ public class MentalState : MonoBehaviour {
             // @Note we add each derived sentence to
             // the base now, but remove this if we
             // figure out to query the links by formula
-            KnowledgeBase.Add(knowledge);
+            knowledgeState.Basis.Add(knowledge);
         }
 
         if (firstCall) {
             // we want to ensure a self-supporting premise isn't
             // removed if other links to it are removed.
-            AddLink(knowledge, knowledge);
+            AddLink(knowledgeState, knowledge, knowledge);
         }
 
         if (knowledge.HeadedBy(VERY, KNOW, MAKE)) {
             var subclause = knowledge.GetArgAsExpression(0);
-            AddToKnowledgeBase(subclause, false);
-            AddLink(knowledge, subclause);
+            AddToKnowledgeState(knowledgeState, subclause, false);
+            AddLink(knowledgeState, knowledge, subclause);
         }
 
         if (knowledge.HeadedBy(OMEGA)) {
             var subclause = knowledge.GetArgAsExpression(1);
-            AddToKnowledgeBase(subclause, false);
-            AddLink(knowledge, subclause);
+            AddToKnowledgeState(knowledgeState, subclause, false);
+            AddLink(knowledgeState, knowledge, subclause);
         }
         
         if (knowledge.HeadedBy(AND)) {
             var a = knowledge.GetArgAsExpression(0);
             var b = knowledge.GetArgAsExpression(1);
             
-            AddToKnowledgeBase(a, false);
-            AddToKnowledgeBase(b, false);
+            AddToKnowledgeState(knowledgeState, a, false);
+            AddToKnowledgeState(knowledgeState, b, false);
 
-            AddLink(knowledge, a);
-            AddLink(knowledge, b);
+            AddLink(knowledgeState, knowledge, a);
+            AddLink(knowledgeState, knowledge, b);
         }
 
         if (knowledge.HeadedBy(NOT)) {
@@ -1083,28 +1173,28 @@ public class MentalState : MonoBehaviour {
                 var notA = new Expression(NOT, subclause.GetArgAsExpression(0));
                 var notB = new Expression(NOT, subclause.GetArgAsExpression(1));
 
-                AddToKnowledgeBase(notA, false);
-                AddToKnowledgeBase(notB, false);
+                AddToKnowledgeState(knowledgeState, notA, false);
+                AddToKnowledgeState(knowledgeState, notB, false);
 
-                AddLink(knowledge, notA);
-                AddLink(knowledge, notB);
+                AddLink(knowledgeState, knowledge, notA);
+                AddLink(knowledgeState, knowledge, notB);
             }
         }
 
         if (knowledge.HeadedBy(IF, ABLE)) {
             var consequent = knowledge.GetArgAsExpression(0);
-            AddLink(knowledge, consequent);
+            AddLink(knowledgeState, knowledge, consequent);
         }
 
         if (knowledge.HeadedBy(SINCE)) {
             var topic = knowledge.GetArgAsExpression(0);
             var anchor = new Expression(PAST, knowledge.GetArgAsExpression(1));
 
-            AddToKnowledgeBase(topic, false);
-            AddToKnowledgeBase(anchor, false);
+            AddToKnowledgeState(knowledgeState, topic, false);
+            AddToKnowledgeState(knowledgeState, anchor, false);
 
-            AddLink(knowledge, topic);
-            AddLink(knowledge, anchor);
+            AddLink(knowledgeState, knowledge, topic);
+            AddLink(knowledgeState, knowledge, anchor);
         }
 
         return true;
@@ -1112,8 +1202,8 @@ public class MentalState : MonoBehaviour {
 
     // we remove the chain of backward links
     // associated with the expression 'knowledge'
-    protected void RemoveLinks(Expression knowledge) {
-        var links = Links;
+    protected void RemoveLinks(KnowledgeState knowledgeState, Expression knowledge) {
+        var links = knowledgeState.Links;
 
         // if there is an expression that contains knowledge,
         // remove knowledge as a link.
@@ -1132,19 +1222,19 @@ public class MentalState : MonoBehaviour {
             // if this is an intermediate link, then remove
             // all of what it links as well.
             
-            RemoveFromKnowledgeBase(remove);
+            RemoveFromKnowledgeState(knowledgeState, remove);
             // @Note remove above and uncomment below
             // once we can query links by formula
 
-            // if (!KnowledgeBase.Contains(remove)) {
+            // if (!KS.Basis.Contains(remove)) {
             //     RemoveLinks(remove, forward);
             // }
         }
     }
 
-    public bool RemoveFromKnowledgeBase(Expression knowledge) {
-        if (KnowledgeBase.Remove(knowledge)) {
-            RemoveLinks(knowledge);
+    public bool RemoveFromKnowledgeState(KnowledgeState knowledgeState, Expression knowledge) {
+        if (knowledgeState.Basis.Remove(knowledge)) {
+            RemoveLinks(knowledgeState, knowledge);
             return true;
         }
         return false;
@@ -1168,7 +1258,7 @@ public class MentalState : MonoBehaviour {
             yield break;
         }
 
-        AddToKnowledgeBase(new Expression(INFORM, content, SELF, speaker));
+        AddToKnowledgeState(KS, new Expression(INFORM, content, SELF, speaker));
         yield break;
     }
 
@@ -1180,7 +1270,7 @@ public class MentalState : MonoBehaviour {
         // Right now, we literally have this as S knows that p is good,
         // but this feels somehow not aesthetically pleasing to me. I'll
         // try it out for now.
-        return AddToKnowledgeBase(new Expression(KNOW, new Expression(GOOD, content), speaker));
+        return AddToKnowledgeState(KS, new Expression(KNOW, new Expression(GOOD, content), speaker));
     }
 
     public static Expression Conjunctify(List<Expression> set) {
@@ -1198,14 +1288,8 @@ public class MentalState : MonoBehaviour {
         int mid  = high / 2;
 
         var left = set.GetRange(low, mid);
-        foreach (var i in left) {
-            Debug.Log(i);
-        }
         
         var right = set.GetRange(mid, high - mid);
-        foreach (var i in right) {
-            Debug.Log(i);
-        }
 
         var leftConjunct  = Conjunctify(left);
         var rightConjunct = Conjunctify(right);
@@ -1438,3 +1522,4 @@ public class MentalState : MonoBehaviour {
         yield break;
     }
 }
+;

@@ -998,6 +998,7 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression TREE   = new Expression(new Name(PREDICATE, "tree"));
     public static readonly Expression TOMATO = new Expression(new Name(PREDICATE, "tomato"));
     public static readonly Expression BANANA = new Expression(new Name(PREDICATE, "banana"));
+    public static readonly Expression FRUIT  = new Expression(new Name(PREDICATE, "fruit"));
     public static readonly Expression PEPPER = new Expression(new Name(PREDICATE, "pepper"));
     public static readonly Expression ROUND  = new Expression(new Name(PREDICATE, "round"));
 
