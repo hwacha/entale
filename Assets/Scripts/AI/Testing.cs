@@ -27,76 +27,37 @@ public class Testing : MonoBehaviour {
         });
 
         StartCoroutine(LogBasesStream(MentalState, new Expression(RED, ALICE)));
-
-        StartCoroutine(LogBasesStream(MentalState, new Expression(OR, new Expression(RED, ALICE), new Expression(BLUE, ALICE))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(OR, new Expression(BLUE, ALICE), new Expression(RED, ALICE))));
-
-        // should be provable as a matter of logic
         StartCoroutine(LogBasesStream(MentalState,
-            new Expression(IF,
-                new Expression(new Name(TRUTH_VALUE, "A")),
-                new Expression(new Name(TRUTH_VALUE, "A")))));
-        // should be provable with red(alice) as a premise
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(SOME, RED, BLUE), new Expression(BLUE, ALICE))));
-        // should not be provable on grounds of relevance
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(RED, ALICE), new Expression(BLUE, ALICE))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(RED, ALICE), new Expression(FRUIT, ALICE))));
+            new Expression(TRULY, new Expression(FRUIT, ALICE))));
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(NOT, new Expression(NOT, new Expression(RED, ALICE)))));
         
-        // should be provable, even though it's provable
-        // independently of knowing the antecedent.
-        // So long as it follows from the antecedent
-        // is enough to prove the conditional
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(FRUIT, ALICE), new Expression(TOMATO, ALICE))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(FRUIT, ALICE), new Expression(BANANA, ALICE))));
-
-        // TODO: PROOF BY CASES
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(IF,
-        //         new Expression(FRUIT, ALICE),
-        //         new Expression(OR,
-        //             new Expression(TOMATO, ALICE),
-        //             new Expression(BANANA, ALICE)))));
-
-        // should be provable, simple
-        // deductive consequence of a conditional
         StartCoroutine(LogBasesStream(MentalState,
-            new Expression(OR,
-                new Expression(GREEN, ALICE),
-                new Expression(IF,
-                    new Expression(AND,
-                        new Expression(RED, ALICE),
-                        new Expression(BLUE, ALICE)),
-                    new Expression(BLUE, ALICE)))));
+            new Expression(OR, new Expression(RED, ALICE), new Expression(FRUIT, ALICE))));
 
-        // links work properly: should be provable as a matter of logic
         StartCoroutine(LogBasesStream(MentalState,
-            new Expression(IF,
-                new Expression(BLUE, ALICE),
-                new Expression(KNOW, new Expression(BLUE, ALICE), BOB))));
+            new Expression(AND, new Expression(RED, ALICE), new Expression(FRUIT, ALICE))));
+
+        // testing it works with an assumption (NOT WORKING)
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(NOT, new Expression(IDENTITY, BOB, CHARLIE))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(NOT, new Expression(KNOW, new Expression(BLUE, ALICE), SELF))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW, new Expression(FRUIT, ALICE), SELF)));
 
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(IF,
-                new Expression(BLUE, ALICE),
-                new Expression(KNOW, new Expression(BLUE, ALICE), SELF))));
+                new Expression(AND,
+                    new Expression(BLUE, ALICE),
+                    new Expression(NOT, new Expression(IDENTITY, BOB, CHARLIE))),
+                new Expression(BLUE, ALICE))));
 
         StartCoroutine(LogBasesStream(MentalState,
-            new Expression(IF,
-                new Expression(BLUE, ALICE),
-                new Expression(VERY, new Expression(VERY, new Expression(VERY, new Expression(BLUE, ALICE)))))));
-
-        // // testing it works with an assumption (NOT WORKING)
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(NOT, new Expression(IDENTITY, BOB, CHARLIE))));
-
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(IF,
-        //         new Expression(AND,
-        //             new Expression(BLUE, ALICE),
-        //             new Expression(NOT, new Expression(IDENTITY, BOB, CHARLIE))),
-        //         new Expression(BLUE, ALICE))));
-
-        // should not be provable
-        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, ALICE)));
+            new Expression(OR, new Expression(NOT, new Expression(NOT, new Expression(FRUIT, ALICE))),
+                new Expression(IF, new Expression(FRUIT, ALICE), new Expression(TOMATO, ALICE)))));
     }
 
     public static void TestConvertToValue(Expression e) {

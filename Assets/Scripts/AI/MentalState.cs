@@ -353,6 +353,8 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
+            // Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
+
             bases.Clear();
 
             reachedDepth = 0;
@@ -387,6 +389,8 @@ public class MentalState : MonoBehaviour {
                     var youngerSiblingBasis = current.YoungerSiblingBases[i];
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
+
+                    // Debug.Log("the current lemma is " + currentLemma);
 
                     // the bases we get from directly
                     // querying the knowledge base.
@@ -907,6 +911,9 @@ public class MentalState : MonoBehaviour {
                     ProofBases sendBases = sends[i].Key;
                     bool exhaustive = sends[i].Value;
 
+                    // Debug.Log("the send bases are " + sendBases);
+                    // Debug.Log("meet basis index is " + meetBasisIndex);
+
                     // pass on the bases and merge them all the way to
                     // its ancestral node.
                     while (merge != null) {
@@ -916,7 +923,7 @@ public class MentalState : MonoBehaviour {
 
                         // this is the basis which gave us this assignment -
                         // we want to meet with this one, and none of the others.
-                        var meetBasis = meetBasisIndex == -1 ? null : merge.YoungerSiblingBases[meetBasisIndex];
+                        var meetBasis = meetBasisIndex == -1 ? new ProofBasis() : merge.YoungerSiblingBases[meetBasisIndex];
 
                         // trim each of the merged bases to
                         // discard unused variable assignments.
@@ -967,13 +974,20 @@ public class MentalState : MonoBehaviour {
                         ProofBases productBases = new ProofBases();
 
                         if (merge.IsAssumption) {
+                            // Debug.Log("this proof node is an assumption");
+                            // Debug.Log("the child bases are " + merge.ChildBases);
+                            // Debug.Log("the meet basis is null? " + (meetBasis == null));
+                            // Debug.Log("search is exhaustive? " + exhaustive);
+                            // Debug.Log("current depth=" + current.Depth);
+                            // Debug.Log("is last child? " + merge.IsLastChild);
                             // no refutation
                             if (sendBases.IsEmpty() &&
                                 merge.ChildBases.IsEmpty() &&
                                 meetBasis != null &&
-                                (exhaustive || current.Depth == maxDepth ||
-                                 mergeLemma.Depth >= this.MaxDepth ||
+                                (exhaustive ||
+                                 current.Depth == maxDepth ||
                                  merge.IsLastChild)) {
+                                // Debug.Log("NO REFUTATION");
                                 // we can safely assume the content of
                                 // this assumption node
                                 var assumptionBasis = new ProofBasis();
@@ -1011,6 +1025,8 @@ public class MentalState : MonoBehaviour {
                                 }
                             }
                         }
+
+                        // Debug.Log("the product bases are " + productBases);
 
                         // if (productBases.IsEmpty() &&
                         //     !exhaustive &&
