@@ -38,8 +38,6 @@ public class Testing : MonoBehaviour {
                 new Expression(new Name(TRUTH_VALUE, "A")))));
         // should be provable with red(alice) as a premise
         StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(SOME, RED, BLUE), new Expression(BLUE, ALICE))));
-        // should not be provable
-        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, ALICE)));
         // should not be provable on grounds of relevance
         StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(RED, ALICE), new Expression(BLUE, ALICE))));
         StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(RED, ALICE), new Expression(FRUIT, ALICE))));
@@ -69,6 +67,36 @@ public class Testing : MonoBehaviour {
                         new Expression(RED, ALICE),
                         new Expression(BLUE, ALICE)),
                     new Expression(BLUE, ALICE)))));
+
+        // links work properly: should be provable as a matter of logic
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(IF,
+                new Expression(BLUE, ALICE),
+                new Expression(KNOW, new Expression(BLUE, ALICE), BOB))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(IF,
+                new Expression(BLUE, ALICE),
+                new Expression(KNOW, new Expression(BLUE, ALICE), SELF))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(IF,
+                new Expression(BLUE, ALICE),
+                new Expression(VERY, new Expression(VERY, new Expression(VERY, new Expression(BLUE, ALICE)))))));
+
+        // // testing it works with an assumption (NOT WORKING)
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(NOT, new Expression(IDENTITY, BOB, CHARLIE))));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(IF,
+        //         new Expression(AND,
+        //             new Expression(BLUE, ALICE),
+        //             new Expression(NOT, new Expression(IDENTITY, BOB, CHARLIE))),
+        //         new Expression(BLUE, ALICE))));
+
+        // should not be provable
+        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, ALICE)));
     }
 
     public static void TestConvertToValue(Expression e) {

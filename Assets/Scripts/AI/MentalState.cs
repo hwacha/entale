@@ -388,8 +388,6 @@ public class MentalState : MonoBehaviour {
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
-                    // Debug.Log(currentLemma);
-
                     // the bases we get from directly
                     // querying the knowledge base.
                     var searchBases = new ProofBases();
@@ -774,9 +772,16 @@ public class MentalState : MonoBehaviour {
 
                         // END PREMISE-EXPANSIVE RULES
 
+                        
                         // M |- P => M |- know(P, self)
+                        // 
+                        // @Note: we only check the above rule
+                        // if we're proving something unconditionally.
+                        // 
                         // M |/- P => not(know(P, self))
-                        if (currentLemma.HeadedBy(KNOW) && currentLemma.GetArgAsExpression(1).Equals(SELF)) {
+                        if (currentLemma.HeadedBy(KNOW) &&
+                            currentLemma.GetArgAsExpression(1).Equals(SELF) &&
+                            (current.KnowledgeState == KS || !current.Parity)) {
                             newStack.Push(new ProofNode(
                                 currentLemma.GetArgAsExpression(0),
                                 current.KnowledgeState,
@@ -932,7 +937,7 @@ public class MentalState : MonoBehaviour {
 
                             foreach (var sendBasis in sendBases) {
                                 bool proofHasAntecedent = false;
-                                var trimmedBasis = new ProofBasis();
+                                var trimmedBasis = new ProofBasis(new List<Expression>(), new Substitution(sendBasis.Substitution));
                                 foreach (var premise in sendBasis.Premises) {
                                     if (premise.Equals(antecedent)) {
                                         proofHasAntecedent = true;
@@ -1025,6 +1030,10 @@ public class MentalState : MonoBehaviour {
                         if (merge.Parent != null) {
                             merge.Parent.ChildBases.Add(productBases);
                             sendBases = productBases;
+                        }
+
+                        if (merge.Parent == null && merge.OlderSibling == null) {
+                            merge.ChildBases.Add(productBases);
                         }
 
                         meetBasisIndex = merge.MeetBasisIndex;
