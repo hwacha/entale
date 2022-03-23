@@ -21,55 +21,55 @@ public class Testing : MonoBehaviour {
         // DON'T COMMENT ABOVE THIS LINE
         MentalState.FrameTimer = FrameTimer;
 
+        var a = new Expression(new Name(TRUTH_VALUE, "A"));
+
         MentalState.Initialize(new Expression[]{
-            new Expression(RED, ALICE),
-            new Expression(FRUIT, ALICE),
+            new Expression(VERY,
+                new Expression(VERY,
+                    new Expression(VERY,
+                        new Expression(GOOD, new Expression(FRUIT, SELF))))),
+            new Expression(ABLE, new Expression(BANANA, SELF), SELF),
+            new Expression(ABLE, new Expression(TOMATO, SELF), SELF),
+            new Expression(OMEGA, VERY,
+                new Expression(GOOD,
+                    new Expression(NOT,
+                        new Expression(MAKE, new Expression(BANANA, SELF), SELF)))),
         });
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, ALICE)));
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(TRULY, new Expression(FRUIT, ALICE))));
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(NOT, new Expression(NOT, new Expression(RED, ALICE)))));
-        
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(OR, new Expression(RED, ALICE), new Expression(FRUIT, ALICE))));
-
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(AND, new Expression(RED, ALICE), new Expression(FRUIT, ALICE))));
-
-        // testing it works with an assumption (NOT WORKING)
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(NOT, new Expression(IDENTITY, BOB, CHARLIE))));
-
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(NOT, new Expression(KNOW, new Expression(BLUE, ALICE), SELF))));
-
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(KNOW, new Expression(FRUIT, ALICE), SELF)));
-
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(VERY, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(VERY, ST), new Expression(VERY, new Expression(VERY, a)))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(OMEGA, VERY, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(VERY, a), new Expression(OMEGA, VERY, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(OMEGA, VERY, a), new Expression(VERY, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(RED, XE), new Expression(VERY, new Expression(RED, ALICE)))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(GOOD, ST), new Expression(VERY, new Expression(GOOD, a)))));
         StartCoroutine(LogBasesStream(MentalState,
             new Expression(IF,
-                new Expression(AND,
-                    new Expression(BLUE, ALICE),
-                    new Expression(NOT, new Expression(IDENTITY, BOB, CHARLIE))),
-                new Expression(BLUE, ALICE))));
+                new Expression(VERY, ST),
+                new Expression(OMEGA, VERY, a))));
 
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(OR, new Expression(NOT, new Expression(NOT, new Expression(FRUIT, ALICE))),
-                new Expression(IF, new Expression(FRUIT, ALICE), new Expression(TOMATO, ALICE)))));
+        StartCoroutine(TestDecideCurrentPlan(MentalState));
+    }
+
+    public static string ValueString(List<int> value) {
+        StringBuilder s = new StringBuilder();
+
+        if (value == null || value.Count == 0) {
+            return "0";
+        }
+
+        s.Append(value[0]);
+
+        for (int i = 1; i < value.Count; i++) {
+            s.Append(" + " + value[i] + "*ω^" + i);
+        }
+        return s.ToString();
     }
 
     public static void TestConvertToValue(Expression e) {
         var eAsNumber = MentalState.ConvertToValue(e);
 
-        StringBuilder s = new StringBuilder();
-
-        foreach (var placeValue in eAsNumber) {
-            s.Append(placeValue + ", ");
-        }
-
-        Debug.Log(s.ToString());
+        Debug.Log("u(" + e + ") = " + ValueString(eAsNumber));
     }
 
     public static IEnumerator Assert(MentalState m, Expression content, Expression speaker) {
@@ -94,6 +94,29 @@ public class Testing : MonoBehaviour {
         str.Append("}");
 
         Log(str.ToString());
+    }
+
+    public static IEnumerator TestDecideCurrentPlan(MentalState m) {
+        var plan = new List<Expression>();
+        var done = new Container<bool>(false);
+
+        m.StartCoroutine(m.DecideCurrentPlan(plan, done));
+
+        while (!done.Item) {
+            yield return null;
+        }
+
+        var planString = new StringBuilder();
+        planString.Append("<");
+        foreach (var step in plan) {
+            planString.Append(step + ", ");
+        }
+        if (plan.Count > 0) {
+            planString.Remove(planString.Length - 2, 2);
+        }
+        planString.Append(">");
+
+        Debug.Log(planString.ToString());
     }
 
     public static String Verbose(Expression e) {
