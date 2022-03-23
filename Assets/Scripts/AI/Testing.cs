@@ -36,17 +36,17 @@ public class Testing : MonoBehaviour {
                         new Expression(MAKE, new Expression(BANANA, SELF), SELF)))),
         });
 
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(VERY, a))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(VERY, ST), new Expression(VERY, new Expression(VERY, a)))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(OMEGA, VERY, a))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(VERY, a), new Expression(OMEGA, VERY, a))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(OMEGA, VERY, a), new Expression(VERY, a))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(RED, XE), new Expression(VERY, new Expression(RED, ALICE)))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(GOOD, ST), new Expression(VERY, new Expression(GOOD, a)))));
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(IF,
-        //         new Expression(VERY, ST),
-        //         new Expression(OMEGA, VERY, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(VERY, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(VERY, ST), new Expression(VERY, new Expression(VERY, a)))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(OMEGA, VERY, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(VERY, a), new Expression(OMEGA, VERY, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(OMEGA, VERY, a), new Expression(VERY, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(RED, XE), new Expression(VERY, new Expression(RED, ALICE)))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(GOOD, ST), new Expression(VERY, new Expression(GOOD, a)))));
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(IF,
+                new Expression(VERY, ST),
+                new Expression(OMEGA, VERY, a))));
 
         StartCoroutine(TestDecideCurrentPlan(MentalState));
     }

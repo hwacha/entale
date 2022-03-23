@@ -1476,7 +1476,6 @@ public class MentalState : MonoBehaviour {
         // first, we get all the goods we can prove from
         // our goal. These are in the running to approximate
         // the value of the goal.
-        Debug.Log("goods from " + goal);
         List<Expression> goodsFromGoal = new List<Expression>();
         foreach (var good in goods) {
             var goodFromGoalBases = new ProofBases();
@@ -1491,11 +1490,6 @@ public class MentalState : MonoBehaviour {
             if (!goodFromGoalBases.IsEmpty()) {
                 goodsFromGoal.Add(good);
             }
-        }
-
-        
-        foreach (var goodFromGoal in goodsFromGoal) {
-            Debug.Log(goodFromGoal);
         }
 
         // now that we have the goods that are in the running,
@@ -1576,8 +1570,6 @@ public class MentalState : MonoBehaviour {
             yield return null;
         }
 
-        Debug.Log("proofs of good(S) are " + goodProofs);
-
         var evaluativeBase = new Dictionary<Expression, List<int>>();
         var goods = new List<Expression>();
         foreach (var goodProof in goodProofs) {
@@ -1597,15 +1589,13 @@ public class MentalState : MonoBehaviour {
             var good = goodAndValueOfGood.Key;
             var valueOfGood = goodAndValueOfGood.Value;
 
-            // Debug.Log("evaluating good " + good + " at u=" + Testing.ValueString(valueOfGood));
-
             var proofBases = new ProofBases();
             var proofDone = new Container<bool>(false);
             StartCoroutine(StreamProofs(proofBases, good, proofDone, Proof));
             while (!proofDone.Item) {
                 yield return null;
             }
-            // Debug.Log("proofs of " + good + " are " + proofBases);
+
             if (!proofBases.IsEmpty()) {
                 continue;
             }
@@ -1616,8 +1606,6 @@ public class MentalState : MonoBehaviour {
             while (!planDone.Item) {
                 yield return null;
             }
-
-            // Debug.Log("plans of " + good + " are " + planBases);
 
             // we have a feasible plan. So, we take
             // the joint value of making all the
@@ -1640,14 +1628,10 @@ public class MentalState : MonoBehaviour {
                         }
                     }
 
-                    Debug.Log("benefit conjunction is " + Conjunctify(benefitConjunction));
-
                     var costConjunction = new List<Expression>();
                     foreach (var conjunct in benefitConjunction) {
                         costConjunction.Add(new Expression(NOT, conjunct));
                     }
-
-                    Debug.Log("cost conjunction is " + Conjunctify(costConjunction));
 
                     var benefitEstimates = new List<Expression>();
                     var benefitEstimationDone = new Container<bool>(false);
@@ -1661,17 +1645,6 @@ public class MentalState : MonoBehaviour {
                     while (!benefitEstimationDone.Item || !costEstimationDone.Item) {
                         yield return null;
                     }
-
-                    Debug.Log("===========");
-                    Debug.Log("benefit estimates are as follows:");
-                    foreach (var benefitEstimate in benefitEstimates) {
-                        Debug.Log(benefitEstimate);
-                    }
-                    Debug.Log("cost estimates are as follows:");
-                    foreach (var costEstimate in costEstimates) {
-                        Debug.Log(costEstimate);
-                    }
-                    Debug.Log("===========");
 
                     var positiveValueForThisPlan = new List<int>();
                     var negativeValueForThisPlan = new List<int>();
@@ -1687,12 +1660,7 @@ public class MentalState : MonoBehaviour {
                         negativeValueForThisPlan[i] = -1 * negativeValueForThisPlan[i];
                     }
 
-                    Debug.Log("benefit=" + Testing.ValueString(positiveValueForThisPlan));
-                    Debug.Log("cost=" + Testing.ValueString(negativeValueForThisPlan));
-
                     var netValueForThisPlan = Plus(positiveValueForThisPlan, negativeValueForThisPlan);
-
-                    Debug.Log("net=" + Testing.ValueString(netValueForThisPlan));
 
                     bestValueForThisGood = MaxValue(bestValueForThisGood, netValueForThisPlan);
                     if (bestValueForThisGood == netValueForThisPlan) {
