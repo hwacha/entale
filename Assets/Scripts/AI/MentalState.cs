@@ -251,10 +251,19 @@ public class MentalState : MonoBehaviour {
         }
 
         if (a.Count > b.Count) {
-            return a;
+            if (a[a.Count - 1] > 0) {
+                return a;    
+            } else {
+                return b;
+            }
+            
         }
         if (b.Count > a.Count) {
-            return b;
+            if (b[b.Count - 1] > 0) {
+                return b;
+            } else {
+                return a;
+            }
         }
 
         for (int i = a.Count - 1; i >= 0; i--) {
@@ -697,7 +706,7 @@ public class MentalState : MonoBehaviour {
 
                             var links = keyAndLinks.Value;
                             foreach (var link in links) {
-                                if (link.Equals(query)) {
+                                if (key.Equals(link)) {
                                     continue;
                                 }
 
@@ -778,7 +787,7 @@ public class MentalState : MonoBehaviour {
                                 Substitution substitution = null;
 
                                 if (variables.Count > 0) {
-                                    var matches = query.GetMatches(key);
+                                    var matches = verylessContent.GetMatches(key);
                                     foreach (var match in matches) {
                                         // @note this assumes pattern match was unambiguous.
                                         // this is a band-aid solution.
@@ -789,10 +798,13 @@ public class MentalState : MonoBehaviour {
 
                                 var links = keyAndLinks.Value;
 
+
+
                                 foreach (var link in links) {
-                                    if (link.Equals(verylessContent)) {
+                                    if (key.Equals(link)) {
                                         continue;
                                     }
+                                    
                                     if (link.HeadedBy(OMEGA)) {
                                         var omegaNode = new ProofNode(link, current.KnowledgeState, nextDepth, current, i, true,
                                             substitution: substitution);
@@ -805,43 +817,75 @@ public class MentalState : MonoBehaviour {
                             // TODO 3/22
                             // GET THIS WORKING WITH VARIABLES!!!
                             // 
-                            // var omegalessContent = verylessContent;
-                            // var power = new Expression(OMEGA, VERY);
-                            // while (omegalessContent.HeadedBy(OMEGA)) {
-                            //     var powerMinusOne = power.GetArgAsExpression(0);
-                            //     while (omegalessContent.HeadedBy(OMEGA) &&
-                            //            omegalessContent.GetArgAsExpression(0).Equals(powerMinusOne)) {
-                            //         omegalessContent = omegalessContent.GetArgAsExpression(1);
-                            //     }
+                            var omegalessContent = verylessContent;
+                            var omegalessTop     = verylessTop;
+                            var omegalessBottom  = verylessBottom;
+                            var power = new Expression(OMEGA, VERY);
+                            while (omegalessContent.HeadedBy(OMEGA)) {
+                                var powerMinusOne = power.GetArgAsExpression(0);
+                                while (omegalessContent.HeadedBy(OMEGA) &&
+                                       omegalessContent.GetArgAsExpression(0).Equals(powerMinusOne)) {
+                                    omegalessContent = omegalessContent.GetArgAsExpression(1);
+                                    omegalessTop     = omegalessTop.GetArgAsExpression(1);
+                                    omegalessBottom  = omegalessBottom.GetArgAsExpression(1);
+                                }
 
-                            //     var powerPlusOne = new Expression(OMEGA, power);
+                                var powerPlusOne = new Expression(OMEGA, power);
 
-                            //     if (current.KnowledgeState.Links.ContainsKey(omegalessContent)) {
-                            //         if (current.KnowledgeState.Links.ContainsKey(omegalessContent)) {
-                            //             foreach (var backwardLink in current.KnowledgeState.Links[omegalessContent]) {
-                            //                 var powerCounter = power;
-                            //                 var linkPowerCounter = backwardLink;
-                            //                 bool linkSupercedes = false;
-                            //                 while (linkPowerCounter.HeadedBy(OMEGA)) {
-                            //                     if (!powerCounter.HeadedBy(OMEGA)) {
-                            //                         linkSupercedes = true;
-                            //                         break;
-                            //                     }
-                            //                     powerCounter = powerCounter.GetArgAsExpression(0);
-                            //                     linkPowerCounter = linkPowerCounter.GetArgAsExpression(0);
-                            //                 }
-                            //                 // TODO 7/19
-                            //                 if (linkSupercedes) {
-                            //                     var powerPlusOneNode = new ProofNode(backwardLink, current.KnowledgeState, nextDepth, current, i, true);
-                            //                     newStack.Push(powerPlusOneNode);
-                            //                     exhaustive = false;
-                            //                 }
-                            //             }
-                            //         }
-                            //     }
+                                var linksByOmegalessKey = new Dictionary<Expression, HashSet<Expression>>();
 
-                            //     power = powerPlusOne;
-                            // }
+                                if (variables.Count == 0) {
+                                    if (current.KnowledgeState.Links.ContainsKey(omegalessContent)) {
+                                        linksByVerylessKey.Add(omegalessContent, current.KnowledgeState.Links[omegalessContent]);
+                                    }
+                                } else {
+                                    foreach (var keyAndLinks in current.KnowledgeState.Links) {
+                                        if (omegalessBottom.CompareTo(keyAndLinks.Key) < 0 && omegalessTop.CompareTo(keyAndLinks.Key) > 0) {
+                                            linksByOmegalessKey.Add(keyAndLinks.Key, keyAndLinks.Value);
+                                        }
+                                    }
+                                }
+
+                                foreach (var keyAndLinks in linksByOmegalessKey) {
+                                    var key = keyAndLinks.Key;
+                                    Substitution substitution = null;
+                                    if (variables.Count > 0) {
+                                        var matches = omegalessContent.GetMatches(key);
+                                        foreach (var match in matches) {
+                                            // @note this assumes pattern match was unambiguous.
+                                            // this is a band-aid solution.
+                                            substitution = match;
+                                            break;
+                                        }
+                                    }
+                                    var links = keyAndLinks.Value;
+                                    foreach (var link in links) {
+                                        if (key.Equals(link)) {
+                                            continue;
+                                        }
+                                        var powerCounter = power;
+                                        var linkPowerCounter = link;
+                                        bool linkSupercedes = false;
+                                        while (linkPowerCounter.HeadedBy(OMEGA)) {
+                                            if (!powerCounter.HeadedBy(OMEGA)) {
+                                                linkSupercedes = true;
+                                                break;
+                                            }
+                                            powerCounter = powerCounter.GetArgAsExpression(0);
+                                            linkPowerCounter = linkPowerCounter.GetArgAsExpression(0);
+                                        }
+                                        // TODO 7/19
+                                        if (linkSupercedes) {
+                                            var powerPlusOneNode = new ProofNode(link, current.KnowledgeState, nextDepth, current, i, true,
+                                                substitution: substitution);
+                                            newStack.Push(powerPlusOneNode);
+                                            exhaustive = false;
+                                        }
+                                    }
+                                }
+
+                                power = powerPlusOne;
+                            }
                         }
 
                         // END PREMISE-EXPANSIVE RULES
@@ -1643,10 +1687,12 @@ public class MentalState : MonoBehaviour {
                         negativeValueForThisPlan[i] = -1 * negativeValueForThisPlan[i];
                     }
 
-                    Debug.Log(Testing.ValueString(positiveValueForThisPlan));
-                    Debug.Log(Testing.ValueString(negativeValueForThisPlan));
+                    Debug.Log("benefit=" + Testing.ValueString(positiveValueForThisPlan));
+                    Debug.Log("cost=" + Testing.ValueString(negativeValueForThisPlan));
 
                     var netValueForThisPlan = Plus(positiveValueForThisPlan, negativeValueForThisPlan);
+
+                    Debug.Log("net=" + Testing.ValueString(netValueForThisPlan));
 
                     bestValueForThisGood = MaxValue(bestValueForThisGood, netValueForThisPlan);
                     if (bestValueForThisGood == netValueForThisPlan) {
