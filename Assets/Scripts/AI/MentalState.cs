@@ -80,6 +80,7 @@ public class MentalState : MonoBehaviour {
 
     void Update() {
         Timestamp++;
+        Locations[SELF] = new Vector3(gameObject.transform.position.x, gameObject.transform.position.y, gameObject.transform.position.z);
     }
 
     // @Note this doesn't check to see if
@@ -366,9 +367,7 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
-            if (pt == Plan) {
-                Debug.Log("proving " + conclusion + " at depth=" + maxDepth);    
-            }
+            // Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
 
             bases.Clear();
 
@@ -404,6 +403,8 @@ public class MentalState : MonoBehaviour {
                     var youngerSiblingBasis = current.YoungerSiblingBases[i];
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
+
+                    // Debug.Log("current lemma is " + currentLemma);
 
                     // the bases we get from directly
                     // querying the knowledge base.
@@ -476,23 +477,6 @@ public class MentalState : MonoBehaviour {
                             searchBases.Add(new ProofBasis());
                         }
 
-                        // I can say anything.
-                        if (current.Parity && pt == Proof && currentLemma.HeadedBy(ABLE) &&
-                            currentLemma.GetArgAsExpression(1).Equals(SELF) &&
-                            currentLemma.GetArgAsExpression(0).HeadedBy(INFORM) &&
-                            currentLemma.GetArgAsExpression(0).GetArgAsExpression(2).Equals(SELF)) {
-                            var basis = new ProofBasis();
-                            basis.AddPremise(currentLemma);
-                            searchBases.Add(basis);
-                        }
-
-                        if (current.Parity && pt == Plan && currentLemma.HeadedBy(INFORM) &&
-                            currentLemma.GetArgAsExpression(2).Equals(SELF)) {
-                            var basis = new ProofBasis();
-                            basis.AddPremise(new Expression(WILL, currentLemma));
-                            searchBases.Add(basis);
-                        }
-
                         // I can go anywhere.
                         if (current.Parity && pt == Proof && currentLemma.HeadedBy(ABLE) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
@@ -527,7 +511,7 @@ public class MentalState : MonoBehaviour {
 
                                 var distance = dx * dx + dy * dy + dz * dz;
 
-                                if (distance < 5) {
+                                if (distance < 10) {
                                     var basis = new ProofBasis();
                                     basis.AddPremise(currentLemma);
                                     searchBases.Add(basis);
@@ -623,8 +607,9 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // and +, ~or +
-                        if (currentLemma.HeadedBy(AND) &&  current.Parity ||
-                            currentLemma.HeadedBy(OR)  && !current.Parity) {
+                        if ((currentLemma.HeadedBy(AND) &&  current.Parity ||
+                            currentLemma.HeadedBy(OR)  && !current.Parity) &&
+                            !current.KnowledgeState.Links[currentLemma].Contains(currentLemma)) {
                             var a = currentLemma.GetArgAsExpression(0);
                             var b = currentLemma.GetArgAsExpression(1);
 
@@ -686,6 +671,23 @@ public class MentalState : MonoBehaviour {
                             newStack.Push(new ProofNode(tomatoX, current.KnowledgeState, nextDepth, current, i, current.Parity));
                             newStack.Push(new ProofNode(bananaX, current.KnowledgeState, nextDepth, current, i, current.Parity));
                             exhaustive = false;
+                        }
+
+                        // // I can say anything, so long as I'm at them.
+                        // if (current.Parity && pt == Proof && currentLemma.HeadedBy(ABLE) &&
+                        //     currentLemma.GetArgAsExpression(1).Equals(SELF) &&
+                        //     currentLemma.GetArgAsExpression(0).HeadedBy(INFORM) &&
+                        //     currentLemma.GetArgAsExpression(0).GetArgAsExpression(2).Equals(SELF)) {
+                        //     var atSelfX = new Expression(AT, SELF, currentLemma.GetArgAsExpression(0).GetArgAsExpression(1));
+
+                        //     newStack.Push(new ProofNode(atSelfX, current.KnowledgeState, nextDepth, current, i, current.Parity));
+                        // }
+
+                        if (current.Parity && pt == Plan && currentLemma.HeadedBy(INFORM) &&
+                            currentLemma.GetArgAsExpression(2).Equals(SELF)) {
+                            var atSelfX = new Expression(AT, SELF, currentLemma.GetArgAsExpression(1));
+                            newStack.Push(new ProofNode(atSelfX, current.KnowledgeState, nextDepth, current, i, current.Parity,
+                                supplement: new Expression(WILL, currentLemma)));
                         }
 
                         // PREMISE-EXPANSIVE RULES
@@ -1206,6 +1208,13 @@ public class MentalState : MonoBehaviour {
         yield break;
     }
 
+    public void AddNamedPercept(Expression name, Vector3 location) {
+        Debug.Assert(name.Type.Equals(INDIVIDUAL));
+        Locations[name] = new Vector3(location.x, location.y, location.z);
+        var percept = new Expression(SEE, new Expression(EXIST, name), SELF);
+        AddToKnowledgeState(KS, percept);
+    }
+
     // the characteristic should be a predicate
     // (or formula with one free variable, TODO)
     // that captures its mode of presentation
@@ -1284,7 +1293,7 @@ public class MentalState : MonoBehaviour {
             // P and was(see(P, x))
             // 
             return AddToKnowledgeState(knowledgeState, pSinceSawP, true);
-        } else {
+        } else if (firstCall) {
             knowledgeState.Basis.Add(knowledge);
         }
 

@@ -5,7 +5,7 @@ using UnityEngine;
 using static Expression;
 using static SemanticType;
 
-public class TestCameraVision : MonoBehaviour
+public class UnnamedObject : MonoBehaviour
 {
     protected Expression Characteristic;
 
@@ -29,7 +29,8 @@ public class TestCameraVision : MonoBehaviour
 
             bool collided = Physics.Raycast(seerPosition, objPosition - seerPosition, Mathf.Infinity, layerMask);
 
-            if (collided) {
+            // @Bug the raycasting is yielding false negatives
+            if (collided || true) {
                 mentalStateRef.MentalState.ConstructPercept(Characteristic, gameObject.transform.position);
             }
         }

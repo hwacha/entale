@@ -180,8 +180,7 @@ public class Actuator : MonoBehaviour {
                     throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
                 }
 
-                Debug.Log(action);
-                Debug.Break();
+                // Debug.Log(action);
                 // StartCoroutine(Say(action, 1));
 
                 var content = action.GetArgAsExpression(0);
@@ -220,7 +219,7 @@ public class Actuator : MonoBehaviour {
                 }
 
                 else if (content.Head.Equals(INFORM.Head) && content.GetArgAsExpression(2).Equals(SELF)) {
-                    var message = content.GetArgAsExpression(0);
+                    var message = new Expression(ASSERT, content.GetArgAsExpression(0));
                     // Debug.Log("saying " + message);
                     StartCoroutine(Say(message, 1.5f));
                 }

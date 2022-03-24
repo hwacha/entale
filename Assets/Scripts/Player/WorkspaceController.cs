@@ -214,12 +214,7 @@ public class WorkspaceController : MonoBehaviour
 
         Workspace = GameObject.Find("Workspace");
 
-        SpawnDebugExpressions(
-            new Expression(ASK, new Expression(SOME, BANANA, BANANA)),
-            new Expression(ASK, new Expression(SOME, TOMATO, TOMATO)),
-            new Expression(ASK, new Expression(SOME, BLUE, BLUE)),
-            new Expression(ASK, new Expression(SOME, RED, RED))
-        );
+        SpawnDebugExpressions();
 
         Workspace.SetActive(false);
         PlayerMovement = GetComponent<PlayerMovement>();
