@@ -181,6 +181,7 @@ public class Actuator : MonoBehaviour {
                 }
 
                 Debug.Log(action);
+                Debug.Break();
                 // StartCoroutine(Say(action, 1));
 
                 var content = action.GetArgAsExpression(0);
