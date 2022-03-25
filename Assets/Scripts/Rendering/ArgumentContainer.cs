@@ -118,7 +118,7 @@ public class ArgumentContainer : MonoBehaviour {
     // to prevent this.
     public void SpawnBordersAndSymbols(int depth = 0) {
         if (Argument is Expression || depth < 2) {
-            gameObject.layer = LayerMask.NameToLayer("Default");
+            gameObject.layer = LayerMask.NameToLayer("Visible");
 
             if (Argument is Expression) {
                 GameObject symbol = Instantiate(Resources.Load<GameObject>("Prefabs/Symbol"),
@@ -202,7 +202,7 @@ public class ArgumentContainer : MonoBehaviour {
     }
 
     public void DisableRenderers() {
-        gameObject.layer = LayerMask.NameToLayer("Default");
+        gameObject.layer = LayerMask.NameToLayer("Visible");
         gameObject.GetComponent<Renderer>().enabled = false;
 
         foreach (Transform child in gameObject.transform) {
@@ -210,7 +210,7 @@ public class ArgumentContainer : MonoBehaviour {
             if (childArgumentContainer != null) {
                 childArgumentContainer.DisableRenderers();
             } else {
-                child.gameObject.layer = gameObject.layer = LayerMask.NameToLayer("Default");
+                child.gameObject.layer = gameObject.layer = LayerMask.NameToLayer("Visible");
                 var r = child.gameObject.GetComponent<Renderer>();
                 if (r != null) r.enabled = false;
             }
@@ -282,8 +282,8 @@ public class ArgumentContainer : MonoBehaviour {
         prePassCamera.GetComponent<ApplyTransparency>().Opacity = 1;
         prePassCameraComponent.Render();
 
-        fillQuad.layer = LayerMask.NameToLayer("Default");
-        borderAndSymbolQuad.layer = LayerMask.NameToLayer("Default");
+        fillQuad.layer = LayerMask.NameToLayer("Visible");
+        borderAndSymbolQuad.layer = LayerMask.NameToLayer("Visible");
 
         Destroy(fillQuad);
         Destroy(borderAndSymbolQuad);
@@ -299,5 +299,24 @@ public class ArgumentContainer : MonoBehaviour {
         prePassCamera.transform.parent = null;
         prePassCameraComponent.enabled = false;
         prePassCameraComponent.targetTexture = null;
+    }
+
+    // to be seen
+    void OnWillRenderObject() {
+        var mentalStateRef = Camera.current.GetComponent<ReferenceToMentalState>();
+        if (mentalStateRef != null) {
+            // check if this object is actually visible
+            int layerMask = 1 << 11;
+
+            var seerPosition = mentalStateRef.transform.position;
+            var objPosition  = transform.position;
+
+            bool collided = Physics.Raycast(seerPosition, objPosition - seerPosition, Mathf.Infinity, layerMask);
+
+            // @Bug the raycasting is yielding false negatives
+            if (collided || true) {
+                // Debug.Log("TODO: see expression");
+            }
+        }
     }
 }

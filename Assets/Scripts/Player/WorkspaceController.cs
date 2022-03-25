@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+using static Expression;
+
 public class OpenArgumentInfo {
     public int ParentX {get; private set;}
     public int ParentY {get; private set;}
@@ -211,6 +213,9 @@ public class WorkspaceController : MonoBehaviour
         }
 
         Workspace = GameObject.Find("Workspace");
+
+        SpawnDebugExpressions();
+
         Workspace.SetActive(false);
         PlayerMovement = GetComponent<PlayerMovement>();
         MouseLook = GameObject.Find("Main Camera").GetComponent<MouseLook>();
@@ -222,7 +227,11 @@ public class WorkspaceController : MonoBehaviour
         Pointer.SetActive(false);
     }
 
-
+    public void SpawnDebugExpressions(params Expression[] expressions) {
+        for (int i = 0; i < expressions.Length; i++) {
+            SpawnExpression(expressions[i]);
+        }
+    }
 
     // Update is called once per frame
     void Update()
