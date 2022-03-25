@@ -10,8 +10,9 @@ public class Bob : Agent
     {
         MentalState.Initialize(
             new Expression[]{
-                new Expression(GOOD, new Expression(SOME, FRUIT, new Expression(AT, SELF))),
-                new Expression(GOOD, new Expression(INFORM, new Expression(RED, SELF), EVAN, SELF)),
+                new Expression(VERY, new Expression(GOOD, new Expression(INFORM, new Expression(RED, SELF), EVAN, SELF))),
+                new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
+                new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
                 // new Expression(ALL, BANANA,
                 //     new Expression(GEACH_E_TRUTH_FUNCTION,
                 //         new Expression(GEACH_T_TRUTH_FUNCTION,

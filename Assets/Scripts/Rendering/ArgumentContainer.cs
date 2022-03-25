@@ -315,7 +315,7 @@ public class ArgumentContainer : MonoBehaviour {
 
             // @Bug the raycasting is yielding false negatives
             if (collided || true) {
-                Debug.Log("TODO: see expression");
+                // Debug.Log("TODO: see expression");
             }
         }
     }

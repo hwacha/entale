@@ -43,7 +43,6 @@ public class MentalState : MonoBehaviour {
     public FrameTimer FrameTimer;
 
     protected int ParameterID;
-    public int Timestamp = 0; // public for testing purposes
 
     public class KnowledgeState {
         public SortedSet<Expression> Basis;
@@ -53,13 +52,31 @@ public class MentalState : MonoBehaviour {
             if (copy) {
                 Basis = new SortedSet<Expression>(basis);
                 Links = new SortedList<Expression, HashSet<Expression>>();
-                foreach (var keyAndValue in Links) {
+                foreach (var keyAndValue in links) {
                     Links.Add(keyAndValue.Key, new HashSet<Expression>(keyAndValue.Value));
                 }
             } else {
                 Basis = basis;
                 Links = links;
             }
+        }
+
+        public override string ToString() {
+            var str = new StringBuilder();
+            str.Append("Basis [\n");
+            foreach (Expression e in Basis) {
+                str.Append("\t" + e + "\n");
+            }
+            str.Append("]\nLinks [\n");
+            foreach (var keyAndLinks in Links) {
+                str.Append("\t" + keyAndLinks.Key + " -> {\n");
+                foreach (var link in keyAndLinks.Value) {
+                    str.Append("\t\t" + link + "\n");
+                }
+                str.Append("\t}\n");
+            }
+            str.Append("]");
+            return str.ToString();
         }
     }
 
@@ -79,7 +96,6 @@ public class MentalState : MonoBehaviour {
     int MaxDepth = 0;
 
     void Update() {
-        Timestamp++;
         Locations[SELF] = new Vector3(gameObject.transform.position.x, gameObject.transform.position.y, gameObject.transform.position.z);
     }
 
@@ -88,7 +104,6 @@ public class MentalState : MonoBehaviour {
     // Assume, for now, as an invariant, that it is.
     public void Initialize(Expression[] initialKnowledge) {
         ParameterID = 0;
-        Timestamp = 0;
         Locations = new Dictionary<Expression, Vector3>();
 
         if (KS != null) {
@@ -252,7 +267,7 @@ public class MentalState : MonoBehaviour {
         }
 
         if (a.Count > b.Count) {
-            if (a[a.Count - 1] > 0) {
+            if (a[a.Count - 1] >= 0) {
                 return a;    
             } else {
                 return b;
@@ -260,7 +275,7 @@ public class MentalState : MonoBehaviour {
             
         }
         if (b.Count > a.Count) {
-            if (b[b.Count - 1] > 0) {
+            if (b[b.Count - 1] >= 0) {
                 return b;
             } else {
                 return a;
@@ -367,6 +382,7 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
+            // Debug.Log("================================================");
             // Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
 
             bases.Clear();
@@ -405,6 +421,7 @@ public class MentalState : MonoBehaviour {
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
                     // Debug.Log("current lemma is " + currentLemma);
+                    // Debug.Log("the current knowledge state is " + current.KnowledgeState);
 
                     // the bases we get from directly
                     // querying the knowledge base.
@@ -481,14 +498,16 @@ public class MentalState : MonoBehaviour {
                         if (current.Parity && pt == Proof && currentLemma.HeadedBy(ABLE) &&
                             currentLemma.GetArgAsExpression(1).Equals(SELF) &&
                             currentLemma.GetArgAsExpression(0).HeadedBy(AT) &&
-                            currentLemma.GetArgAsExpression(0).GetArgAsExpression(0).Equals(SELF)) {
+                            currentLemma.GetArgAsExpression(0).GetArgAsExpression(0).Equals(SELF) &&
+                            Locations.ContainsKey(currentLemma.GetArgAsExpression(0).GetArgAsExpression(1))) {
                             var basis = new ProofBasis();
                             basis.AddPremise(currentLemma);
                             searchBases.Add(basis);
                         }
 
                         if (current.Parity && pt == Plan && currentLemma.HeadedBy(AT) &&
-                            currentLemma.GetArgAsExpression(0).Equals(SELF)) {
+                            currentLemma.GetArgAsExpression(0).Equals(SELF) &&
+                            Locations.ContainsKey(currentLemma.GetArgAsExpression(1))) {
                             var basis = new ProofBasis();
                             basis.AddPremise(new Expression(WILL, currentLemma));
                             searchBases.Add(basis);
@@ -642,11 +661,6 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // conditional proof
-                        // 
-                        // NOTE: this is getting the right result but
-                        // the basis returned has the antecedent of the
-                        // conditional, not the conditional itself.
-                        // 
                         // M, A |- B => M |- A -> B
                         if (currentLemma.HeadedBy(IF) && current.Parity) {
                             // @Note this is not a typo ---
@@ -655,6 +669,7 @@ public class MentalState : MonoBehaviour {
                             var antecedent = currentLemma.GetArgAsExpression(1);
 
                             var newKnowledgeState = new KnowledgeState(current.KnowledgeState.Basis, current.KnowledgeState.Links);
+
                             AddToKnowledgeState(newKnowledgeState, antecedent);
 
                             var consequentNode = new ProofNode(consequent, newKnowledgeState, nextDepth, current, i, current.Parity);
@@ -1231,6 +1246,7 @@ public class MentalState : MonoBehaviour {
         foreach (var nameAndLocation in Locations) {
             if (location == nameAndLocation.Value) {
                 param = nameAndLocation.Key;
+                break;
             }
         }
 
@@ -1268,38 +1284,35 @@ public class MentalState : MonoBehaviour {
     public bool AddToKnowledgeState(KnowledgeState knowledgeState, Expression knowledge, bool firstCall = true) {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
 
-        // Debug.Log("adding " + knowledge + " to knowledge state.");
-
         if (knowledgeState.Basis.Contains(knowledge)) {
             return false;
         }
+
+        // Debug.Log("adding " + knowledge + " to knowledge state.");
 
         if (knowledge.Depth > MaxDepth) {
             MaxDepth = knowledge.Depth;
         }
 
-        if (knowledge.HeadedBy(SEE, INFORM) && firstCall) {
-            var p = knowledge.GetArgAsExpression(0);
-            var pSinceSawP = new Expression(SINCE, p, knowledge);
-
-            // @Note: since(A, B) as a logical operator is typically
-            // made to be a conditional on was(B) to conclude A.
-            // 
-            // We're making it factive. It's ampliatively assumed
-            // we add a factive event into the knowledge base.
-            // 
-            // M <- see(P, x)
-            // M <- since(P, see(P, x)) which entails both
-            // P and was(see(P, x))
-            // 
-            return AddToKnowledgeState(knowledgeState, pSinceSawP, true);
-        } else if (firstCall) {
-            knowledgeState.Basis.Add(knowledge);
-        }
-
         if (firstCall) {
+            if (knowledge.HeadedBy(SEE, INFORM)) {
+                var p = knowledge.GetArgAsExpression(0);
+                var pSinceSawP = new Expression(SINCE, p, knowledge);
+                // @Note: since(A, B) as a logical operator is typically
+                // made to be a conditional on was(B) to conclude A.
+                // 
+                // We're making it factive. It's ampliatively assumed
+                // we add a factive event into the knowledge base.
+                // 
+                // M <- see(P, x)
+                // M <- since(P, see(P, x)) which entails both
+                // P and was(see(P, x))
+                // 
+                return AddToKnowledgeState(knowledgeState, pSinceSawP, true);
+            }
             // we want to ensure a self-supporting premise isn't
             // removed if other links to it are removed.
+            knowledgeState.Basis.Add(knowledge);
             AddLink(knowledgeState, knowledge, knowledge);
         }
 

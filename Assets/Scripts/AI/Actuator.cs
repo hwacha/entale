@@ -195,27 +195,12 @@ public class Actuator : MonoBehaviour {
                     // assumption: if we find this in a plan,
                     // then the location of X should be known.
                     var location = Agent.MentalState.Locations[destination];
-
                     NavMeshAgent.SetDestination(location);
-
                     while (Vector3.Distance(transform.position, location) > NavMeshAgent.stoppingDistance + 1) {
+                        location = Agent.MentalState.Locations[destination];
+                        NavMeshAgent.SetDestination(location);
                         yield return null;
                     }
-
-                    // NavMeshPath path = new NavMeshPath();
-                    // Debug.Log(path.status);
-                    // NavMeshAgent.CalculatePath(location, path);
-
-                    // Debug.Log(path.status);
-
-                    // if (path.status != NavMeshPathStatus.PathPartial) {
-                    //     Debug.Log("here");
-                    //     NavMeshAgent.SetPath(path);
-                    //     while (NavMeshAgent.remainingDistance > 1.9f) {
-                    //         yield return null;
-                    //     }
-                    //     NavMeshAgent.ResetPath();
-                    // }
                 }
 
                 else if (content.Head.Equals(INFORM.Head) && content.GetArgAsExpression(2).Equals(SELF)) {
@@ -223,12 +208,6 @@ public class Actuator : MonoBehaviour {
                     // Debug.Log("saying " + message);
                     StartCoroutine(Say(message, 1.5f));
                 }
-
-                // var iTried = new Expression(TRIED, content, SELF);
-
-                // we assert to the mental state that
-                // we've tried to perform this action.
-                // Agent.MentalState.Assert(iTried);
 
                 yield return new WaitForSeconds(2);
             }

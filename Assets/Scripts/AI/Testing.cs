@@ -25,7 +25,15 @@ public class Testing : MonoBehaviour {
         var b = new Expression(new Name(TRUTH_VALUE, "B"));
 
         MentalState.Initialize(new Expression[]{
+            new Expression(BANANA, new Expression(new Parameter(INDIVIDUAL, 0))),
+            new Expression(TOMATO, new Expression(new Parameter(INDIVIDUAL, 1))),
         });
+
+        var imAtFruit = new Expression(SOME, FRUIT, new Expression(AT, SELF));
+        var imAt0 = new Expression(AT, SELF, new Expression(new Parameter(INDIVIDUAL, 0)));
+        var imAt1 = new Expression(AT, SELF, new Expression(new Parameter(INDIVIDUAL, 1)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, imAtFruit, new Expression(MAKE, imAt0, SELF))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, imAtFruit, new Expression(MAKE, imAt1, SELF))));
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(AND, a, b))));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, b, new Expression(AND, a, b))));
