@@ -25,27 +25,11 @@ public class Testing : MonoBehaviour {
         var b = new Expression(new Name(TRUTH_VALUE, "B"));
 
         MentalState.Initialize(new Expression[]{
-            new Expression(BANANA, new Expression(new Parameter(INDIVIDUAL, 0))),
-            new Expression(TOMATO, new Expression(new Parameter(INDIVIDUAL, 1))),
+            new Expression(ALL, PERSON, new Expression(KNOW, a)),
+            new Expression(PERSON, ALICE)
         });
 
-        var imAtFruit = new Expression(SOME, FRUIT, new Expression(AT, SELF));
-        var imAt0 = new Expression(AT, SELF, new Expression(new Parameter(INDIVIDUAL, 0)));
-        var imAt1 = new Expression(AT, SELF, new Expression(new Parameter(INDIVIDUAL, 1)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, imAtFruit, new Expression(MAKE, imAt0, SELF))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, imAtFruit, new Expression(MAKE, imAt1, SELF))));
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(AND, a, b))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, b, new Expression(AND, a, b))));
-
-        // var inform = new Expression(INFORM, new Expression(BLUE, SELF), BOB, SELF);
-
-        // var andMakeAtAndInform =
-        //     new Expression(AND,
-        //         new Expression(MAKE, new Expression(AT, SELF, BOB), SELF),
-        //         new Expression(MAKE, inform, SELF));
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, inform, andMakeAtAndInform)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, PERSON, new Expression(KNOW, a))));
     }
 
     public static string ValueString(List<int> value) {

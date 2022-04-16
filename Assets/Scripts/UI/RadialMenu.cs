@@ -64,19 +64,22 @@ public class RadialMenu : MonoBehaviour {
             [TRUTH_FUNCTION] = new HashSet<Name>(){
                 TRULY.Head as Name,
                 NOT.Head as Name,
+                VERY.Head as Name,
+                GOOD.Head as Name,
                 PAST.Head as Name,
                 FUTURE.Head as Name
             },
             [TRUTH_FUNCTION_2] = new HashSet<Name>(){
                 AND.Head as Name,
                 OR.Head  as Name,
-                // IF.Head  as Name,
-                // BETTER.Head as Name,
-                // AS_GOOD_AS.Head  as Name
+                IF.Head  as Name,
             },
             [INDIVIDUAL_TRUTH_RELATION] = new HashSet<Name>(){
                 // BELIEVE.Head as Name,
                 KNOW.Head as Name,
+            },
+            [TRUTH_FUNCTOR] = new HashSet<Name>(){
+                OMEGA.Head as Name
             },
             [QUANTIFIER] = new HashSet<Name>(){
                 SOME.Head as Name,

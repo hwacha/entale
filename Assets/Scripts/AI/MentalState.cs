@@ -628,7 +628,7 @@ public class MentalState : MonoBehaviour {
                         // and +, ~or +
                         if ((currentLemma.HeadedBy(AND) &&  current.Parity ||
                             currentLemma.HeadedBy(OR)  && !current.Parity) &&
-                            !current.KnowledgeState.Links[currentLemma].Contains(currentLemma)) {
+                            !current.KnowledgeState.Basis.Contains(currentLemma)) {
                             var a = currentLemma.GetArgAsExpression(0);
                             var b = currentLemma.GetArgAsExpression(1);
 
@@ -849,9 +849,6 @@ public class MentalState : MonoBehaviour {
                                 }
                             }
 
-                            // TODO 3/22
-                            // GET THIS WORKING WITH VARIABLES!!!
-                            // 
                             var omegalessContent = verylessContent;
                             var omegalessTop     = verylessTop;
                             var omegalessBottom  = verylessBottom;
@@ -909,7 +906,6 @@ public class MentalState : MonoBehaviour {
                                             powerCounter = powerCounter.GetArgAsExpression(0);
                                             linkPowerCounter = linkPowerCounter.GetArgAsExpression(0);
                                         }
-                                        // TODO 7/19
                                         if (linkSupercedes) {
                                             var powerPlusOneNode = new ProofNode(link, current.KnowledgeState, nextDepth, current, i, true,
                                                 substitution: substitution);
@@ -969,8 +965,8 @@ public class MentalState : MonoBehaviour {
                             var allNode = new ProofNode(allF1F2, current.KnowledgeState,
                                 nextDepth, current, i, current.Parity, f1xNode);
 
-                            // newStack.Push(allNode);
-                            // newStack.Push(f1xNode);
+                            newStack.Push(allNode);
+                            newStack.Push(f1xNode);
                             exhaustive = false;
                         }
 
@@ -1200,13 +1196,15 @@ public class MentalState : MonoBehaviour {
                         }
 
                         if (merge.Parent != null) {
+                            // Debug.Log(merge.Parent.Lemma + " bases added " + productBases);
                             merge.Parent.ChildBases.Add(productBases);
                             sendBases = productBases;
                         }
 
-                        if (merge.Parent == null && merge.OlderSibling == null) {
-                            merge.ChildBases.Add(productBases);
-                        }
+                        // if (merge.Parent == null && merge.OlderSibling == null) {
+                        //     Debug.Log(merge.Lemma + " bases added " + productBases);
+                        //     merge.ChildBases.Add(productBases);
+                        // }
 
                         meetBasisIndex = merge.MeetBasisIndex;
 
@@ -1442,7 +1440,10 @@ public class MentalState : MonoBehaviour {
         // Right now, we literally have this as S knows that p is good,
         // but this feels somehow not aesthetically pleasing to me. I'll
         // try it out for now.
-        return AddToKnowledgeState(KS, new Expression(KNOW, new Expression(GOOD, content), speaker));
+        return AddToKnowledgeState(KS,
+            new Expression(KNOW,
+                new Expression(OMEGA, VERY, new Expression(GOOD, content)),
+                speaker));
     }
 
     public static Expression Conjunctify(List<Expression> set) {

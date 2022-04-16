@@ -74,6 +74,8 @@ public abstract class SemanticType : IComparable<SemanticType> {
 
     public static readonly FunctionalType TRUTH_FUNCTOR =
         new FunctionalType(new SemanticType[]{TRUTH_FUNCTION, TRUTH_VALUE}, TRUTH_VALUE);
+    public static readonly FunctionalType APPLIED_TRUTH_FUNCTOR =
+        new FunctionalType(new SemanticType[]{TRUTH_FUNCTION}, TRUTH_VALUE);
 
     public static readonly FunctionalType TRUTH_QUESTION_FUNCTION =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE}, QUESTION);

@@ -44,6 +44,8 @@ public class RenderingOptions {
             [QUANTIFIER_PHRASE] = new Color(0.4f, 0.5f, 0.6f, 1),
             [TRUTH_FUNCTION_2] = new Color(0.1f, 0.9f, 0.86f, 1),
             [TRUTH_FUNCTION] = new Color(0.7f, 0.7f, 0.86f, 1),
+            [TRUTH_FUNCTOR]  = new Color(0.5f, 0.5f, 0.9f, 1),
+            [APPLIED_TRUTH_FUNCTOR] = new Color(0.3f, 0.3f, 0.7f, 1),
             [ASSERTION]   = new Color(1, 1, 1, 1),
             [QUESTION]    = new Color(0.9f, 0.2f, 0.9f, 1),
             [CONFORMITY_VALUE] = new Color(0.0f, 0.1f, 0.1f, 1),
@@ -51,7 +53,7 @@ public class RenderingOptions {
             [TRUTH_QUESTION_FUNCTION]  = new Color(0.9f, 0.4f, 0.7f, 1),
             [TRUTH_CONFORMITY_FUNCTION] = new Color(0.4f, 0.5f, 0.5f, 1),
             [RELATION_2_REDUCER] = new Color(0.8f, 0.6f, 0.3f, 1),
-            [INDIVIDUAL_TRUTH_RELATION] = new Color(0.6f, 0.3f, 0.2f, 1)
+            [INDIVIDUAL_TRUTH_RELATION] = new Color(0.6f, 0.3f, 0.2f, 1),
         };
     #endregion
 

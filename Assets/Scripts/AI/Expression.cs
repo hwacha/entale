@@ -1002,6 +1002,7 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression PEPPER = new Expression(new Name(PREDICATE, "pepper"));
     public static readonly Expression ROUND  = new Expression(new Name(PREDICATE, "round"));
     public static readonly Expression EXIST  = new Expression(new Name(PREDICATE, "exist"));
+    public static readonly Expression PERSON = new Expression(new Name(PREDICATE, "person"));
 
     // Predicate variables
     public static readonly Expression FET = new Expression(new Variable(PREDICATE, 0));
