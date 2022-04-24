@@ -352,6 +352,17 @@ public class MentalState : MonoBehaviour {
             ChildBases = new ProofBases();
             IsLastChild = false;
         }
+
+        public override string ToString() {
+            return "Proof Node {" +
+                "\n\tlemma: " + Lemma +
+                "\n\tparent: " + (Parent == null ? "ROOT" : Parent.Lemma.ToString()) +
+                "\n\tolderSibling: " + (OlderSibling == null ? "SINGLETON" : OlderSibling.Lemma.ToString()) +
+                "\n\tdepth: " + Depth +
+                "\n\tparity: " + Parity +
+                "\n\tis Assumption: " + IsAssumption +
+                "\n}";
+        }
     }
 
     // TODO:
@@ -382,8 +393,8 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
-            // Debug.Log("================================================");
-            // Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
+            Debug.Log("================================================");
+            Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
 
             bases.Clear();
 
@@ -420,6 +431,7 @@ public class MentalState : MonoBehaviour {
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
+                    Debug.Log("searching " + current);
                     // Debug.Log("current lemma is " + currentLemma);
                     // Debug.Log("the current knowledge state is " + current.KnowledgeState);
 
@@ -939,35 +951,53 @@ public class MentalState : MonoBehaviour {
                             exhaustive = false;
                         }
 
-                        // all -
-                        // M |- all(F, G), M |- F(x) => G(x)
                         var currentVariables = currentLemma.GetVariables();
                         var x1 = GetUnusedVariable(INDIVIDUAL, currentVariables);
                         var f1 = GetUnusedVariable(PREDICATE, currentVariables);
 
-                        var augmentedVariables = new HashSet<Variable>{f1};
-                        augmentedVariables.UnionWith(currentVariables);
+                        if (current.Parity) {
+                            var augmentedVariables = new HashSet<Variable>{f1};
+                            augmentedVariables.UnionWith(currentVariables);
 
-                        var f2 = GetUnusedVariable(PREDICATE, augmentedVariables);
+                            var f2 = GetUnusedVariable(PREDICATE, augmentedVariables);
 
-                        var f2xFormula = new Expression(new Expression(f2), new Expression(x1));
-                        var f2xMatches = f2xFormula.GetMatches(currentLemma);
+                            var f2xFormula = new Expression(new Expression(f2), new Expression(x1));
+                            var f2xMatches = f2xFormula.GetMatches(currentLemma);
 
-                        foreach (var f2xBinding in f2xMatches) {
-                            var allF1F2 = new Expression(ALL, new Expression(f1), f2xBinding[f2]);
-                            
-                            var f1xFormula = new Expression(new Expression(f1), f2xBinding[x1]);
-                            
-                            var f1xNode = new ProofNode(f1xFormula, current.KnowledgeState,
-                                    nextDepth, current, i, current.Parity,
-                                    hasYoungerSibling: true);
+                            foreach (var f2xBinding in f2xMatches) {
+                                if (f2xBinding[f2] is Variable) {
+                                    continue;
+                                }
+                                var f1xFormula = new Expression(new Expression(f1), f2xBinding[x1]);
+                                var f1xNodeForAll = new ProofNode(f1xFormula, current.KnowledgeState,
+                                    nextDepth, current, i, current.Parity, hasYoungerSibling: true);
 
-                            var allNode = new ProofNode(allF1F2, current.KnowledgeState,
-                                nextDepth, current, i, current.Parity, f1xNode);
+                                // all -
+                                // M |- all(F, G), M |- F(x) => G(x)
+                                var allF1F2 = new Expression(ALL, new Expression(f1), f2xBinding[f2]);
+                                var allNode = new ProofNode(allF1F2, current.KnowledgeState,
+                                    nextDepth, current, i, current.Parity, f1xNodeForAll);
 
-                            newStack.Push(allNode);
-                            newStack.Push(f1xNode);
-                            exhaustive = false;
+                                var f2xNode = new ProofNode(new Expression(NOT, currentLemma), current.KnowledgeState,
+                                    nextDepth, current, i, current.Parity, hasYoungerSibling: true, isAssumption: true);
+
+                                var f1xNodeForGen = new ProofNode(f1xFormula, current.KnowledgeState,
+                                    nextDepth, current, i, current.Parity, f2xNode, hasYoungerSibling: true);;
+
+                                // gen -
+                                // M |- gen(F, G), M |- F(x), M |/- ~G(x) => G(x)
+                                var genF1F2 = new Expression(GEN, new Expression(f1), f2xBinding[f2]);
+                                var genNode = new ProofNode(genF1F2, current.KnowledgeState,
+                                    nextDepth, current, i, current.Parity, f1xNodeForGen);
+
+                                newStack.Push(genNode);
+                                newStack.Push(f1xNodeForGen);
+                                newStack.Push(f2xNode);
+
+                                newStack.Push(allNode);
+                                newStack.Push(f1xNodeForAll);
+                                exhaustive = false;
+                            }
                         }
 
                         // geach - : (t -> t), (e -> t), e -> t
@@ -1056,15 +1086,14 @@ public class MentalState : MonoBehaviour {
                     ProofBases sendBases = sends[i].Key;
                     bool exhaustive = sends[i].Value;
 
-                    // Debug.Log("the send bases are " + sendBases);
-                    // Debug.Log("meet basis index is " + meetBasisIndex);
-
                     // pass on the bases and merge them all the way to
                     // its ancestral node.
                     while (merge != null) {
                         if (FrameTimer.FrameDuration >= TIME_BUDGET) {
                             yield return null;
                         }
+
+                        Debug.Log("merging " + merge);
 
                         // this is the basis which gave us this assignment -
                         // we want to meet with this one, and none of the others.
@@ -1126,20 +1155,17 @@ public class MentalState : MonoBehaviour {
                         ProofBases productBases = new ProofBases();
 
                         if (merge.IsAssumption) {
-                            // Debug.Log("this proof node is an assumption");
-                            // Debug.Log("the child bases are " + merge.ChildBases);
-                            // Debug.Log("the meet basis is null? " + (meetBasis == null));
-                            // Debug.Log("search is exhaustive? " + exhaustive);
-                            // Debug.Log("current depth=" + current.Depth);
-                            // Debug.Log("is last child? " + merge.IsLastChild);
+                            // Debug.Log(merge);
                             // no refutation
                             if (sendBases.IsEmpty() &&
                                 merge.ChildBases.IsEmpty() &&
-                                meetBasis != null &&
+                                (merge.YoungerSiblingBases.Count > 0) &&
                                 (exhaustive ||
                                  current.Depth == maxDepth ||
                                  merge.IsLastChild)) {
-                                // Debug.Log("NO REFUTATION");
+                                Debug.Log("exhaustive? " + exhaustive);
+                                Debug.Log("depth is max? " + (current.Depth == maxDepth));
+                                Debug.Log("last child? " + (current.Depth == maxDepth));
                                 // we can safely assume the content of
                                 // this assumption node
                                 var assumptionBasis = new ProofBasis();

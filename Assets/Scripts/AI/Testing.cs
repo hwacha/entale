@@ -25,11 +25,13 @@ public class Testing : MonoBehaviour {
         var b = new Expression(new Name(TRUTH_VALUE, "B"));
 
         MentalState.Initialize(new Expression[]{
-            new Expression(ALL, PERSON, new Expression(KNOW, a)),
-            new Expression(PERSON, ALICE)
+            new Expression(GEN, RED, BLUE),
+            new Expression(ALL, GREEN, BLUE),
+            new Expression(RED, ALICE),
+            new Expression(GREEN, BOB),
         });
-
-        StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, PERSON, new Expression(KNOW, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, ALICE)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, BOB)));
     }
 
     public static string ValueString(List<int> value) {
