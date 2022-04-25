@@ -25,13 +25,32 @@ public class Testing : MonoBehaviour {
         var b = new Expression(new Name(TRUTH_VALUE, "B"));
 
         MentalState.Initialize(new Expression[]{
-            new Expression(GEN, RED, BLUE),
-            new Expression(ALL, GREEN, BLUE),
-            new Expression(RED, ALICE),
-            new Expression(GREEN, BOB),
+            // new Expression(OMEGA, VERY, a),
+            // new Expression(OMEGA, new Expression(OMEGA, VERY), b),
+            new Expression(OMEGA, new Expression(GEACH_T_QUANTIFIER_PHRASE, new Expression(ALL, PERSON), KNOW), a)
         });
-        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, ALICE)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, BOB)));
+        
+        var va = a;
+        // true
+        for (int i = 0; i < 5; i++) {
+            StartCoroutine(LogBasesStream(MentalState, va));
+            va = new Expression(GEACH_T_QUANTIFIER_PHRASE, new Expression(ALL, PERSON), KNOW, va);
+        }
+
+        // not true
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(OR, new Expression(VERY, a), b))));
+
+        // this is looping
+        // var vb = b;
+        // for (int i = 0; i < 10; i++) {
+        //     StartCoroutine(LogBasesStream(MentalState, vb));
+        //     vb = new Expression(OMEGA, VERY, vb);
+        // }
+
+        // proving lower-order sentences from higher-order omegas
+        // is not working, because we need to check the links,
+        // not just the knowledge basis. Not sure how to do that.
     }
 
     public static string ValueString(List<int> value) {

@@ -1077,8 +1077,8 @@ public class Expression : Argument, IComparable<Expression> {
 
     // defactivizer: turns a sentence F(P) that entails P
     // into one that doesn't entail P
-    // df(F(P)) is also entailed by F(P)
-    public static readonly Expression DF = new Expression(new Name(TRUTH_FUNCTION, "df"));
+    // df(F, P) is also entailed by F(P)
+    public static readonly Expression DF = new Expression(new Name(TRUTH_FUNCTOR, "df"));
 
     // tensers
     public static readonly Expression WHEN   = new Expression(new Name(TENSER, "when"));
@@ -1104,6 +1104,8 @@ public class Expression : Argument, IComparable<Expression> {
         SemanticType.Push(TRUTH_FUNCTION_2, SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION_2)), "geach"));
     public static readonly Expression GEACH_E_QUANTIFIER_PHRASE = new Expression(new Name(
         SemanticType.Push(QUANTIFIER_PHRASE, SemanticType.Geach(INDIVIDUAL, QUANTIFIER_PHRASE)), "geach"));
+    public static readonly Expression GEACH_T_QUANTIFIER_PHRASE = new Expression(new Name(
+        SemanticType.Push(QUANTIFIER_PHRASE, SemanticType.Geach(TRUTH_VALUE, QUANTIFIER_PHRASE)), "geach"));
 
     // compose
     public static readonly Expression COMPOSE_TRUTH_FUNCTION = new Expression(new Name(
