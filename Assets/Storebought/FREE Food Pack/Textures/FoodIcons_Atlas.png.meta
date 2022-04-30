@@ -185,9 +185,12 @@ TextureImporter:
     externalNormalMap: 0
     heightScale: 0.25
     normalMapFilter: 0
+    flipGreenChannel: 0
   isReadable: 0
   streamingMipmaps: 0
   streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMasterTextureLimit: 0
   grayScaleToAlpha: 0
   generateCubemap: 6
   cubemapConvolution: 0
@@ -196,9 +199,9 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: -1
+    filterMode: 1
     aniso: 16
-    mipBias: -100
+    mipBias: 0
     wrapU: 1
     wrapV: 1
     wrapW: 1
@@ -219,10 +222,14 @@ TextureImporter:
   textureType: 8
   textureShape: 1
   singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
   maxTextureSizeSet: 0
   compressionQualitySet: 0
   textureFormatSet: 0
+  ignorePngGamma: 0
   applyGammaDecoding: 1
+  swizzle: 50462976
   platformSettings:
   - serializedVersion: 3
     buildTarget: DefaultTexturePlatform
@@ -1314,9 +1321,58 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
+    nameFileIdTable:
+      Food_Pepper: 21300044
+      Food_Maki: 21300074
+      Food_Sushi: 21300064
+      Food_Egg: 21300108
+      Food_Meatball: 21300072
+      Food_Baguette: 21300056
+      Food_ChocolateEclair: 21300048
+      Food_SteakUncooked: 21300106
+      Food_Mushroom: 21300088
+      Food_Croissant: 21300062
+      Food_SweetPepper: 21300040
+      Food_Omelette: 21300066
+      Food_Pizza: 21300030
+      Food_Onigiri: 21300078
+      Food_Avocado: 21300042
+      Food_Chili: 21300054
+      Food_Gyoza: 21300080
+      Food_WineBottle: 21300058
+      Food_Watermelon: 21300022
+      Food_Saucisson: 21300068
+      Food_Salad: 21300036
+      Food_Cheese_02: 21300084
+      Food_Banana: 21300020
+      Food_ChipsBag: 21300026
+      Food_SteakCooked: 21300090
+      Food_HotDog: 21300034
+      Food_Fries: 21300004
+      Food_IcecreamCone: 21300024
+      Food_Cheese_01: 21300060
+      Food_Sausage: 21300086
+      Food_Tomato: 21300046
+      Food_Taco: 21300050
+      Food_Drink2: 21300012
+      Food_Chips: 21300032
+      Food_Mochi: 21300104
+      Food_Coconut: 21300008
+      Food_Chicken: 21300102
+      Food_Donut: 21300006
+      Food_Onion: 21300052
+      Food_Tempura: 21300070
+      Food_Drink3: 21300014
+      Food_Pineapple: 21300100
+      Food_Drink1: 21300010
+      Food_Toast: 21300094
+      Food_Shrimp: 21300000
+      Food_Burger: 21300028
+      Food_Muffin: 21300038
+      Food_IceCream: 21300016
+      Food_RiceBowl: 21300082
   spritePackingTag: 
   pSDRemoveMatte: 0
-  pSDShowRemoveMatteOption: 0
   userData: 
   assetBundleName: 
   assetBundleVariant: 

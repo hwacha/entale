@@ -424,6 +424,8 @@ public class MentalState : MonoBehaviour {
                 }
                 
                 var sends = new List<KeyValuePair<ProofBases, bool>>();
+
+                // Debug.Log("searching " + current);
  
                 for (int i = 0; i < current.YoungerSiblingBases.Count; i++) {
                     if (FrameTimer.FrameDuration >= TIME_BUDGET) {
@@ -434,7 +436,6 @@ public class MentalState : MonoBehaviour {
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
 
-                    // Debug.Log("searching " + current);
                     // Debug.Log("current lemma is " + currentLemma);
                     // Debug.Log("the current knowledge state is " + current.KnowledgeState);
 
@@ -583,8 +584,20 @@ public class MentalState : MonoBehaviour {
                         
                         var newStack = new Stack<ProofNode>();
 
-                        void PushNode(ProofNode proofNode) {
-                            newStack.Push(proofNode);
+                        void PushNode(ProofNode pushNode) {
+                            var pushLemma = pushNode.Lemma;
+                            var ancestor = pushNode.Parent;
+                            while (ancestor != null) {
+                                if (ancestor.Lemma.Equals(pushLemma)) {
+                                    return;
+                                }
+                                // @note/TODO for formulas we may
+                                // want to check if the
+                                // lemmas match one another
+                                ancestor = ancestor.Parent;
+                            }
+                            newStack.Push(pushNode);
+                            exhaustive = false;
                         }
 
                         // truly +
@@ -791,7 +804,7 @@ public class MentalState : MonoBehaviour {
                                 if (link.HeadedBy(IF)) {
                                     var antecedent = link.GetArgAsExpression(1);
                                     var antecedentNode = new ProofNode(antecedent, current.KnowledgeState, nextDepth, current, i, true, current.Omega,
-                                        hasYoungerSibling: true, substitution: substitution);
+                                        hasYoungerSibling: true);
                                     var conditionalNode = new ProofNode(link, current.KnowledgeState, nextDepth, current, i, true, current.Omega,
                                         antecedentNode, substitution: substitution);
 
@@ -1034,7 +1047,9 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // trim antecedents of conditionals.
-                        if (merge.Lemma.HeadedBy(IF)) {
+                        // TODO make this more robust for if
+                        // the merge lemma is a formula
+                        if (merge.Lemma.HeadedBy(IF) && !merge.KnowledgeState.Basis.Contains(merge.Lemma)) {
                             var antecedent = merge.Lemma.GetArgAsExpression(1);
                             var trimmedBases = new ProofBases();
 
