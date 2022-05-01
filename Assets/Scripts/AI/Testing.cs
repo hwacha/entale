@@ -26,12 +26,10 @@ public class Testing : MonoBehaviour {
         var c = new Expression(new Name(TRUTH_VALUE, "C"));
 
         MentalState.Initialize(new Expression[]{
-            new Expression(IF, b, a),
-            new Expression(IF, c, b),
-            a,
+            new Expression(OMEGA, VERY, new Expression(GOOD, a)),
         });
 
-        StartCoroutine(LogBasesStream(MentalState, c));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, a)));
     }
 
     public static string ValueString(List<int> value) {

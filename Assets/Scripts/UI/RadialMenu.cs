@@ -13,8 +13,8 @@ public class RadialMenu : MonoBehaviour {
     public Camera playerCamera;
     MouseLook playerMouseLook;
     const double INITIAL_ANGLE_OFFSET = Math.PI / 2f;
-    const double RADIUS = 400;
-    const float ITEM_SCALE = 4;
+    const double RADIUS = 300;
+    const float ITEM_SCALE = 2;
     Vector2 SCREEN_CENTER = new Vector2(Screen.width, Screen.height);
 
     public Dictionary<SemanticType, HashSet<Name>> Lexicon =
@@ -46,11 +46,13 @@ public class RadialMenu : MonoBehaviour {
             [INDIVIDUAL] = new HashSet<Name>(){
                 SELF.Head as Name,
                 BOB.Head  as Name,
+                EVAN.Head as Name,
                 THIS.Head as Name
             },
             [PREDICATE] = new HashSet<Name>(){
                 RED.Head  as Name,
                 BLUE.Head as Name,
+                YELLOW.Head as Name,
                 TOMATO.Head as Name,
                 BANANA.Head as Name
             },

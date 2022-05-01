@@ -10,12 +10,9 @@ public class Evan : Agent
     {
         MentalState.Initialize(
             new Expression[]{
-                new Expression(VERY, new Expression(GOOD, new Expression(INFORM, new Expression(RED, SELF), BOB, SELF))),
-                new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
-                new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
-                // new Expression(GOOD, new Expression(INFORM, new Expression(BLUE, SELF), BOB, SELF)),
-                // new Expression(GOOD, new Expression(SOME, BANANA, new Expression(AT, SELF))),
-                // new Expression(GOOD, new Expression(SOME, TOMATO, new Expression(AT, SELF))),
+                new Expression(IDENTITY, SELF, EVAN),
+                new Expression(GEN, TOMATO, RED),
+                new Expression(GEN, BANANA, YELLOW)
             }
         );
 

@@ -726,6 +726,14 @@ public class MentalState : MonoBehaviour {
                             PushNode(consequentNode);
                         }
 
+                        // symmetry of identity
+                        // M |- a = b => M |- b = a
+                        if (currentLemma.HeadedBy(IDENTITY) && current.Parity) {
+                            var converse = new Expression(IDENTITY, currentLemma.GetArgAsExpression(1), currentLemma.GetArgAsExpression(0));
+                            var converseNode = new ProofNode(converse, current.KnowledgeState, nextDepth, current, i, current.Parity, current.Omega);
+                            PushNode(converseNode);
+                        }
+
                         // M |- banana(x) => M |- fruit(x)
                         // M |- tomato(x) => M |- fruit(x)
                         if (currentLemma.HeadedBy(FRUIT) && current.Parity) {
@@ -1367,8 +1375,6 @@ public class MentalState : MonoBehaviour {
     }
 
     // a direct assertion.
-    // @TODO add an inference rule to cover knowledge from
-    // assertion. Now is a simple fix.
     public IEnumerator ReceiveAssertion(Expression content, Expression speaker) {
         // check if the content would make our mental state inconsistent
         var notContentBases = new ProofBases();
@@ -1396,10 +1402,7 @@ public class MentalState : MonoBehaviour {
         // Right now, we literally have this as S knows that p is good,
         // but this feels somehow not aesthetically pleasing to me. I'll
         // try it out for now.
-        return AddToKnowledgeState(KS,
-            new Expression(KNOW,
-                new Expression(OMEGA, VERY, new Expression(GOOD, content)),
-                speaker));
+        return AddToKnowledgeState(KS, new Expression(OMEGA, VERY, new Expression(GOOD, content)));
     }
 
     public static Expression Conjunctify(List<Expression> set) {
