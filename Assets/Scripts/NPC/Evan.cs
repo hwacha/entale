@@ -11,6 +11,7 @@ public class Evan : Agent
         MentalState.Initialize(
             new Expression[]{
                 new Expression(IDENTITY, SELF, EVAN),
+                new Expression(RED, SELF),
                 new Expression(GEN, TOMATO, RED),
                 new Expression(GEN, BANANA, YELLOW)
             }

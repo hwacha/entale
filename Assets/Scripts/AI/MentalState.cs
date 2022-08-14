@@ -1287,7 +1287,7 @@ public class MentalState : MonoBehaviour {
         if (knowledge.HeadedBy(OMEGA)) {
             var functor = new Expression(knowledge.GetArgAsExpression(0), knowledge.GetArgAsExpression(1));
             AddToKnowledgeState(knowledgeState, functor, false);
-            // AddLink(knowledgeState, knowledge, functor);
+            AddLink(knowledgeState, knowledge, functor);
         }
         
         if (knowledge.HeadedBy(AND)) {

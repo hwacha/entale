@@ -7,6 +7,7 @@ using static UnityEngine.Debug;
 using static SemanticType;
 using static Expression;
 using static ProofType;
+using static InferenceRule;
 
 using Substitution = System.Collections.Generic.Dictionary<Variable, Expression>;
 
@@ -27,9 +28,76 @@ public class Testing : MonoBehaviour {
 
         MentalState.Initialize(new Expression[]{
             new Expression(OMEGA, VERY, new Expression(GOOD, a)),
+            new Expression(OMEGA, new Expression(OMEGA, VERY), b)
         });
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, a)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, a)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, a))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(VERY, new Expression(GOOD, a)))));
+
+        // StartCoroutine(LogBasesStream(MentalState, b));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, b)));
+        // // this is failing because: the search would need to check the LINKS
+        // // and not just the knowledge base for omega sentences.
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(VERY, b))));
+
+        var orLeftIntroduction = new InferenceRule("OR+L", e => e.HeadedBy(OR),
+            e => new List<Expression>{
+                e.GetArgAsExpression(0)
+            });
+        var orRightIntroduction = new InferenceRule("OR+R", e => e.HeadedBy(OR),
+            e => new List<Expression>{
+                e.GetArgAsExpression(1)
+            });
+        var andIntroduction = new InferenceRule("AND+", e => e.HeadedBy(AND),
+            e => new List<Expression>{
+                e.GetArgAsExpression(0), e.GetArgAsExpression(1)
+            });
+
+        TestInferenceRule(orLeftIntroduction, new Expression(OR, a, b)); // A
+        TestInferenceRule(orLeftIntroduction, new Expression(AND, a, b)); // null
+        TestInferenceRule(orLeftIntroduction, a); // null
+
+        TestInferenceRule(orRightIntroduction, new Expression(OR, a, b)); // B
+        TestInferenceRule(orRightIntroduction, new Expression(AND, a, b)); // null
+        TestInferenceRule(orRightIntroduction, a); // null
+
+        TestInferenceRule(andIntroduction, new Expression(OR, a, b)); // null
+        TestInferenceRule(andIntroduction, new Expression(AND, a, b)); // A, B
+        TestInferenceRule(andIntroduction, a); // A, B
+
+        var knowledgeElim = new InferenceRule("K-", e => e.Equals(a),
+            e => new List<Expression>{
+                new Expression(KNOW, a, BOB)
+            });
+
+        TestInferenceRule(knowledgeElim, a);
+
+        // every(person, knows(A)), person(x) => knows(A, x) => A
+        
+        // omega(F, P) => F(P)
+        // M |- omega(F, P) -> X => M |- F(X)
+        
+    }
+
+    public static void TestInferenceRule(InferenceRule rule, Expression e) {
+        var premises = rule.Apply(e);
+
+        var s = new StringBuilder();
+
+        s.Append(rule + " applied to " + e + " yields ");
+
+        if (premises == null) {
+            s.Append("NONE\n");
+            Debug.Log(s.ToString());
+            return;
+        }
+
+        foreach (var premise in premises) {
+            s.Append(premise + ", ");
+        }
+        s.Append("\n");
+        Debug.Log(s.ToString());
     }
 
     public static string ValueString(List<int> value) {
