@@ -1203,8 +1203,9 @@ public class MentalState : MonoBehaviour {
         knowledgeState.Rules[key].Add(rule);
     }
 
-    public bool AddToKnowledgeState(KnowledgeState knowledgeState, Expression knowledge, bool firstCall = true) {
+    public bool AddToKnowledgeState(KnowledgeState knowledgeState, Expression knowledge, bool firstCall = true, Expression trace = null) {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
+        Debug.Assert(firstCall || trace != null);
 
         if (knowledgeState.Basis.Contains(knowledge)) {
             return false;
@@ -1214,6 +1215,12 @@ public class MentalState : MonoBehaviour {
 
         if (knowledge.Depth > MaxDepth) {
             MaxDepth = knowledge.Depth;
+        }
+
+        Expression signature = trace;
+
+        if (signature == null) {
+            signature = knowledge;
         }
 
         if (firstCall) {
@@ -1239,16 +1246,16 @@ public class MentalState : MonoBehaviour {
 
         if (knowledge.HeadedBy(VERY, KNOW, MAKE, SEE, INFORM)) {
             var subclause = knowledge.GetArgAsExpression(0);
-            AddToKnowledgeState(knowledgeState, subclause, false);
-            AddRule(knowledgeState, knowledge, new InferenceRule("K-",
+            AddToKnowledgeState(knowledgeState, subclause, false, knowledge);
+            AddRule(knowledgeState, signature, new InferenceRule("K-",
                 e => e.Equals(subclause),
                 e => new List<Expression>{knowledge}));
         }
 
         if (knowledge.HeadedBy(OMEGA)) {
             var functor = new Expression(knowledge.GetArgAsExpression(0), knowledge.GetArgAsExpression(1));
-            AddToKnowledgeState(knowledgeState, functor, false);
-            AddRule(knowledgeState, knowledge, new InferenceRule("omega(F, P) |- F(P)",
+            AddToKnowledgeState(knowledgeState, functor, false, knowledge);
+            AddRule(knowledgeState, signature, new InferenceRule("omega(F, P) |- F(P)",
                 e => e.Equals(functor),
                 e => new List<Expression>{knowledge}));
         }
@@ -1257,13 +1264,13 @@ public class MentalState : MonoBehaviour {
             var a = knowledge.GetArgAsExpression(0);
             var b = knowledge.GetArgAsExpression(1);
             
-            AddToKnowledgeState(knowledgeState, a, false);
-            AddToKnowledgeState(knowledgeState, b, false);
+            AddToKnowledgeState(knowledgeState, a, false, knowledge);
+            AddToKnowledgeState(knowledgeState, b, false, knowledge);
 
-            AddRule(knowledgeState, knowledge, new InferenceRule("A & B |- A",
+            AddRule(knowledgeState, signature, new InferenceRule("A & B |- A",
                 e => e.Equals(a),
                 e => new List<Expression>{knowledge}));
-            AddRule(knowledgeState, knowledge, new InferenceRule("A & B |- B",
+            AddRule(knowledgeState, signature, new InferenceRule("A & B |- B",
                 e => e.Equals(b),
                 e => new List<Expression>{knowledge}));
         }
@@ -1274,13 +1281,13 @@ public class MentalState : MonoBehaviour {
                 var notA = new Expression(NOT, subclause.GetArgAsExpression(0));
                 var notB = new Expression(NOT, subclause.GetArgAsExpression(1));
 
-                AddToKnowledgeState(knowledgeState, notA, false);
-                AddToKnowledgeState(knowledgeState, notB, false);
+                AddToKnowledgeState(knowledgeState, notA, false, knowledge);
+                AddToKnowledgeState(knowledgeState, notB, false, knowledge);
 
-                AddRule(knowledgeState, knowledge, new InferenceRule("~(A v B) |- ~A",
+                AddRule(knowledgeState, signature, new InferenceRule("~(A v B) |- ~A",
                     e => e.Equals(notA),
                     e => new List<Expression>{knowledge}));
-                AddRule(knowledgeState, knowledge, new InferenceRule("~(A v B) |- ~B",
+                AddRule(knowledgeState, signature, new InferenceRule("~(A v B) |- ~B",
                     e => e.Equals(notB),
                     e => new List<Expression>{knowledge}));
             }
@@ -1289,17 +1296,17 @@ public class MentalState : MonoBehaviour {
         if (knowledge.HeadedBy(IF)) {
             var consequent = knowledge.GetArgAsExpression(0);
             var antecedent = knowledge.GetArgAsExpression(1);
-            AddRule(knowledgeState, knowledge, new InferenceRule("Modus Ponens",
+            AddRule(knowledgeState, signature, new InferenceRule("Modus Ponens",
                 e => e.Equals(consequent),
                 e => new List<Expression>{knowledge, antecedent}));
 
             // TODO @Bug the K- rule won't be removed when the conditional is!
-            AddToKnowledgeState(knowledgeState, consequent, false);
+            AddToKnowledgeState(knowledgeState, consequent, false, knowledge);
         }
 
         if (knowledge.HeadedBy(ABLE)) {
             var content = knowledge.GetArgAsExpression(0);
-            AddRule(knowledgeState, knowledge, new InferenceRule("ability to will",
+            AddRule(knowledgeState, signature, new InferenceRule("ability to will",
                 e => e.Equals(content),
                 e => new List<Expression>{knowledge},
                 supplement: new Expression(WILL, content)));
@@ -1310,20 +1317,20 @@ public class MentalState : MonoBehaviour {
             var x  = new Expression(GetUnusedVariable(INDIVIDUAL, g.GetVariables()));
             var gx = new Expression(g, x);
 
-            AddToKnowledgeState(knowledgeState, gx, false);
+            AddToKnowledgeState(knowledgeState, gx, false, knowledge);
         }
 
         if (knowledge.HeadedBy(SINCE)) {
             var topic = knowledge.GetArgAsExpression(0);
             var anchor = new Expression(PAST, knowledge.GetArgAsExpression(1));
 
-            AddToKnowledgeState(knowledgeState, topic, false);
-            AddToKnowledgeState(knowledgeState, anchor, false);
+            AddToKnowledgeState(knowledgeState, topic, false, knowledge);
+            AddToKnowledgeState(knowledgeState, anchor, false, knowledge);
 
-            AddRule(knowledgeState, knowledge, new InferenceRule("since(P, Q) |- P",
+            AddRule(knowledgeState, signature, new InferenceRule("since(P, Q) |- P",
                 e => e.Equals(topic),
                 e => new List<Expression>{knowledge}));
-            AddRule(knowledgeState, knowledge, new InferenceRule("since(P, Q) |- was(Q)",
+            AddRule(knowledgeState, signature, new InferenceRule("since(P, Q) |- was(Q)",
                 e => e.Equals(anchor),
                 e => new List<Expression>{knowledge}));
         }
