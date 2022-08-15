@@ -781,7 +781,7 @@ public class MentalState : MonoBehaviour {
                                         for (int j = premises.Count - 1; j >= 0; j--) {
                                             var curPremNode = new ProofNode(
                                                 premises[j], current.KnowledgeState, nextDepth, current, i,
-                                                current.Parity, current.Omega, nextPremNode, hasYoungerSibling: j > 0,
+                                                true, current.Omega, nextPremNode, hasYoungerSibling: j > 0,
                                                 supplement: rule.Supplement);
                                             nodes.Push(curPremNode);
                                             nextPremNode = curPremNode;
