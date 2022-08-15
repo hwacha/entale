@@ -11,11 +11,13 @@ public class InferenceRule
     string Name;
     Predicate<Expression> Condition;
     Func<Expression, List<Expression>> Selector;
+    public Expression Supplement { get; protected set; }
 
-    public InferenceRule(string name, Predicate<Expression> condition, Func<Expression, List<Expression>> selector) {
+    public InferenceRule(string name, Predicate<Expression> condition, Func<Expression, List<Expression>> selector, Expression supplement = null) {
         Name = name;
         Condition = condition;
         Selector = selector;
+        Supplement = supplement;
     }
 
     public List<Expression> Apply(Expression e) {

@@ -46,18 +46,21 @@ public class MentalState : MonoBehaviour {
 
     public class KnowledgeState {
         public SortedSet<Expression> Basis;
-        public SortedList<Expression, HashSet<Expression>> Links;
+        public SortedList<Expression, List<InferenceRule>> Rules;
 
-        public KnowledgeState(SortedSet<Expression> basis, SortedList<Expression, HashSet<Expression>> links, bool copy = true) {
+        public KnowledgeState(SortedSet<Expression> basis, SortedList<Expression, List<InferenceRule>> rules, bool copy = true) {
             if (copy) {
                 Basis = new SortedSet<Expression>(basis);
-                Links = new SortedList<Expression, HashSet<Expression>>();
-                foreach (var keyAndValue in links) {
-                    Links.Add(keyAndValue.Key, new HashSet<Expression>(keyAndValue.Value));
+                Rules = new SortedList<Expression, List<InferenceRule>>();
+                foreach (var keyAndRules in rules) {
+                    Rules.Add(keyAndRules.Key, new List<InferenceRule>());
+                    foreach (var rule in keyAndRules.Value) {
+                        Rules[keyAndRules.Key].Add(rule);
+                    }
                 }
             } else {
                 Basis = basis;
-                Links = links;
+                Rules = rules;
             }
         }
 
@@ -67,13 +70,9 @@ public class MentalState : MonoBehaviour {
             foreach (Expression e in Basis) {
                 str.Append("\t" + e + "\n");
             }
-            str.Append("]\nLinks [\n");
-            foreach (var keyAndLinks in Links) {
-                str.Append("\t" + keyAndLinks.Key + " -> {\n");
-                foreach (var link in keyAndLinks.Value) {
-                    str.Append("\t\t" + link + "\n");
-                }
-                str.Append("\t}\n");
+            str.Append("]\nRules [\n");
+            foreach (var keyAndRule in Rules) {
+                str.Append("\t" + keyAndRule.Key + " -> " + keyAndRule.Value + "\n");
             }
             str.Append("]");
             return str.ToString();
@@ -109,7 +108,7 @@ public class MentalState : MonoBehaviour {
         if (KS != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
-        KS = new KnowledgeState(new SortedSet<Expression>(), new SortedList<Expression, HashSet<Expression>>(), false);
+        KS = new KnowledgeState(new SortedSet<Expression>(), new SortedList<Expression, List<InferenceRule>>(), false);
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
             AddToKnowledgeState(KS, initialKnowledge[i]);
@@ -717,7 +716,7 @@ public class MentalState : MonoBehaviour {
                             var consequent = currentLemma.GetArgAsExpression(0);
                             var antecedent = currentLemma.GetArgAsExpression(1);
 
-                            var newKnowledgeState = new KnowledgeState(current.KnowledgeState.Basis, current.KnowledgeState.Links);
+                            var newKnowledgeState = new KnowledgeState(current.KnowledgeState.Basis, current.KnowledgeState.Rules);
 
                             AddToKnowledgeState(newKnowledgeState, antecedent);
 
@@ -764,71 +763,33 @@ public class MentalState : MonoBehaviour {
 
                         // here, we check against rules that
                         // would otherwise be premise-expansive.
-                        Dictionary<Expression, HashSet<Expression>> linksByKey = new Dictionary<Expression, HashSet<Expression>>();
-                        if (variables.Count == 0) {
-                            if (current.KnowledgeState.Links.ContainsKey(query)) {
-                                linksByKey.Add(query, current.KnowledgeState.Links[query]);
-                            }
-                        } else {
-                            foreach (var keyAndLinks in current.KnowledgeState.Links) {
-                                // @Note this is linear search and be done
-                                // in O(log(n)) time with binary search.
-                                // TODO Revisit this.
-                                if (bottom.CompareTo(keyAndLinks.Key) < 0 && top.CompareTo(keyAndLinks.Key) > 0) {
-                                    linksByKey.Add(keyAndLinks.Key, keyAndLinks.Value);
-                                }
-                            }
-                        }
-
-                        foreach (var keyAndLinks in linksByKey) {
-                            var key = keyAndLinks.Key;
-                            Substitution substitution = null;
-
-                            if (variables.Count > 0) {
-                                var matches = query.GetMatches(key);
-                                foreach (var match in matches) {
-                                    // @note this assumes pattern match was unambiguous.
-                                    // this is a band-aid solution.
-                                    substitution = match;
-                                    break;
-                                }
-                            }
-
-                            var links = keyAndLinks.Value;
-                            foreach (var link in links) {
-                                if (key.Equals(link)) {
+                        
+                        foreach (var rules in current.KnowledgeState.Rules.Values) {
+                            foreach (var rule in rules) {
+                                if (rule.ToString().Equals("ability to will") && pt != ProofType.Plan) {
                                     continue;
                                 }
-
-                                // M |- factive(P) => M |- P
-                                // factive - (1)
-                                if (link.HeadedBy(KNOW, SEE, MAKE, VERY, AND, SINCE, OMEGA)) {
-                                    var factiveNode = new ProofNode(link, current.KnowledgeState, nextDepth, current, i, true, current.Omega,
-                                        substitution: substitution);
-                                    PushNode(factiveNode);
-                                }
-                                // Modus Ponens
-                                // M |- B if A, M |- A => M |- B
-                                if (link.HeadedBy(IF)) {
-                                    var antecedent = link.GetArgAsExpression(1);
-                                    var antecedentNode = new ProofNode(antecedent, current.KnowledgeState, nextDepth, current, i, true, current.Omega,
-                                        hasYoungerSibling: true);
-                                    var conditionalNode = new ProofNode(link, current.KnowledgeState, nextDepth, current, i, true, current.Omega,
-                                        antecedentNode, substitution: substitution);
-
-                                    PushNode(conditionalNode);
-                                    PushNode(antecedentNode);
-                                }
-
-                                // M |- able(P, x), M::will(P) => M |- P
-                                if (link.HeadedBy(ABLE) &&
-                                    link.GetArgAsExpression(1).Equals(SELF) &&
-                                    pt == ProofType.Plan) {
-                                    var will = new Expression(WILL, link.GetArgAsExpression(0));
-                                    var ableNode = new ProofNode(link, current.KnowledgeState, nextDepth, current, i, true, current.Omega,
-                                        supplement: will, substitution: substitution);
-
-                                    PushNode(ableNode);
+                                var premises = rule.Apply(currentLemma);
+                                if (premises != null) {
+                                    if (premises.Count == 0) {
+                                        searchBases.Add(new ProofBasis());
+                                    } else if (premises.Count == 1) {
+                                        PushNode(new ProofNode(premises[0], current.KnowledgeState, nextDepth, current, i, current.Parity, current.Omega));
+                                    } else {
+                                        ProofNode nextPremNode = null;
+                                        var nodes = new Stack<ProofNode>();
+                                        for (int j = premises.Count - 1; j >= 0; j--) {
+                                            var curPremNode = new ProofNode(
+                                                premises[j], current.KnowledgeState, nextDepth, current, i,
+                                                current.Parity, current.Omega, nextPremNode, hasYoungerSibling: j > 0,
+                                                supplement: rule.Supplement);
+                                            nodes.Push(curPremNode);
+                                            nextPremNode = curPremNode;
+                                        }
+                                        while (nodes.Count > 0 ) {
+                                            PushNode(nodes.Pop());    
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1234,13 +1195,12 @@ public class MentalState : MonoBehaviour {
 
         return param;
     }
-
-    private void AddLink(KnowledgeState knowledgeState, Expression premise, Expression conclusion) {
-        if (knowledgeState.Links.ContainsKey(conclusion)) {
-            knowledgeState.Links[conclusion].Add(premise);
-        } else {
-            knowledgeState.Links.Add(conclusion, new HashSet<Expression>{premise});
+    
+    private void AddRule(KnowledgeState knowledgeState, Expression key, InferenceRule rule) {
+        if (!knowledgeState.Rules.ContainsKey(key)) {
+            knowledgeState.Rules.Add(key, new List<InferenceRule>());
         }
+        knowledgeState.Rules[key].Add(rule);
     }
 
     public bool AddToKnowledgeState(KnowledgeState knowledgeState, Expression knowledge, bool firstCall = true) {
@@ -1275,19 +1235,22 @@ public class MentalState : MonoBehaviour {
             // we want to ensure a self-supporting premise isn't
             // removed if other links to it are removed.
             knowledgeState.Basis.Add(knowledge);
-            AddLink(knowledgeState, knowledge, knowledge);
         }
 
         if (knowledge.HeadedBy(VERY, KNOW, MAKE, SEE, INFORM)) {
             var subclause = knowledge.GetArgAsExpression(0);
             AddToKnowledgeState(knowledgeState, subclause, false);
-            AddLink(knowledgeState, knowledge, subclause);
+            AddRule(knowledgeState, knowledge, new InferenceRule("K-",
+                e => e.Equals(subclause),
+                e => new List<Expression>{knowledge}));
         }
 
         if (knowledge.HeadedBy(OMEGA)) {
             var functor = new Expression(knowledge.GetArgAsExpression(0), knowledge.GetArgAsExpression(1));
             AddToKnowledgeState(knowledgeState, functor, false);
-            AddLink(knowledgeState, knowledge, functor);
+            AddRule(knowledgeState, knowledge, new InferenceRule("omega(F, P) |- F(P)",
+                e => e.Equals(functor),
+                e => new List<Expression>{knowledge}));
         }
         
         if (knowledge.HeadedBy(AND)) {
@@ -1297,8 +1260,12 @@ public class MentalState : MonoBehaviour {
             AddToKnowledgeState(knowledgeState, a, false);
             AddToKnowledgeState(knowledgeState, b, false);
 
-            AddLink(knowledgeState, knowledge, a);
-            AddLink(knowledgeState, knowledge, b);
+            AddRule(knowledgeState, knowledge, new InferenceRule("A & B |- A",
+                e => e.Equals(a),
+                e => new List<Expression>{knowledge}));
+            AddRule(knowledgeState, knowledge, new InferenceRule("A & B |- B",
+                e => e.Equals(b),
+                e => new List<Expression>{knowledge}));
         }
 
         if (knowledge.HeadedBy(NOT)) {
@@ -1310,14 +1277,40 @@ public class MentalState : MonoBehaviour {
                 AddToKnowledgeState(knowledgeState, notA, false);
                 AddToKnowledgeState(knowledgeState, notB, false);
 
-                AddLink(knowledgeState, knowledge, notA);
-                AddLink(knowledgeState, knowledge, notB);
+                AddRule(knowledgeState, knowledge, new InferenceRule("~(A v B) |- ~A",
+                    e => e.Equals(notA),
+                    e => new List<Expression>{knowledge}));
+                AddRule(knowledgeState, knowledge, new InferenceRule("~(A v B) |- ~B",
+                    e => e.Equals(notB),
+                    e => new List<Expression>{knowledge}));
             }
         }
 
-        if (knowledge.HeadedBy(IF, ABLE)) {
+        if (knowledge.HeadedBy(IF)) {
             var consequent = knowledge.GetArgAsExpression(0);
-            AddLink(knowledgeState, knowledge, consequent);
+            var antecedent = knowledge.GetArgAsExpression(1);
+            AddRule(knowledgeState, knowledge, new InferenceRule("Modus Ponens",
+                e => e.Equals(consequent),
+                e => new List<Expression>{knowledge, antecedent}));
+
+            // TODO @Bug the K- rule won't be removed when the conditional is!
+            AddToKnowledgeState(knowledgeState, consequent, false);
+        }
+
+        if (knowledge.HeadedBy(ABLE)) {
+            var content = knowledge.GetArgAsExpression(0);
+            AddRule(knowledgeState, knowledge, new InferenceRule("ability to will",
+                e => e.Equals(content),
+                e => new List<Expression>{knowledge},
+                supplement: new Expression(WILL, content)));
+        }
+
+        if (knowledge.HeadedBy(ALL)) {
+            var g  = knowledge.GetArgAsExpression(1);
+            var x  = new Expression(GetUnusedVariable(INDIVIDUAL, g.GetVariables()));
+            var gx = new Expression(g, x);
+
+            AddToKnowledgeState(knowledgeState, gx, false);
         }
 
         if (knowledge.HeadedBy(SINCE)) {
@@ -1327,48 +1320,20 @@ public class MentalState : MonoBehaviour {
             AddToKnowledgeState(knowledgeState, topic, false);
             AddToKnowledgeState(knowledgeState, anchor, false);
 
-            AddLink(knowledgeState, knowledge, topic);
-            AddLink(knowledgeState, knowledge, anchor);
+            AddRule(knowledgeState, knowledge, new InferenceRule("since(P, Q) |- P",
+                e => e.Equals(topic),
+                e => new List<Expression>{knowledge}));
+            AddRule(knowledgeState, knowledge, new InferenceRule("since(P, Q) |- was(Q)",
+                e => e.Equals(anchor),
+                e => new List<Expression>{knowledge}));
         }
 
         return true;
     }
 
-    // we remove the chain of backward links
-    // associated with the expression 'knowledge'
-    protected void RemoveLinks(KnowledgeState knowledgeState, Expression knowledge) {
-        var links = knowledgeState.Links;
-
-        // if there is an expression that contains knowledge,
-        // remove knowledge as a link.
-        var toRemove = new List<Expression>();
-        foreach (var link in links) {
-            if (link.Value.Contains(knowledge)) {
-                link.Value.Remove(knowledge);
-            }
-            // if there are no more links to this value, remove it.
-            if (link.Value.Count == 0) {
-                toRemove.Add(link.Key);
-            }
-        }
-        foreach (var remove in toRemove) {
-            links.Remove(remove);
-            // if this is an intermediate link, then remove
-            // all of what it links as well.
-            
-            RemoveFromKnowledgeState(knowledgeState, remove);
-            // @Note remove above and uncomment below
-            // once we can query links by formula
-
-            // if (!KS.Basis.Contains(remove)) {
-            //     RemoveLinks(remove, forward);
-            // }
-        }
-    }
-
     public bool RemoveFromKnowledgeState(KnowledgeState knowledgeState, Expression knowledge) {
         if (knowledgeState.Basis.Remove(knowledge)) {
-            RemoveLinks(knowledgeState, knowledge);
+            knowledgeState.Rules.Remove(knowledge);
             return true;
         }
         return false;

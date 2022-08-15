@@ -25,10 +25,23 @@ public class Testing : MonoBehaviour {
         var a = new Expression(new Name(TRUTH_VALUE, "A"));
         var b = new Expression(new Name(TRUTH_VALUE, "B"));
         var c = new Expression(new Name(TRUTH_VALUE, "C"));
+        var d = new Expression(new Name(TRUTH_VALUE, "D"));
+        var e = new Expression(new Name(TRUTH_VALUE, "E"));
 
         MentalState.Initialize(new Expression[]{
+            // new Expression(OMEGA, VERY, new Expression(GOOD, a)),
+            // new Expression(OMEGA, new Expression(OMEGA, VERY), b)
+            new Expression(KNOW, a, ALICE),
+            new Expression(IF, c, b),
+            b,
+            new Expression(IF, new Expression(KNOW, new Expression(RED, SELF), CHARLIE), b),
+            new Expression(ALL, PERSON, new Expression(KNOW, new Expression(GREEN, SELF))),
+            new Expression(PERSON, ALICE),
+            new Expression(ABLE, new Expression(BLUE, SELF), SELF),
             new Expression(OMEGA, VERY, new Expression(GOOD, a)),
-            new Expression(OMEGA, new Expression(OMEGA, VERY), b)
+            new Expression(OMEGA, new Expression(OMEGA, VERY), new Expression(GOOD, b)),
+            new Expression(OMEGA, new Expression(OMEGA, new Expression(OMEGA, VERY)), new Expression(GOOD, c)),
+            new Expression(AND, d, e)
         });
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, a)));
@@ -41,37 +54,62 @@ public class Testing : MonoBehaviour {
         // // and not just the knowledge base for omega sentences.
         // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(VERY, b))));
 
-        var orLeftIntroduction = new InferenceRule("OR+L", e => e.HeadedBy(OR),
-            e => new List<Expression>{
-                e.GetArgAsExpression(0)
-            });
-        var orRightIntroduction = new InferenceRule("OR+R", e => e.HeadedBy(OR),
-            e => new List<Expression>{
-                e.GetArgAsExpression(1)
-            });
-        var andIntroduction = new InferenceRule("AND+", e => e.HeadedBy(AND),
-            e => new List<Expression>{
-                e.GetArgAsExpression(0), e.GetArgAsExpression(1)
-            });
+        // var orLeftIntroduction = new InferenceRule("OR+L", e => e.HeadedBy(OR),
+        //     e => new List<Expression>{
+        //         e.GetArgAsExpression(0)
+        //     });
+        // var orRightIntroduction = new InferenceRule("OR+R", e => e.HeadedBy(OR),
+        //     e => new List<Expression>{
+        //         e.GetArgAsExpression(1)
+        //     });
+        // var andIntroduction = new InferenceRule("AND+", e => e.HeadedBy(AND),
+        //     e => new List<Expression>{
+        //         e.GetArgAsExpression(0), e.GetArgAsExpression(1)
+        //     });
 
-        TestInferenceRule(orLeftIntroduction, new Expression(OR, a, b)); // A
-        TestInferenceRule(orLeftIntroduction, new Expression(AND, a, b)); // null
-        TestInferenceRule(orLeftIntroduction, a); // null
+        // TestInferenceRule(orLeftIntroduction, new Expression(OR, a, b)); // A
+        // TestInferenceRule(orLeftIntroduction, new Expression(AND, a, b)); // null
+        // TestInferenceRule(orLeftIntroduction, a); // null
 
-        TestInferenceRule(orRightIntroduction, new Expression(OR, a, b)); // B
-        TestInferenceRule(orRightIntroduction, new Expression(AND, a, b)); // null
-        TestInferenceRule(orRightIntroduction, a); // null
+        // TestInferenceRule(orRightIntroduction, new Expression(OR, a, b)); // B
+        // TestInferenceRule(orRightIntroduction, new Expression(AND, a, b)); // null
+        // TestInferenceRule(orRightIntroduction, a); // null
 
-        TestInferenceRule(andIntroduction, new Expression(OR, a, b)); // null
-        TestInferenceRule(andIntroduction, new Expression(AND, a, b)); // A, B
-        TestInferenceRule(andIntroduction, a); // A, B
+        // TestInferenceRule(andIntroduction, new Expression(OR, a, b)); // null
+        // TestInferenceRule(andIntroduction, new Expression(AND, a, b)); // A, B
+        // TestInferenceRule(andIntroduction, a); // A, B
 
-        var knowledgeElim = new InferenceRule("K-", e => e.Equals(a),
-            e => new List<Expression>{
-                new Expression(KNOW, a, BOB)
-            });
+        // var knowledgeElim = new InferenceRule("K-", e => e.Equals(a),
+        //     e => new List<Expression>{
+        //         new Expression(KNOW, a, BOB)
+        //     });
 
-        TestInferenceRule(knowledgeElim, a);
+        // TestInferenceRule(knowledgeElim, a);
+
+        StartCoroutine(LogBasesStream(MentalState, a));
+        StartCoroutine(LogBasesStream(MentalState, c));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF), Plan));
+
+        StartCoroutine(LogBasesStream(MentalState, d));
+        StartCoroutine(LogBasesStream(MentalState, e));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, a)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, b)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, c)));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, a))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, b))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, c))));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY,
+        //     new Expression(VERY, new Expression(GOOD, a)))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY,
+        //     new Expression(VERY, new Expression(GOOD, b)))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY,
+        //     new Expression(VERY, new Expression(GOOD, c)))));
 
         // every(person, knows(A)), person(x) => knows(A, x) => A
         
