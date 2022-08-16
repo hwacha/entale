@@ -370,6 +370,17 @@ public class Expression : Argument, IComparable<Expression> {
         return false;
     }
 
+    public bool PrejacentHeadedBy(Expression f, params Expression[] exprs) {
+        if (!(f.Type is FunctionalType) || (f.Type as FunctionalType).GetNumArgs() != 1) {
+            throw new ArgumentException("f(x) must be a one-place function");
+        }
+        if (!this.HeadedBy(f)) {
+            return false;
+        }
+        var prejacent = this.GetArgAsExpression(0);
+        return prejacent.HeadedBy(exprs);
+    }
+
     // returns true if x occurs in this expression
     public bool HasOccurenceOf(Variable x) {
         if (Head.Equals(x)) {
@@ -685,8 +696,7 @@ public class Expression : Argument, IComparable<Expression> {
         return patternSubstitutions;
     }
 
-    public HashSet<Dictionary<Variable, Expression>>
-        GetMatches(Expression that) {
+    public HashSet<Dictionary<Variable, Expression>> GetMatches(Expression that) {
         var initialSubstitution = new Dictionary<Variable, Expression>();
         var initialSubstitutions = new HashSet<Dictionary<Variable, Expression>>();
         initialSubstitutions.Add(initialSubstitution);
