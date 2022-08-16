@@ -31,17 +31,27 @@ public class Testing : MonoBehaviour {
         MentalState.Initialize(new Expression[]{
             // new Expression(OMEGA, VERY, new Expression(GOOD, a)),
             // new Expression(OMEGA, new Expression(OMEGA, VERY), b)
-            new Expression(KNOW, a, ALICE),
-            new Expression(IF, c, b),
-            b,
-            new Expression(IF, new Expression(KNOW, new Expression(RED, SELF), CHARLIE), b),
-            new Expression(ALL, PERSON, new Expression(KNOW, new Expression(GREEN, SELF))),
+            // new Expression(KNOW, a, ALICE),
+            // new Expression(IF, c, b),
+            // b,
+            // new Expression(IF, new Expression(KNOW, new Expression(RED, SELF), CHARLIE), b),
+            // new Expression(ALL, PERSON, new Expression(KNOW, new Expression(GREEN, SELF))),
+            // new Expression(ALL, RED, new Expression(GEACH_E_TRUTH_FUNCTION, NOT, BLUE)),
+            // new Expression(RED, ALICE),
+            // new Expression(NOT, new Expression(GREEN, BOB)),
+            // new Expression(NOT, new Expression(YELLOW, BOB)),
+            new Expression(OMEGA,
+                new Expression(GEACH_T_QUANTIFIER_PHRASE,
+                    new Expression(ALL, PERSON), KNOW),
+                new Expression(GREEN, SELF)),
             new Expression(PERSON, ALICE),
-            new Expression(ABLE, new Expression(BLUE, SELF), SELF),
+            new Expression(GEACH_T_QUANTIFIER_PHRASE, new Expression(ALL, PERSON), KNOW, new Expression(GREEN, SELF)),
+
+            // new Expression(ABLE, new Expression(BLUE, SELF), SELF),
             new Expression(OMEGA, VERY, new Expression(GOOD, a)),
-            new Expression(OMEGA, new Expression(OMEGA, VERY), new Expression(GOOD, b)),
-            new Expression(OMEGA, new Expression(OMEGA, new Expression(OMEGA, VERY)), new Expression(GOOD, c)),
-            new Expression(AND, d, e)
+            // new Expression(OMEGA, new Expression(OMEGA, VERY), new Expression(GOOD, b)),// Mental State line 809
+            // new Expression(OMEGA, new Expression(OMEGA, new Expression(OMEGA, VERY)), new Expression(GOOD, c)),
+            // new Expression(AND, d, e)
         });
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, a)));
@@ -86,30 +96,57 @@ public class Testing : MonoBehaviour {
 
         // TestInferenceRule(knowledgeElim, a);
 
-        StartCoroutine(LogBasesStream(MentalState, a));
-        StartCoroutine(LogBasesStream(MentalState, c));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, a));
+        // StartCoroutine(LogBasesStream(MentalState, c));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF), Plan));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF), Plan));
 
-        StartCoroutine(LogBasesStream(MentalState, d));
-        StartCoroutine(LogBasesStream(MentalState, e));
+        // StartCoroutine(LogBasesStream(MentalState, d));
+        // StartCoroutine(LogBasesStream(MentalState, e));
 
         // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, a)));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, b)));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, c)));
 
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, a))));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, b))));
         // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, c))));
 
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY,
-        //     new Expression(VERY, new Expression(GOOD, a)))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY,
-        //     new Expression(VERY, new Expression(GOOD, b)))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY,
-        //     new Expression(VERY, new Expression(GOOD, c)))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(VERY, new Expression(VERY, new Expression(GOOD, a)))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(VERY, new Expression(VERY, new Expression(GOOD, b))))); // LINE 831
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(VERY, new Expression(VERY, new Expression(GOOD, c)))));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(GOOD, b)))));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(GOOD, c)))));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(VERY, new Expression(VERY,
+        //         new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(GOOD, b)))))));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(VERY,
+        //         new Expression(OMEGA, VERY,
+        //             new Expression(OMEGA, new Expression(OMEGA, VERY),
+        //                 new Expression(GOOD, c))))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(KNOW, new Expression(GREEN, SELF), ALICE)));
+        
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(NOT, new Expression(BLUE, ALICE))));
+
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME,
+        //         new Expression(GEACH_E_TRUTH_FUNCTION, NOT, GREEN),
+        //         new Expression(GEACH_E_TRUTH_FUNCTION, NOT, YELLOW))));
 
         // every(person, knows(A)), person(x) => knows(A, x) => A
         

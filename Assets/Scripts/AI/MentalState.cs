@@ -47,8 +47,9 @@ public class MentalState : MonoBehaviour {
     public class KnowledgeState {
         public SortedSet<Expression> Basis;
         public SortedList<Expression, List<InferenceRule>> Rules;
+        public SortedSet<Expression> OmegaPool;
 
-        public KnowledgeState(SortedSet<Expression> basis, SortedList<Expression, List<InferenceRule>> rules, bool copy = true) {
+        public KnowledgeState(SortedSet<Expression> basis, SortedList<Expression, List<InferenceRule>> rules, SortedSet<Expression> omegaPool, bool copy = true) {
             if (copy) {
                 Basis = new SortedSet<Expression>(basis);
                 Rules = new SortedList<Expression, List<InferenceRule>>();
@@ -58,9 +59,11 @@ public class MentalState : MonoBehaviour {
                         Rules[keyAndRules.Key].Add(rule);
                     }
                 }
+                OmegaPool = new SortedSet<Expression>(omegaPool);
             } else {
                 Basis = basis;
                 Rules = rules;
+                OmegaPool = omegaPool;
             }
         }
 
@@ -73,6 +76,10 @@ public class MentalState : MonoBehaviour {
             str.Append("]\nRules [\n");
             foreach (var keyAndRule in Rules) {
                 str.Append("\t" + keyAndRule.Key + " -> " + keyAndRule.Value + "\n");
+            }
+            str.Append("]\nOmega Pool [\n");
+            foreach (Expression e in OmegaPool) {
+                str.Append("\t" + e + "\n");
             }
             str.Append("]");
             return str.ToString();
@@ -108,7 +115,7 @@ public class MentalState : MonoBehaviour {
         if (KS != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
-        KS = new KnowledgeState(new SortedSet<Expression>(), new SortedList<Expression, List<InferenceRule>>(), false);
+        KS = new KnowledgeState(new SortedSet<Expression>(), new SortedList<Expression, List<InferenceRule>>(), new SortedSet<Expression>(), false);
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
             AddToKnowledgeState(KS, initialKnowledge[i]);
@@ -363,6 +370,7 @@ public class MentalState : MonoBehaviour {
                 "\n\tdepth: " + Depth +
                 "\n\tparity: " + Parity +
                 "\n\tis Assumption: " + IsAssumption +
+                "\n\tOmega: " + Omega +
                 "\n}";
         }
     }
@@ -716,7 +724,7 @@ public class MentalState : MonoBehaviour {
                             var consequent = currentLemma.GetArgAsExpression(0);
                             var antecedent = currentLemma.GetArgAsExpression(1);
 
-                            var newKnowledgeState = new KnowledgeState(current.KnowledgeState.Basis, current.KnowledgeState.Rules);
+                            var newKnowledgeState = new KnowledgeState(current.KnowledgeState.Basis, current.KnowledgeState.Rules, current.KnowledgeState.OmegaPool);
 
                             AddToKnowledgeState(newKnowledgeState, antecedent);
 
@@ -800,8 +808,9 @@ public class MentalState : MonoBehaviour {
                             var truthFunctionFormula = new Expression(new Expression(tf), new Expression(t));
 
                             var matches = truthFunctionFormula.GetMatches(currentLemma);
+                            // pattern match on sentences of the form F(Q)
                             foreach (var match in matches) {
-                                var ancestral = current;
+                                // omega(F, Q)
                                 var omega = new Expression(OMEGA, match[tf], match[t]);
                                 if (current.Omega == null) {
                                     bool ignorePerfectMatch = false;
@@ -810,11 +819,7 @@ public class MentalState : MonoBehaviour {
                                         ignorePerfectMatch = true;
                                     }
 
-                                    var omegaBottom = new Expression(OMEGA, match[tf], new Expression(new Bottom(TRUTH_VALUE)));
-                                    var omegaTop    = new Expression(OMEGA, match[tf], new Expression(new Top(TRUTH_VALUE)));
-                                    var omegaRange = current.KnowledgeState.Basis.GetViewBetween(omegaBottom, omegaTop);
-
-                                    foreach (var imperfectOmega in omegaRange) {
+                                    foreach (var imperfectOmega in current.KnowledgeState.OmegaPool) {
                                         if (ignorePerfectMatch && imperfectOmega.Equals(omega)) {
                                             continue;
                                         }
@@ -824,7 +829,9 @@ public class MentalState : MonoBehaviour {
                                     }
                                 } else if (current.Omega.GetArgAsExpression(0).Equals(match[tf])) {
                                     if (current.Omega.Equals(omega)) {
-                                        searchBases.Add(new ProofBasis(new List<Expression>{omega}, new Substitution()));
+                                        if (current.KnowledgeState.Basis.Contains(current.Omega)) {
+                                            searchBases.Add(new ProofBasis(new List<Expression>{omega}, new Substitution()));
+                                        }
                                     } else {
                                         var omegaNode = new ProofNode(match[t], current.KnowledgeState, nextDepth, current, i, true, current.Omega);
                                         PushNode(omegaNode);
@@ -899,8 +906,7 @@ public class MentalState : MonoBehaviour {
                                 PushNode(f1xNodeForAll);
                             }
                         }
-
-                        // geach - : (t -> t), (e -> t), e -> t
+                        // geach: (t -> t), (e -> t), e -> t
                         // M |- geach(T, F, x) => M |- T(F(x))
                         var tf1 = GetUnusedVariable(TRUTH_FUNCTION, currentVariables);
                         var tfxFormula = new Expression(
@@ -916,9 +922,17 @@ public class MentalState : MonoBehaviour {
                                     tfxBinding[f1],
                                     tfxBinding[x1]);
 
-                            // PushNode(new ProofNode(
-                            //   geachedTfx, current.KnowledgeState, nextDepth, current, i, current.Parity, current.Omega));
+                            PushNode(new ProofNode(geachedTfx, current.KnowledgeState,
+                                nextDepth, current, i, current.Parity, current.Omega));
+                        }
+                        // M |- T(F(x)) => M |- geach(T, F, x)
+                        if (currentLemma.HeadedBy(GEACH_E_TRUTH_FUNCTION, GEACH_T_QUANTIFIER_PHRASE)) {
+                            var ungeachedTfx = new Expression(currentLemma.GetArgAsExpression(0),
+                                    new Expression(currentLemma.GetArgAsExpression(1),
+                                        currentLemma.GetArgAsExpression(2)));
 
+                            PushNode(new ProofNode(ungeachedTfx, current.KnowledgeState,
+                                nextDepth, current, i, current.Parity, current.Omega));
                         }
 
                         // geach - : (t -> t), (t -> t), t -> t
@@ -946,6 +960,27 @@ public class MentalState : MonoBehaviour {
                             //     geachedTf1tf2t, current.KnowledgeState,
                             //     nextDepth, current, i, current.Parity, current.Omega));
 
+                        }
+
+                        // geach - : (e -> t) -> t, (t, e -> t), t -> t
+                        // g(qp, i, t) => qp(i(t))
+                        var qp1 = GetUnusedVariable(QUANTIFIER_PHRASE, currentVariables);
+                        var i1  = GetUnusedVariable(INDIVIDUAL_TRUTH_RELATION, currentVariables);
+                        var qpitFormula = new Expression(
+                            new Expression(qp1),
+                                new Expression(new Expression(i1), new Expression(t1)));
+
+                        var qpitMatches = qpitFormula.GetMatches(currentLemma);
+
+                        foreach (var qpitBinding in qpitMatches) {
+                            var geachedQpit =
+                                new Expression(GEACH_T_QUANTIFIER_PHRASE,
+                                    qpitBinding[qp1],
+                                    qpitBinding[i1],
+                                    qpitBinding[t1]);
+
+                            PushNode(new ProofNode(geachedQpit, current.KnowledgeState,
+                                nextDepth, current, i, current.Parity, current.Omega));
                         }
 
                         // here we reverse the order of new proof nodes.
@@ -1203,6 +1238,10 @@ public class MentalState : MonoBehaviour {
         knowledgeState.Rules[key].Add(rule);
     }
 
+    private void AddToOmegaPool(KnowledgeState knowledgeState, Expression omega) {
+        knowledgeState.OmegaPool.Add(omega);
+    }
+
     public bool AddToKnowledgeState(KnowledgeState knowledgeState, Expression knowledge, bool firstCall = true, Expression trace = null) {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
         Debug.Assert(firstCall || trace != null);
@@ -1246,7 +1285,7 @@ public class MentalState : MonoBehaviour {
 
         if (knowledge.HeadedBy(VERY, KNOW, MAKE, SEE, INFORM)) {
             var subclause = knowledge.GetArgAsExpression(0);
-            AddToKnowledgeState(knowledgeState, subclause, false, knowledge);
+            AddToKnowledgeState(knowledgeState, subclause, false, signature);
             AddRule(knowledgeState, signature, new InferenceRule("K-",
                 e => e.Equals(subclause),
                 e => new List<Expression>{knowledge}));
@@ -1254,18 +1293,19 @@ public class MentalState : MonoBehaviour {
 
         if (knowledge.HeadedBy(OMEGA)) {
             var functor = new Expression(knowledge.GetArgAsExpression(0), knowledge.GetArgAsExpression(1));
-            AddToKnowledgeState(knowledgeState, functor, false, knowledge);
+            AddToKnowledgeState(knowledgeState, functor, false, signature);
             AddRule(knowledgeState, signature, new InferenceRule("omega(F, P) |- F(P)",
                 e => e.Equals(functor),
                 e => new List<Expression>{knowledge}));
+            AddToOmegaPool(knowledgeState, knowledge);
         }
         
         if (knowledge.HeadedBy(AND)) {
             var a = knowledge.GetArgAsExpression(0);
             var b = knowledge.GetArgAsExpression(1);
             
-            AddToKnowledgeState(knowledgeState, a, false, knowledge);
-            AddToKnowledgeState(knowledgeState, b, false, knowledge);
+            AddToKnowledgeState(knowledgeState, a, false, signature);
+            AddToKnowledgeState(knowledgeState, b, false, signature);
 
             AddRule(knowledgeState, signature, new InferenceRule("A & B |- A",
                 e => e.Equals(a),
@@ -1281,8 +1321,8 @@ public class MentalState : MonoBehaviour {
                 var notA = new Expression(NOT, subclause.GetArgAsExpression(0));
                 var notB = new Expression(NOT, subclause.GetArgAsExpression(1));
 
-                AddToKnowledgeState(knowledgeState, notA, false, knowledge);
-                AddToKnowledgeState(knowledgeState, notB, false, knowledge);
+                AddToKnowledgeState(knowledgeState, notA, false, signature);
+                AddToKnowledgeState(knowledgeState, notB, false, signature);
 
                 AddRule(knowledgeState, signature, new InferenceRule("~(A v B) |- ~A",
                     e => e.Equals(notA),
@@ -1301,7 +1341,7 @@ public class MentalState : MonoBehaviour {
                 e => new List<Expression>{knowledge, antecedent}));
 
             // TODO @Bug the K- rule won't be removed when the conditional is!
-            AddToKnowledgeState(knowledgeState, consequent, false, knowledge);
+            AddToKnowledgeState(knowledgeState, consequent, false, signature);
         }
 
         if (knowledge.HeadedBy(ABLE)) {
@@ -1317,15 +1357,25 @@ public class MentalState : MonoBehaviour {
             var x  = new Expression(GetUnusedVariable(INDIVIDUAL, g.GetVariables()));
             var gx = new Expression(g, x);
 
-            AddToKnowledgeState(knowledgeState, gx, false, knowledge);
+            AddToKnowledgeState(knowledgeState, gx, false, signature);
+        }
+
+        if (knowledge.HeadedBy(GEACH_T_QUANTIFIER_PHRASE)) {
+            var qp  = knowledge.GetArgAsExpression(0);
+            var itr = knowledge.GetArgAsExpression(1);
+            var t   = knowledge.GetArgAsExpression(2);
+
+            var ungeached = new Expression(qp, new Expression(itr, t));
+
+            AddToKnowledgeState(knowledgeState, ungeached, false, signature);
         }
 
         if (knowledge.HeadedBy(SINCE)) {
             var topic = knowledge.GetArgAsExpression(0);
             var anchor = new Expression(PAST, knowledge.GetArgAsExpression(1));
 
-            AddToKnowledgeState(knowledgeState, topic, false, knowledge);
-            AddToKnowledgeState(knowledgeState, anchor, false, knowledge);
+            AddToKnowledgeState(knowledgeState, topic, false, signature);
+            AddToKnowledgeState(knowledgeState, anchor, false, signature);
 
             AddRule(knowledgeState, signature, new InferenceRule("since(P, Q) |- P",
                 e => e.Equals(topic),
