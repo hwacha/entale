@@ -48,6 +48,14 @@ public class Testing : MonoBehaviour {
         var y = new Expression(new Name(TRUTH_VALUE, "Y"));
         var z = new Expression(new Name(TRUTH_VALUE, "Z"));
 
+        var aa = new Expression(new Name(TRUTH_VALUE, "AA"));
+        var bb = new Expression(new Name(TRUTH_VALUE, "BB"));
+        var cc = new Expression(new Name(TRUTH_VALUE, "CC"));
+        var dd = new Expression(new Name(TRUTH_VALUE, "DD"));
+        var ee = new Expression(new Name(TRUTH_VALUE, "EE"));
+        var ff = new Expression(new Name(TRUTH_VALUE, "FF"));
+        var gg = new Expression(new Name(TRUTH_VALUE, "GG"));
+        var hh = new Expression(new Name(TRUTH_VALUE, "HH"));
 
         MentalState.Initialize(new Expression[]{
             a,
@@ -82,6 +90,14 @@ public class Testing : MonoBehaviour {
             new Expression(GEN, BLUE, new Expression(KNOW, v)),
             new Expression(SINCE, w, x),
             new Expression(IF, new Expression(MAKE, o, SELF), new Expression(DF, MAKE, o, SELF)),
+            new Expression(OR, aa, bb),
+            new Expression(NOT, aa),
+            new Expression(OR, cc, dd),
+            new Expression(NOT, dd),
+            new Expression(NOT, new Expression(AND, ee, ff)),
+            ee,
+            new Expression(NOT, new Expression(AND, gg, hh)),
+            hh,
         });
 
         StartCoroutine(LogBasesStream(MentalState, VERUM));
@@ -162,6 +178,11 @@ public class Testing : MonoBehaviour {
         StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(KNOW, y, SELF))));
 
         StartCoroutine(LogBasesStream(MentalState, o, Plan));
+
+        StartCoroutine(LogBasesStream(MentalState, bb));
+        StartCoroutine(LogBasesStream(MentalState, cc));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, ff)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, gg)));
     }
 
     public static void TestInferenceRule(InferenceRule rule, Expression e) {

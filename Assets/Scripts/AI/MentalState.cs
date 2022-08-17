@@ -1336,6 +1336,40 @@ public class MentalState : MonoBehaviour {
                 e => new List<Expression>{knowledge}));
         }
 
+        // disjunctive syllogism and conjunctive syllogism
+        // A v B, ~A |- B; A v B, ~B |- A
+        // ~(A v B), A |- ~B; ~(A v B), B |- ~A
+        if (knowledge.HeadedBy(OR) ||
+            knowledge.PrejacentHeadedBy(NOT, AND)) {
+            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
+            var adjunctA = query.GetArgAsExpression(0);
+            var adjunctB = query.GetArgAsExpression(1);
+            var notAdjunctA = new Expression(NOT, adjunctA);
+            var notAdjunctB = new Expression(NOT, adjunctB);
+
+            if (knowledge.HeadedBy(NOT)) {
+                AddToKnowledgeState(knowledgeState, notAdjunctA, false, signature);
+                AddToKnowledgeState(knowledgeState, notAdjunctB, false, signature);
+
+                AddRule(knowledgeState, signature, new InferenceRule("conjunctive syllogism left",
+                    e => e.Equals(notAdjunctA),
+                    e => new List<Expression>{knowledge, adjunctB}));
+                AddRule(knowledgeState, signature, new InferenceRule("conjunctive syllogism right",
+                    e => e.Equals(notAdjunctB),
+                    e => new List<Expression>{knowledge, adjunctA}));
+            } else {
+                AddToKnowledgeState(knowledgeState, adjunctA, false, signature);
+                AddToKnowledgeState(knowledgeState, adjunctB, false, signature);
+
+                AddRule(knowledgeState, signature, new InferenceRule("disjunctive syllogism left",
+                    e => e.Equals(adjunctA),
+                    e => new List<Expression>{knowledge, notAdjunctB}));
+                AddRule(knowledgeState, signature, new InferenceRule("disjunctive syllogism right",
+                    e => e.Equals(adjunctB),
+                    e => new List<Expression>{knowledge, notAdjunctA}));
+            }
+        }
+
         if (knowledge.HeadedBy(IF)) {
             var consequent = knowledge.GetArgAsExpression(0);
             var antecedent = knowledge.GetArgAsExpression(1);
