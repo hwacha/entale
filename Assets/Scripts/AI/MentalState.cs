@@ -432,7 +432,7 @@ public class MentalState : MonoBehaviour {
                     var youngerSiblingBasis = current.YoungerSiblingBases[i];
 
                     var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
-
+                    
                     // Debug.Log("current lemma is " + currentLemma);
                     // Debug.Log("the current knowledge state is " + current.KnowledgeState);
 
@@ -473,14 +473,10 @@ public class MentalState : MonoBehaviour {
                             var range = current.KnowledgeState.Basis.GetViewBetween(bottom, top);
 
                             foreach (var e in range) {
-                                bool sampleParity = !e.HeadedBy(NOT);
-
                                 var matches = currentLemma.GetMatches(e);
                                 // we have a match
-                                if (sampleParity == current.Parity) {
-                                    foreach (var match in matches) {
-                                        searchBases.Add(new ProofBasis(new List<Expression>{e}, match));
-                                    }
+                                foreach (var match in matches) {
+                                    searchBases.Add(new ProofBasis(new List<Expression>{e}, match));
                                 }
                             }
                         // if there are no variables
@@ -597,6 +593,16 @@ public class MentalState : MonoBehaviour {
                                 current.Omega));
                         }
 
+                        // star + 
+                        // M |/- A => M |- *A
+                        if (currentLemma.HeadedBy(STAR)) {
+                            PushNode(new ProofNode(
+                                currentLemma.GetArgAsExpression(0),
+                                current.KnowledgeState,
+                                nextDepth, current, i, current.Omega,
+                                isAssumption: true));
+                        }
+
                         // nonidentity assumption
                         if (currentLemma.PrejacentHeadedBy(NOT, IDENTITY)) {
                             PushNode(new ProofNode(
@@ -614,9 +620,10 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // contraposed very +
+                        // M |- ~A => M |- ~+A
                         if (currentLemma.PrejacentHeadedBy(NOT, VERY)) {
                             PushNode(new ProofNode(
-                                currentLemma.GetArgAsExpression(0),
+                                new Expression(NOT, currentLemma.GetArgAsExpression(0).GetArgAsExpression(0)),
                                 current.KnowledgeState, nextDepth,
                                 current, i, current.Omega));
                         }
@@ -642,7 +649,8 @@ public class MentalState : MonoBehaviour {
 
                         // M |- good(~A) => M |- ~good(A)
                         if (currentLemma.PrejacentHeadedBy(NOT, GOOD)) {
-                            var goodNotA = new Expression(GOOD, new Expression(NOT, currentLemma.GetArgAsExpression(0)));
+                            var goodNotA = new Expression(GOOD,
+                                new Expression(NOT, currentLemma.GetArgAsExpression(0).GetArgAsExpression(0)));
                             PushNode(new ProofNode(
                                 goodNotA, current.KnowledgeState, nextDepth,
                                 current, i, current.Omega));
@@ -654,6 +662,12 @@ public class MentalState : MonoBehaviour {
                             var adjunction = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
                             var a = adjunction.GetArgAsExpression(0);
                             var b = adjunction.GetArgAsExpression(1);
+
+                            if (currentLemma.HeadedBy(NOT)) {
+                                a = new Expression(NOT, a);
+                                b = new Expression(NOT, b);
+                            }
+
                             PushNode(new ProofNode(
                                 a, current.KnowledgeState, nextDepth,
                                 current, i, current.Omega));
@@ -663,12 +677,16 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // and +, ~or +
-                        if ((currentLemma.HeadedBy(AND) ||
-                            currentLemma.PrejacentHeadedBy(NOT, OR)) &&
-                            !current.KnowledgeState.Basis.Contains(currentLemma)) {
+                        if (currentLemma.HeadedBy(AND) ||
+                            currentLemma.PrejacentHeadedBy(NOT, OR)) {
                             var adjunction = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
                             var a = adjunction.GetArgAsExpression(0);
                             var b = adjunction.GetArgAsExpression(1);
+
+                            if (currentLemma.HeadedBy(NOT)) {
+                                a = new Expression(NOT, a);
+                                b = new Expression(NOT, b);
+                            }
 
                             var bNode = new ProofNode(
                                 b, current.KnowledgeState, nextDepth,
@@ -685,10 +703,11 @@ public class MentalState : MonoBehaviour {
                         // some +, ~all +
                         if (currentLemma.HeadedBy(SOME) ||
                             currentLemma.PrejacentHeadedBy(NOT, ALL)) {
-                            var f = currentLemma.GetArgAsExpression(0);
-                            var g = currentLemma.GetArgAsExpression(1);
+                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
+                            var f = query.GetArgAsExpression(0);
+                            var g = query.GetArgAsExpression(1);
 
-                            var x = new Expression(GetUnusedVariable(INDIVIDUAL, currentLemma.GetVariables()));
+                            var x = new Expression(GetUnusedVariable(INDIVIDUAL, query.GetVariables()));
 
                             var fx = new Expression(f, x);
                             var gx = new Expression(g, x);
@@ -707,6 +726,9 @@ public class MentalState : MonoBehaviour {
 
                         // conditional proof
                         // M, A |- B => M |- A -> B
+                        // 
+                        // TODO figure out logic for conditional
+                        // with antecedent known to be false
                         if (currentLemma.HeadedBy(IF)) {
                             // @Note this is not a typo ---
                             // antecedent is the second argument of the conditional
@@ -724,8 +746,13 @@ public class MentalState : MonoBehaviour {
 
                         // symmetry of identity
                         // M |- a = b => M |- b = a
-                        if (currentLemma.HeadedBy(IDENTITY)) {
-                            var converse = new Expression(IDENTITY, currentLemma.GetArgAsExpression(1), currentLemma.GetArgAsExpression(0));
+                        if (currentLemma.HeadedBy(IDENTITY) ||
+                            currentLemma.PrejacentHeadedBy(NOT, IDENTITY)) {
+                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
+                            var converse = new Expression(IDENTITY, query.GetArgAsExpression(1), query.GetArgAsExpression(0));
+                            if (currentLemma.HeadedBy(NOT)) {
+                                converse = new Expression(NOT, converse);
+                            }
                             var converseNode = new ProofNode(converse, current.KnowledgeState, nextDepth, current, i, current.Omega);
                             PushNode(converseNode);
                         }
@@ -737,6 +764,11 @@ public class MentalState : MonoBehaviour {
                             var bananaX = new Expression(BANANA, currentLemma.GetArgAsExpression(0));
                             PushNode(new ProofNode(tomatoX, current.KnowledgeState, nextDepth, current, i, current.Omega));
                             PushNode(new ProofNode(bananaX, current.KnowledgeState, nextDepth, current, i, current.Omega));
+                        }
+                        // contraposed
+                        if (currentLemma.PrejacentHeadedBy(NOT, TOMATO, BANANA)) {
+                            var fruitX = new Expression(NOT, new Expression(FRUIT, currentLemma.GetArgAsExpression(0).GetArgAsExpression(0)));
+                            PushNode(new ProofNode(fruitX, current.KnowledgeState, nextDepth, current, i, current.Omega));
                         }
 
                         // PREMISE-EXPANSIVE RULES
@@ -758,8 +790,7 @@ public class MentalState : MonoBehaviour {
                                         for (int j = premises.Count - 1; j >= 0; j--) {
                                             var curPremNode = new ProofNode(
                                                 premises[j], current.KnowledgeState, nextDepth, current, i,
-                                                current.Omega, nextPremNode, hasYoungerSibling: j > 0,
-                                                supplement: rule.Supplement);
+                                                current.Omega, nextPremNode, hasYoungerSibling: j > 0);
                                             nodes.Push(curPremNode);
                                             nextPremNode = curPremNode;
                                         }
@@ -774,61 +805,63 @@ public class MentalState : MonoBehaviour {
                         // END PREMISE-EXPANSIVE RULES
                         
                         // OMEGA MADNESS
-                        var tf = GetUnusedVariable(TRUTH_FUNCTION, currentLemma.GetVariables());
-                        var t  = GetUnusedVariable(TRUTH_VALUE, currentLemma.GetVariables());
-                        var truthFunctionFormula = new Expression(new Expression(tf), new Expression(t));
+                        // var tf = GetUnusedVariable(TRUTH_FUNCTION, currentLemma.GetVariables());
+                        // var t  = GetUnusedVariable(TRUTH_VALUE, currentLemma.GetVariables());
+                        // var truthFunctionFormula = new Expression(new Expression(tf), new Expression(t));
 
-                        var matches = truthFunctionFormula.GetMatches(currentLemma);
-                        // pattern match on sentences of the form F(Q)
-                        foreach (var match in matches) {
-                            // omega(F, Q)
-                            var omega = new Expression(OMEGA, match[tf], match[t]);
-                            if (current.Omega == null) {
-                                bool ignorePerfectMatch = false;
-                                if (current.KnowledgeState.Basis.Contains(omega)) {
-                                    searchBases.Add(new ProofBasis(new List<Expression>{omega}, new Substitution()));
-                                    ignorePerfectMatch = true;
-                                }
+                        // var matches = truthFunctionFormula.GetMatches(currentLemma);
+                        // // pattern match on sentences of the form F(Q)
+                        // foreach (var match in matches) {
+                        //     // omega(F, Q)
+                        //     var omega = new Expression(OMEGA, match[tf], match[t]);
+                        //     if (current.Omega == null) {
+                        //         bool ignorePerfectMatch = false;
+                        //         if (current.KnowledgeState.Basis.Contains(omega)) {
+                        //             searchBases.Add(new ProofBasis(new List<Expression>{omega}, new Substitution()));
+                        //             ignorePerfectMatch = true;
+                        //         }
 
-                                foreach (var imperfectOmega in current.KnowledgeState.OmegaPool) {
-                                    if (ignorePerfectMatch && imperfectOmega.Equals(omega)) {
-                                        continue;
-                                    }
+                        //         foreach (var imperfectOmega in current.KnowledgeState.OmegaPool) {
+                        //             if (ignorePerfectMatch && imperfectOmega.Equals(omega)) {
+                        //                 continue;
+                        //             }
 
-                                    var omegaNode = new ProofNode(match[t], current.KnowledgeState, nextDepth, current, i, imperfectOmega);
-                                    PushNode(omegaNode);
-                                }
-                            } else if (current.Omega.GetArgAsExpression(0).Equals(match[tf])) {
-                                if (current.Omega.Equals(omega)) {
-                                    if (current.KnowledgeState.Basis.Contains(current.Omega)) {
-                                        searchBases.Add(new ProofBasis(new List<Expression>{omega}, new Substitution()));
-                                    }
-                                } else {
-                                    var omegaNode = new ProofNode(match[t], current.KnowledgeState, nextDepth, current, i, current.Omega);
-                                    PushNode(omegaNode);
-                                }
-                            }
-                        }
+                        //             var omegaNode = new ProofNode(match[t], current.KnowledgeState, nextDepth, current, i, imperfectOmega);
+                        //             PushNode(omegaNode);
+                        //         }
+                        //     } else if (current.Omega.GetArgAsExpression(0).Equals(match[tf])) {
+                        //         if (current.Omega.Equals(omega)) {
+                        //             if (current.KnowledgeState.Basis.Contains(current.Omega)) {
+                        //                 searchBases.Add(new ProofBasis(new List<Expression>{omega}, new Substitution()));
+                        //             }
+                        //         } else {
+                        //             var omegaNode = new ProofNode(match[t], current.KnowledgeState, nextDepth, current, i, current.Omega);
+                        //             PushNode(omegaNode);
+                        //         }
+                        //     }
+                        // }
                         // END OMEGA MADNESS
                         
                         // @Note: we only check the above rule
                         // if we're proving something unconditionally.
                         // 
                         // should this be the case? shouldn't we be able
-                        // to say, e.g. that if 
+                        // to say, e.g. that if ~A, we don't know A?
                         // 
-                        
                         // de se knowledge transparency
                         // M |- P => M  |- know(P, self)
                         // M |/- P => M |- ~know(P, self)
-                        if (((currentLemma.HeadedBy(KNOW) && current.KnowledgeState == KS) ||
-                            (currentLemma.PrejacentHeadedBy(NOT, KNOW))) &&
-                            currentLemma.GetArgAsExpression(1).Equals(SELF)) {
-                            PushNode(new ProofNode(
-                                currentLemma.GetArgAsExpression(0),
-                                current.KnowledgeState,
-                                nextDepth, current, i, current.Omega,
-                                isAssumption: currentLemma.HeadedBy(NOT)));
+                        if (current.KnowledgeState == KS &&
+                            (currentLemma.HeadedBy(KNOW) || currentLemma.PrejacentHeadedBy(NOT, KNOW))) {
+                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
+
+                            if (query.GetArgAsExpression(1).Equals(SELF)) {
+                                PushNode(new ProofNode(
+                                    query.GetArgAsExpression(0),
+                                    current.KnowledgeState,
+                                    nextDepth, current, i, current.Omega,
+                                    isAssumption: currentLemma.HeadedBy(NOT)));
+                            }
                         }
 
                         // we add a specific rule for de se abilities that are always provable
@@ -879,55 +912,11 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // end abilities
-
-                        // quantifier elimination
+                        
                         var currentVariables = currentLemma.GetVariables();
-                        var x1 = GetUnusedVariable(INDIVIDUAL, currentVariables);
                         var f1 = GetUnusedVariable(PREDICATE, currentVariables);
+                        var x1 = GetUnusedVariable(INDIVIDUAL, currentVariables);
 
-                        var augmentedVariables = new HashSet<Variable>{f1};
-                        augmentedVariables.UnionWith(currentVariables);
-
-                        var f2 = GetUnusedVariable(PREDICATE, augmentedVariables);
-
-                        // TODO: ~some -
-
-                        var f2xFormula = new Expression(new Expression(f2), new Expression(x1));
-                        var f2xMatches = f2xFormula.GetMatches(currentLemma);
-
-                        foreach (var f2xBinding in f2xMatches) {
-                            if (f2xBinding[f2] is Variable) {
-                                continue;
-                            }
-                            var f1xFormula = new Expression(new Expression(f1), f2xBinding[x1]);
-                            var f1xNodeForAll = new ProofNode(f1xFormula, current.KnowledgeState,
-                                nextDepth, current, i, current.Omega, hasYoungerSibling: true);
-
-                            // all -
-                            // M |- all(F, G), M |- F(x) => G(x)
-                            var allF1F2 = new Expression(ALL, new Expression(f1), f2xBinding[f2]);
-                            var allNode = new ProofNode(allF1F2, current.KnowledgeState,
-                                nextDepth, current, i, current.Omega, f1xNodeForAll);
-
-                            var f2xNode = new ProofNode(new Expression(NOT, currentLemma), current.KnowledgeState,
-                                nextDepth, current, i, current.Omega, hasYoungerSibling: true, isAssumption: true);
-
-                            var f1xNodeForGen = new ProofNode(f1xFormula, current.KnowledgeState,
-                                nextDepth, current, i, current.Omega, f2xNode, hasYoungerSibling: true);;
-
-                            // gen -
-                            // M |- gen(F, G), M |- F(x), M |/- ~G(x) => G(x)
-                            var genF1F2 = new Expression(GEN, new Expression(f1), f2xBinding[f2]);
-                            var genNode = new ProofNode(genF1F2, current.KnowledgeState,
-                                nextDepth, current, i, current.Omega, f1xNodeForGen);
-
-                            // PushNode(genNode);
-                            // PushNode(f1xNodeForGen);
-                            // PushNode(f2xNode);
-
-                            // PushNode(allNode);
-                            // PushNode(f1xNodeForAll);
-                        }
                         // geach: (t -> t), (e -> t), e -> t
                         // M |- geach(T, F, x) => M |- T(F(x))
                         var tf1 = GetUnusedVariable(TRUTH_FUNCTION, currentVariables);
@@ -1123,8 +1112,7 @@ public class MentalState : MonoBehaviour {
                                 // we can safely assume the content of
                                 // this assumption node
                                 var assumptionBasis = new ProofBasis();
-                                assumptionBasis.AddPremise(
-                                    new Expression(NOT, new Expression(KNOW, mergeLemma, SELF)));
+                                assumptionBasis.AddPremise(new Expression(STAR, mergeLemma));
 
                                 var productBasis = new ProofBasis(meetBasis, assumptionBasis);
                                 productBases.Add(productBasis);
@@ -1296,7 +1284,9 @@ public class MentalState : MonoBehaviour {
                 // M <- since(P, see(P, x)) which entails both
                 // P and was(see(P, x))
                 // 
-                return AddToKnowledgeState(knowledgeState, pSinceSawP, true);
+                // TODO figure out a better way to handle events and states
+                // 
+                // return AddToKnowledgeState(knowledgeState, pSinceSawP, true);
             }
             // we want to ensure a self-supporting premise isn't
             // removed if other links to it are removed.
@@ -1320,37 +1310,30 @@ public class MentalState : MonoBehaviour {
             AddToOmegaPool(knowledgeState, knowledge);
         }
         
-        if (knowledge.HeadedBy(AND)) {
-            var a = knowledge.GetArgAsExpression(0);
-            var b = knowledge.GetArgAsExpression(1);
+        if (knowledge.HeadedBy(AND) ||
+            knowledge.PrejacentHeadedBy(NOT, OR)) {
+            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
+            var a = query.GetArgAsExpression(0);
+            var b = query.GetArgAsExpression(1);
+            var leftRuleName = "A & B |- A";
+            var rightRuleName = "A & B |- B";
+
+            if (knowledge.HeadedBy(NOT)) {
+                a = new Expression(NOT, a);
+                b = new Expression(NOT, b);
+                leftRuleName  = "~(A v B) |- ~A";
+                rightRuleName = "~(A v B) |- ~B";
+            }
             
             AddToKnowledgeState(knowledgeState, a, false, signature);
             AddToKnowledgeState(knowledgeState, b, false, signature);
 
-            AddRule(knowledgeState, signature, new InferenceRule("A & B |- A",
+            AddRule(knowledgeState, signature, new InferenceRule(leftRuleName,
                 e => e.Equals(a),
                 e => new List<Expression>{knowledge}));
-            AddRule(knowledgeState, signature, new InferenceRule("A & B |- B",
+            AddRule(knowledgeState, signature, new InferenceRule(rightRuleName,
                 e => e.Equals(b),
                 e => new List<Expression>{knowledge}));
-        }
-
-        if (knowledge.HeadedBy(NOT)) {
-            var subclause = knowledge.GetArgAsExpression(0);
-            if (subclause.HeadedBy(OR)) {
-                var notA = new Expression(NOT, subclause.GetArgAsExpression(0));
-                var notB = new Expression(NOT, subclause.GetArgAsExpression(1));
-
-                AddToKnowledgeState(knowledgeState, notA, false, signature);
-                AddToKnowledgeState(knowledgeState, notB, false, signature);
-
-                AddRule(knowledgeState, signature, new InferenceRule("~(A v B) |- ~A",
-                    e => e.Equals(notA),
-                    e => new List<Expression>{knowledge}));
-                AddRule(knowledgeState, signature, new InferenceRule("~(A v B) |- ~B",
-                    e => e.Equals(notB),
-                    e => new List<Expression>{knowledge}));
-            }
         }
 
         if (knowledge.HeadedBy(IF)) {
@@ -1363,10 +1346,41 @@ public class MentalState : MonoBehaviour {
             AddToKnowledgeState(knowledgeState, consequent, false, signature);
         }
 
-        if (knowledge.HeadedBy(ALL)) {
-            var g  = knowledge.GetArgAsExpression(1);
+        if (knowledge.HeadedBy(ALL, GEN) ||
+            knowledge.PrejacentHeadedBy(NOT, SOME)) {
+            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
+            var g  = query.GetArgAsExpression(1);
             var x  = new Expression(GetUnusedVariable(INDIVIDUAL, g.GetVariables()));
             var gx = new Expression(g, x);
+            if (knowledge.HeadedBy(NOT)) {
+                gx = new Expression(NOT, gx);
+            }
+
+            var ruleName = "∀-";
+            if (knowledge.HeadedBy(GEN)) {
+                ruleName = "Gen-";
+            }
+            if (knowledge.PrejacentHeadedBy(NOT, SOME)) {
+                ruleName = "~∃-";
+            }
+
+            AddRule(knowledgeState, signature, new InferenceRule(ruleName,
+                e => gx.GetMatches(e) != null,
+                e => {
+                    var gxMatches = gx.GetMatches(e);
+
+                    foreach (var gxMatch in gxMatches) {
+                        var c = gxMatch[x.Head as Variable];
+                        var fc = new Expression(query.GetArgAsExpression(0), c);
+                        var premises = new List<Expression>{knowledge, fc};
+
+                        if (knowledge.HeadedBy(GEN)) {
+                            premises.Add(new Expression(STAR, new Expression(NOT, new Expression(g, c))));
+                        }
+                        return premises;
+                    }
+                    return null;
+                }));
 
             AddToKnowledgeState(knowledgeState, gx, false, signature);
         }
@@ -1378,7 +1392,7 @@ public class MentalState : MonoBehaviour {
 
             var ungeached = new Expression(qp, new Expression(itr, t));
 
-            AddToKnowledgeState(knowledgeState, ungeached, false, signature);
+            // AddToKnowledgeState(knowledgeState, ungeached, false, signature);
         }
 
         if (knowledge.HeadedBy(SINCE)) {

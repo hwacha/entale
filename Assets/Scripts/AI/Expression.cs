@@ -726,7 +726,14 @@ public class Expression : Argument, IComparable<Expression> {
             return s.ToString();
         }
 
-        s.Append("(");
+        bool skipParens =
+            Args.Length == 1 &&
+            Head is Constant &&
+            !Char.IsLetter((Head as Name).ID[0]);
+
+        if (!skipParens) {
+            s.Append("(");
+        }
 
         for (int i = 0; i < Args.Length; i++) {
             s.Append(Args[i]);
@@ -737,7 +744,9 @@ public class Expression : Argument, IComparable<Expression> {
             s.Remove(s.Length - 2, 2);
         }
 
-        s.Append(")");
+        if (!skipParens) {
+            s.Append(")");
+        }
 
         return s.ToString();
     }
@@ -806,48 +815,6 @@ public class Expression : Argument, IComparable<Expression> {
         if (that.Type.Equals(that.Head.Type) && that.Head is Bottom) {
             return 1;
         }
-
-        // BEGIN CUSTOM-ORDERING FOR EVIDENTIALS, etc.
-        if (Type.Equals(TRUTH_VALUE)) {         
-            // we check the depth to tell which to recur on.
-            // @Note This _shouldn't_ cause problems if dealing
-            // with reduced expressions.
-            int thisDepth = this.Depth;
-            int thatDepth = that.Depth;
-
-            // NEGATION
-            bool thisNot = this.HeadedBy(NOT);
-            bool thatNot = that.HeadedBy(NOT);
-
-            if (thisNot && thatNot && thisDepth == thatDepth) {
-                var thisSubclause = this.GetArgAsExpression(0);
-                var thatSubclause = that.GetArgAsExpression(0);
-
-                int comparison = thisSubclause.CompareTo(thatSubclause);
-                return comparison;
-            }
-
-            if (thisNot && !thatNot ||
-                thisNot && thatNot && thisDepth > thatDepth) {
-                var subclause = this.GetArgAsExpression(0);
-                int comparison = subclause.CompareTo(that);
-                if (comparison == 0) {
-                    return 1;
-                }
-                return comparison;
-            }
-
-            if (!thisNot && thatNot ||
-                thisNot && thatNot && thisDepth < thatDepth) {
-                var subclause = that.GetArgAsExpression(0);
-                int comparison = this.CompareTo(subclause);
-                if (comparison == 0) {
-                    return -1;
-                }
-                return comparison;
-            }
-        }
-        // END
 
         var headTypeComparison = this.Head.Type.CompareTo(that.Head.Type);
         if (headTypeComparison < 0) {
@@ -925,8 +892,8 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression ZE = new Expression(new Variable(INDIVIDUAL, 2));
 
     // Truth Value constants
-    public static readonly Expression VERUM   = new Expression(new Name(TRUTH_VALUE, "verum"));
-    public static readonly Expression FALSUM  = new Expression(new Name(TRUTH_VALUE, "falsum"));
+    public static readonly Expression VERUM   = new Expression(new Name(TRUTH_VALUE, "⊤"));
+    public static readonly Expression FALSUM  = new Expression(new Name(TRUTH_VALUE, "⊥"));
     public static readonly Expression NEUTRAL = new Expression(new Name(TRUTH_VALUE, "neutral"));
 
     // Truth Value variables
@@ -964,8 +931,9 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression REET = new Expression(new Variable(RELATION_2, 0));
 
     // 1-place truth functions
-    public static readonly Expression NOT    = new Expression(new Name(TRUTH_FUNCTION, "not"));
-    public static readonly Expression TRULY  = new Expression(new Name(TRUTH_FUNCTION, "truly"));
+    public static readonly Expression STAR   = new Expression(new Name(TRUTH_FUNCTION, "*"));
+    public static readonly Expression NOT    = new Expression(new Name(TRUTH_FUNCTION, "~"));
+    public static readonly Expression TRULY  = new Expression(new Name(TRUTH_FUNCTION, "_"));
     // the question of whether "A" is closed,
     // so you either believe A or ~A
     public static readonly Expression CLOSED = new Expression(new Name(TRUTH_FUNCTION, "closed"));
@@ -975,9 +943,9 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression PRESENT = new Expression(new Name(TRUTH_FUNCTION, "present"));
     public static readonly Expression FUTURE  = new Expression(new Name(TRUTH_FUNCTION, "future"));
     // very
-    public static readonly Expression VERY  = new Expression(new Name(TRUTH_FUNCTION, "very"));
+    public static readonly Expression VERY  = new Expression(new Name(TRUTH_FUNCTION, "+"));
     // limit-ordinal: used to mark lexical priority
-    public static readonly Expression OMEGA = new Expression(new Name(TRUTH_FUNCTOR, "omega"));
+    public static readonly Expression OMEGA = new Expression(new Name(TRUTH_FUNCTOR, "Ω"));
 
     // higher-order variables
     public static readonly Expression FTF  = new Expression(new Variable(TRUTH_FUNCTION, 0));
@@ -1025,8 +993,8 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression DF = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION_FUNCTOR, "df"));
 
     // quantifiers
-    public static readonly Expression SOME = new Expression(new Name(QUANTIFIER, "some"));
-    public static readonly Expression ALL  = new Expression(new Name(QUANTIFIER, "all"));
+    public static readonly Expression SOME = new Expression(new Name(QUANTIFIER, "∃"));
+    public static readonly Expression ALL  = new Expression(new Name(QUANTIFIER, "∀"));
     public static readonly Expression GEN  = new Expression(new Name(QUANTIFIER, "gen"));
 
     // weird function words
