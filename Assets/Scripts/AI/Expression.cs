@@ -846,69 +846,6 @@ public class Expression : Argument, IComparable<Expression> {
                 }
                 return comparison;
             }
-
-            // TIME
-            // @Note this depends on the order of not/when
-            // e.g. we get the right ordering for not(when(A, t))
-            // but not for when(not(A), t)
-            // 
-            // We could check for more cases in the ordering,
-            // introduce subtyping to place restriction on
-            // which arguments the expressions accept,
-            // or (as we currently do) maintain the working
-            // order as an invariant.
-            // 
-            // @Bug ordering does not work properly when there
-            // is a variable in the content.
-            bool thisWhen = this.HeadedBy(WHEN, BEFORE, AFTER);
-            bool thatWhen = that.HeadedBy(WHEN, BEFORE, AFTER);
-
-            if (thisWhen && thatWhen) {
-                var thisContent = this.GetArgAsExpression(0);
-                var thatContent = that.GetArgAsExpression(0);
-
-                int contentComparison = thisContent.CompareTo(thatContent);
-
-                if (contentComparison != 0) {
-                    return contentComparison;
-                }
-
-                var thisTime = this.GetArgAsExpression(1);
-                var thatTime = that.GetArgAsExpression(1);
-
-                int timeComparison = thisTime.CompareTo(thatTime);
-
-                if (timeComparison == 0) {
-                    if (this.HeadedBy(AFTER) && that.HeadedBy(WHEN, BEFORE) ||
-                        this.HeadedBy(AFTER, WHEN) && that.HeadedBy(BEFORE)) {
-                        return 1;
-                    }
-                    if (this.HeadedBy(BEFORE) && that.HeadedBy(WHEN, AFTER) ||
-                        this.HeadedBy(BEFORE, WHEN) && that.HeadedBy(AFTER)) {
-                        return -1;
-                    }
-                    return 0;
-                }
-
-                return timeComparison;
-            }
-
-            if (thisWhen && !thatWhen) {
-                var content = this.GetArgAsExpression(0);
-                int comparison = content.CompareTo(that);
-                if (comparison == 0) {
-                    return 1;
-                }
-                return comparison;
-            }
-            if (!thisWhen && thatWhen) {
-                var content = that.GetArgAsExpression(0);
-                int comparison = this.CompareTo(content);
-                if (comparison == 0) {
-                    return -1;
-                }
-                return comparison;
-            }
         }
         // END
 
@@ -1072,28 +1009,20 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression WILL  = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "will"));
     public static readonly Expression WOULD = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "would"));
 
-    // individual-truth relations
-    public static readonly Expression ABLE  = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "able"));
-
     // FACTIVES
     // evidentials
-    public static readonly Expression KNOW   = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
-    public static readonly Expression SEE    = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "see"));
-    public static readonly Expression RECALL  = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "recall"));
-    public static readonly Expression INFORM  = new Expression(new Name(INDIVIDUAL_2_TRUTH_RELATION, "inform"));
+    public static readonly Expression KNOW      = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "know"));
+    public static readonly Expression SEE       = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "see"));
+    public static readonly Expression RECALL    = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "recall"));
+    public static readonly Expression INFORMED  = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "informed"));
 
     // agentives
     public static readonly Expression MAKE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "make"));
 
-    // defactivizer: turns a sentence F(P) that entails P
+    // defactivizer: turns a sentence R(P, x) that entails P
     // into one that doesn't entail P
-    // df(F, P) is also entailed by F(P)
-    public static readonly Expression DF = new Expression(new Name(TRUTH_FUNCTOR, "df"));
-
-    // tensers
-    public static readonly Expression WHEN   = new Expression(new Name(TENSER, "when"));
-    public static readonly Expression BEFORE = new Expression(new Name(TENSER, "before"));
-    public static readonly Expression AFTER  = new Expression(new Name(TENSER, "after"));
+    // df(R, P, x) is also entailed by R(P, x)
+    public static readonly Expression DF = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION_FUNCTOR, "df"));
 
     // quantifiers
     public static readonly Expression SOME = new Expression(new Name(QUANTIFIER, "some"));

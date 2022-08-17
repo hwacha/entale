@@ -74,8 +74,12 @@ public class MentalState : MonoBehaviour {
                 str.Append("\t" + e + "\n");
             }
             str.Append("]\nRules [\n");
-            foreach (var keyAndRule in Rules) {
-                str.Append("\t" + keyAndRule.Key + " -> " + keyAndRule.Value + "\n");
+            foreach (var keyAndRules in Rules) {
+                str.Append("\t" + keyAndRules.Key + " -> {\n");
+                foreach (var rule in keyAndRules.Value) {
+                    str.Append("\t\t" + rule + "\n");
+                }
+                str.Append("\t}\n");
             }
             str.Append("]\nOmega Pool [\n");
             foreach (Expression e in OmegaPool) {
@@ -338,7 +342,6 @@ public class MentalState : MonoBehaviour {
             Parent = parent;
             MeetBasisIndex = meetBasisIndex;
             OlderSibling = olderSibling;
-            Supplement = supplement;
             IsAssumption = isAssumption;
             Omega = omega;
 
@@ -503,22 +506,13 @@ public class MentalState : MonoBehaviour {
                                 searchBases.Add(new ProofBasis());
                             }
 
-                            // I can go anywhere.
-                            if (pt == Proof && currentLemma.HeadedBy(ABLE) &&
-                                currentLemma.GetArgAsExpression(1).Equals(SELF) &&
-                                currentLemma.GetArgAsExpression(0).HeadedBy(AT) &&
-                                currentLemma.GetArgAsExpression(0).GetArgAsExpression(0).Equals(SELF) &&
-                                Locations.ContainsKey(currentLemma.GetArgAsExpression(0).GetArgAsExpression(1))) {
+                            // de se performative resolution
+                            // will(P) |- df(make, P, self)
+                            if (pt == Plan && currentLemma.HeadedBy(DF) &&
+                                currentLemma.GetArgAsExpression(0).HeadedBy(MAKE) &&
+                                currentLemma.GetArgAsExpression(2).Equals(SELF)) {
                                 var basis = new ProofBasis();
-                                basis.AddPremise(currentLemma);
-                                searchBases.Add(basis);
-                            }
-
-                            if (pt == Plan && currentLemma.HeadedBy(AT) &&
-                                currentLemma.GetArgAsExpression(0).Equals(SELF) &&
-                                Locations.ContainsKey(currentLemma.GetArgAsExpression(1))) {
-                                var basis = new ProofBasis();
-                                basis.AddPremise(new Expression(WILL, currentLemma));
+                                basis.AddPremise(new Expression(WILL, currentLemma.GetArgAsExpression(1)));
                                 searchBases.Add(basis);
                             }
 
@@ -629,7 +623,10 @@ public class MentalState : MonoBehaviour {
 
                         // defactivizer +
                         if (currentLemma.HeadedBy(DF)) {
-                            var factive = new Expression(currentLemma.GetArgAsExpression(0), currentLemma.GetArgAsExpression(1));
+                            var factive = new Expression(
+                                currentLemma.GetArgAsExpression(0),
+                                currentLemma.GetArgAsExpression(1),
+                                currentLemma.GetArgAsExpression(2));
                             PushNode(new ProofNode(
                                 factive, current.KnowledgeState, nextDepth,
                                 current, i, current.Omega));
@@ -742,23 +739,6 @@ public class MentalState : MonoBehaviour {
                             PushNode(new ProofNode(bananaX, current.KnowledgeState, nextDepth, current, i, current.Omega));
                         }
 
-                        // // I can say anything, so long as I'm at them.
-                        // if (current.Parity && pt == Proof && currentLemma.HeadedBy(ABLE) &&
-                        //     currentLemma.GetArgAsExpression(1).Equals(SELF) &&
-                        //     currentLemma.GetArgAsExpression(0).HeadedBy(INFORM) &&
-                        //     currentLemma.GetArgAsExpression(0).GetArgAsExpression(2).Equals(SELF)) {
-                        //     var atSelfX = new Expression(AT, SELF, currentLemma.GetArgAsExpression(0).GetArgAsExpression(1));
-
-                        //     PushNode(new ProofNode(atSelfX, current.KnowledgeState, nextDepth, current, i, current.Parity));
-                        // }
-
-                        if (pt == Plan && currentLemma.HeadedBy(INFORM) &&
-                            currentLemma.GetArgAsExpression(2).Equals(SELF)) {
-                            var atSelfX = new Expression(AT, SELF, currentLemma.GetArgAsExpression(1));
-                            PushNode(new ProofNode(atSelfX, current.KnowledgeState, nextDepth, current, i, current.Omega,
-                                supplement: new Expression(WILL, currentLemma)));
-                        }
-
                         // PREMISE-EXPANSIVE RULES
 
                         // here, we check against rules that
@@ -766,9 +746,6 @@ public class MentalState : MonoBehaviour {
                         
                         foreach (var rules in current.KnowledgeState.Rules.Values) {
                             foreach (var rule in rules) {
-                                if (rule.ToString().Equals("ability to will") && pt != ProofType.Plan) {
-                                    continue;
-                                }
                                 var premises = rule.Apply(currentLemma);
                                 if (premises != null) {
                                     if (premises.Count == 0) {
@@ -854,6 +831,55 @@ public class MentalState : MonoBehaviour {
                                 isAssumption: currentLemma.HeadedBy(NOT)));
                         }
 
+                        // we add a specific rule for de se abilities that are always provable
+                        // I can go anywhere.
+                        // M |- df(make, at(self, X), self) => M |- make(at(self, X), self)
+                        if (currentLemma.HeadedBy(MAKE) &&
+                            currentLemma.GetArgAsExpression(1).Equals(SELF) &&
+                            currentLemma.GetArgAsExpression(0).HeadedBy(AT) &&
+                            currentLemma.GetArgAsExpression(0).GetArgAsExpression(0).Equals(SELF) &&
+                            Locations.ContainsKey(currentLemma.GetArgAsExpression(0).GetArgAsExpression(1))) {
+                            var df = new Expression(DF, MAKE,
+                                currentLemma.GetArgAsExpression(0),
+                                currentLemma.GetArgAsExpression(1));
+
+                            PushNode(new ProofNode(df, current.KnowledgeState, nextDepth, current, i, current.Omega));
+                        }                        
+                        // I can inform anyone as long as I'm close enough.
+                        // 
+                        // (what I say also needs to be true, but if I don't believe
+                        // P then I can't actually _try_ to inform x of P, I can only
+                        // try to make them think they're informed of P)
+                        // 
+                        // M |- at(self, x), M |- df(make, informed(P, x), self) =>
+                        // M |- make(informed(P, x), self)
+                        if (currentLemma.HeadedBy(MAKE) &&
+                            currentLemma.GetArgAsExpression(0).HeadedBy(INFORMED) &&
+                            currentLemma.GetArgAsExpression(1).Equals(SELF)) {
+                            var addressee = currentLemma.GetArgAsExpression(0).GetArgAsExpression(1);
+                            var at = new Expression(AT, SELF, addressee);
+                            var df = new Expression(DF, MAKE, currentLemma.GetArgAsExpression(0), currentLemma.GetArgAsExpression(1));
+
+                            var dfNode = new ProofNode(df, current.KnowledgeState,
+                                nextDepth, current, i, current.Omega,
+                                hasYoungerSibling: true);
+
+                            var atNode = new ProofNode(at, current.KnowledgeState,
+                                nextDepth, current, i, current.Omega, dfNode);
+
+                            PushNode(atNode);
+                            PushNode(dfNode);
+                        }
+                        // M |- make(at(self, X), self) => M |- at(self, X)
+                        // M |- make(informed(P, x), self) => M |- informed(P, x)
+                        if ((currentLemma.HeadedBy(AT) && currentLemma.GetArgAsExpression(0).Equals(SELF)) ||
+                            currentLemma.HeadedBy(INFORMED)) {
+                            var make = new Expression(MAKE, currentLemma, SELF);
+                            PushNode(new ProofNode(make, current.KnowledgeState, nextDepth, current, i, current.Omega));
+                        }
+
+                        // end abilities
+
                         // quantifier elimination
                         var currentVariables = currentLemma.GetVariables();
                         var x1 = GetUnusedVariable(INDIVIDUAL, currentVariables);
@@ -895,12 +921,12 @@ public class MentalState : MonoBehaviour {
                             var genNode = new ProofNode(genF1F2, current.KnowledgeState,
                                 nextDepth, current, i, current.Omega, f1xNodeForGen);
 
-                            PushNode(genNode);
-                            PushNode(f1xNodeForGen);
-                            PushNode(f2xNode);
+                            // PushNode(genNode);
+                            // PushNode(f1xNodeForGen);
+                            // PushNode(f2xNode);
 
-                            PushNode(allNode);
-                            PushNode(f1xNodeForAll);
+                            // PushNode(allNode);
+                            // PushNode(f1xNodeForAll);
                         }
                         // geach: (t -> t), (e -> t), e -> t
                         // M |- geach(T, F, x) => M |- T(F(x))
@@ -918,8 +944,8 @@ public class MentalState : MonoBehaviour {
                                     tfxBinding[f1],
                                     tfxBinding[x1]);
 
-                            PushNode(new ProofNode(geachedTfx, current.KnowledgeState,
-                                nextDepth, current, i, current.Omega));
+                            // PushNode(new ProofNode(geachedTfx, current.KnowledgeState,
+                            //     nextDepth, current, i, current.Omega));
                         }
                         // M |- T(F(x)) => M |- geach(T, F, x)
                         if (currentLemma.HeadedBy(GEACH_E_TRUTH_FUNCTION, GEACH_T_QUANTIFIER_PHRASE)) {
@@ -927,8 +953,8 @@ public class MentalState : MonoBehaviour {
                                     new Expression(currentLemma.GetArgAsExpression(1),
                                         currentLemma.GetArgAsExpression(2)));
 
-                            PushNode(new ProofNode(ungeachedTfx, current.KnowledgeState,
-                                nextDepth, current, i, current.Omega));
+                            // PushNode(new ProofNode(ungeachedTfx, current.KnowledgeState,
+                            //     nextDepth, current, i, current.Omega));
                         }
 
                         // geach - : (t -> t), (t -> t), t -> t
@@ -952,9 +978,9 @@ public class MentalState : MonoBehaviour {
                                     tf1tf2tBinding[tf2],
                                     tf1tf2tBinding[t1]);
 
-                            PushNode(new ProofNode(
-                                geachedTf1tf2t, current.KnowledgeState,
-                                nextDepth, current, i, current.Omega));
+                            // PushNode(new ProofNode(
+                            //     geachedTf1tf2t, current.KnowledgeState,
+                            //     nextDepth, current, i, current.Omega));
                         }
 
                         // geach - : (e -> t) -> t, (t, e -> t), t -> t
@@ -974,8 +1000,8 @@ public class MentalState : MonoBehaviour {
                                     qpitBinding[i1],
                                     qpitBinding[t1]);
 
-                            PushNode(new ProofNode(geachedQpit, current.KnowledgeState,
-                                nextDepth, current, i, current.Omega));
+                            // PushNode(new ProofNode(geachedQpit, current.KnowledgeState,
+                            //     nextDepth, current, i, current.Omega));
                         }
 
                         // here we reverse the order of new proof nodes.
@@ -1257,7 +1283,7 @@ public class MentalState : MonoBehaviour {
         }
 
         if (firstCall) {
-            if (knowledge.HeadedBy(SEE, INFORM)) {
+            if (knowledge.HeadedBy(SEE, MAKE)) {
                 var p = knowledge.GetArgAsExpression(0);
                 var pSinceSawP = new Expression(SINCE, p, knowledge);
                 // @Note: since(A, B) as a logical operator is typically
@@ -1277,7 +1303,7 @@ public class MentalState : MonoBehaviour {
             knowledgeState.Basis.Add(knowledge);
         }
 
-        if (knowledge.HeadedBy(VERY, KNOW, MAKE, SEE, INFORM)) {
+        if (knowledge.HeadedBy(VERY, KNOW, MAKE, SEE, INFORMED)) {
             var subclause = knowledge.GetArgAsExpression(0);
             AddToKnowledgeState(knowledgeState, subclause, false, signature);
             AddRule(knowledgeState, signature, new InferenceRule("K-",
@@ -1334,16 +1360,7 @@ public class MentalState : MonoBehaviour {
                 e => e.Equals(consequent),
                 e => new List<Expression>{knowledge, antecedent}));
 
-            // TODO @Bug the K- rule won't be removed when the conditional is!
             AddToKnowledgeState(knowledgeState, consequent, false, signature);
-        }
-
-        if (knowledge.HeadedBy(ABLE)) {
-            var content = knowledge.GetArgAsExpression(0);
-            AddRule(knowledgeState, signature, new InferenceRule("ability to will",
-                e => e.Equals(content),
-                e => new List<Expression>{knowledge},
-                supplement: new Expression(WILL, content)));
         }
 
         if (knowledge.HeadedBy(ALL)) {
@@ -1406,7 +1423,7 @@ public class MentalState : MonoBehaviour {
             yield break;
         }
 
-        AddToKnowledgeState(KS, new Expression(INFORM, content, SELF, speaker));
+        AddToKnowledgeState(KS, new Expression(MAKE, new Expression(INFORMED, content, SELF), speaker));
         yield break;
     }
 

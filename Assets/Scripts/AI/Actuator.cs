@@ -203,7 +203,7 @@ public class Actuator : MonoBehaviour {
                     }
                 }
 
-                else if (content.Head.Equals(INFORM.Head) && content.GetArgAsExpression(2).Equals(SELF)) {
+                else if (content.Head.Equals(INFORMED.Head)) {
                     var message = new Expression(ASSERT, content.GetArgAsExpression(0));
                     // Debug.Log("saying " + message);
                     StartCoroutine(Say(message, 1.5f));

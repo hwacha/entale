@@ -29,130 +29,23 @@ public class Testing : MonoBehaviour {
         var e = new Expression(new Name(TRUTH_VALUE, "E"));
 
         MentalState.Initialize(new Expression[]{
-            // new Expression(OMEGA, VERY, new Expression(GOOD, a)),
-            // new Expression(OMEGA, new Expression(OMEGA, VERY), b)
-            // new Expression(KNOW, a, ALICE),
-            // new Expression(IF, c, b),
-            // b,
-            // new Expression(IF, new Expression(KNOW, new Expression(RED, SELF), CHARLIE), b),
-            // new Expression(ALL, PERSON, new Expression(KNOW, new Expression(GREEN, SELF))),
-            // new Expression(ALL, RED, new Expression(GEACH_E_TRUTH_FUNCTION, NOT, BLUE)),
-            // new Expression(RED, ALICE),
-            // new Expression(NOT, new Expression(GREEN, BOB)),
-            // new Expression(NOT, new Expression(YELLOW, BOB)),
-            new Expression(OMEGA,
-                new Expression(GEACH_T_QUANTIFIER_PHRASE,
-                    new Expression(ALL, PERSON), KNOW),
-                new Expression(GREEN, SELF)),
-            new Expression(PERSON, ALICE),
-            new Expression(GEACH_T_QUANTIFIER_PHRASE, new Expression(ALL, PERSON), KNOW, new Expression(GREEN, SELF)),
-
-            // new Expression(ABLE, new Expression(BLUE, SELF), SELF),
-            new Expression(OMEGA, VERY, new Expression(GOOD, a)),
-            // new Expression(OMEGA, new Expression(OMEGA, VERY), new Expression(GOOD, b)),// Mental State line 809
-            // new Expression(OMEGA, new Expression(OMEGA, new Expression(OMEGA, VERY)), new Expression(GOOD, c)),
-            // new Expression(AND, d, e)
+            new Expression(IF,
+                new Expression(MAKE, b, SELF),
+                new Expression(DF, MAKE, b, SELF))
         });
 
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, a)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, a))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(VERY, new Expression(GOOD, a)))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(MAKE, b, SELF), Plan));
+        StartCoroutine(LogBasesStream(MentalState, b, Plan));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(DF, MAKE, b, SELF), Plan));
 
-        // StartCoroutine(LogBasesStream(MentalState, b));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, b)));
-        // // this is failing because: the search would need to check the LINKS
-        // // and not just the knowledge base for omega sentences.
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(VERY, b))));
+        var place = new Expression(new Name(INDIVIDUAL, "place"));
 
-        // var orLeftIntroduction = new InferenceRule("OR+L", e => e.HeadedBy(OR),
-        //     e => new List<Expression>{
-        //         e.GetArgAsExpression(0)
-        //     });
-        // var orRightIntroduction = new InferenceRule("OR+R", e => e.HeadedBy(OR),
-        //     e => new List<Expression>{
-        //         e.GetArgAsExpression(1)
-        //     });
-        // var andIntroduction = new InferenceRule("AND+", e => e.HeadedBy(AND),
-        //     e => new List<Expression>{
-        //         e.GetArgAsExpression(0), e.GetArgAsExpression(1)
-        //     });
+        MentalState.Locations.Add(place, new Vector3(10, 10, 10));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(AT, SELF, place), Plan));
 
-        // TestInferenceRule(orLeftIntroduction, new Expression(OR, a, b)); // A
-        // TestInferenceRule(orLeftIntroduction, new Expression(AND, a, b)); // null
-        // TestInferenceRule(orLeftIntroduction, a); // null
+        MentalState.Locations.Add(BOB, new Vector3(0, 0, 0));
 
-        // TestInferenceRule(orRightIntroduction, new Expression(OR, a, b)); // B
-        // TestInferenceRule(orRightIntroduction, new Expression(AND, a, b)); // null
-        // TestInferenceRule(orRightIntroduction, a); // null
-
-        // TestInferenceRule(andIntroduction, new Expression(OR, a, b)); // null
-        // TestInferenceRule(andIntroduction, new Expression(AND, a, b)); // A, B
-        // TestInferenceRule(andIntroduction, a); // A, B
-
-        // var knowledgeElim = new InferenceRule("K-", e => e.Equals(a),
-        //     e => new List<Expression>{
-        //         new Expression(KNOW, a, BOB)
-        //     });
-
-        // TestInferenceRule(knowledgeElim, a);
-
-        // StartCoroutine(LogBasesStream(MentalState, a));
-        // StartCoroutine(LogBasesStream(MentalState, c));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(RED, SELF)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(GREEN, SELF)));
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, SELF), Plan));
-
-        // StartCoroutine(LogBasesStream(MentalState, d));
-        // StartCoroutine(LogBasesStream(MentalState, e));
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, a)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, b)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(GOOD, c)));
-
-        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, a))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, b))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(GOOD, c))));
-
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(VERY, new Expression(VERY, new Expression(GOOD, a)))));
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(VERY, new Expression(VERY, new Expression(GOOD, b))))); // LINE 831
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(VERY, new Expression(VERY, new Expression(GOOD, c)))));
-
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(GOOD, b)))));
-
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(GOOD, c)))));
-
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(VERY, new Expression(VERY,
-        //         new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(GOOD, b)))))));
-
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(VERY,
-        //         new Expression(OMEGA, VERY,
-        //             new Expression(OMEGA, new Expression(OMEGA, VERY),
-        //                 new Expression(GOOD, c))))));
-
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(KNOW, new Expression(GREEN, SELF), ALICE)));
-        
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(NOT, new Expression(BLUE, ALICE))));
-
-        // StartCoroutine(LogBasesStream(MentalState,
-        //     new Expression(SOME,
-        //         new Expression(GEACH_E_TRUTH_FUNCTION, NOT, GREEN),
-        //         new Expression(GEACH_E_TRUTH_FUNCTION, NOT, YELLOW))));
-
-        // every(person, knows(A)), person(x) => knows(A, x) => A
-        
-        // omega(F, P) => F(P)
-        // M |- omega(F, P) -> X => M |- F(X)
-        
+        StartCoroutine(LogBasesStream(MentalState, new Expression(INFORMED, new Expression(BLUE, SELF), BOB), Plan));
     }
 
     public static void TestInferenceRule(InferenceRule rule, Expression e) {
@@ -279,7 +172,7 @@ public class Testing : MonoBehaviour {
 
         var waitingString = "waiting for '" + e + "' to be proved...";
         var foundResult = "found partial result. go to LogBasesStream() to see it.";
-        var isProvedByString = "'" + e + "'" + " is proved by: ";
+        var isProvedByString = "'" + e + "'" + " is " + (pt == Proof ? "proved" : "planned") + " by: ";
         while (!done.Item) {
             if (startTime + timeout >= Time.time) {
                 m.StopCoroutine(proofRoutine);

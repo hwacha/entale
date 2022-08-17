@@ -87,6 +87,9 @@ public abstract class SemanticType : IComparable<SemanticType> {
     public static readonly FunctionalType INDIVIDUAL_TRUTH_RELATION =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL}, TRUTH_VALUE);
 
+    public static readonly FunctionalType INDIVIDUAL_TRUTH_RELATION_FUNCTOR =
+        new FunctionalType(new SemanticType[]{INDIVIDUAL_TRUTH_RELATION, TRUTH_VALUE, INDIVIDUAL}, TRUTH_VALUE);
+
     public static readonly FunctionalType INDIVIDUAL_2_TRUTH_RELATION =
         new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL, INDIVIDUAL}, TRUTH_VALUE);
 
@@ -97,13 +100,6 @@ public abstract class SemanticType : IComparable<SemanticType> {
 
     public static readonly FunctionalType PROPOSITIONAL_QUANTIFIER =
         new FunctionalType(new SemanticType[]{TRUTH_FUNCTION, TRUTH_FUNCTION}, TRUTH_VALUE);
-
-    public static readonly FunctionalType TENSER =
-        new FunctionalType(new SemanticType[]{TRUTH_VALUE, TIME}, TRUTH_VALUE);
-
-    public static readonly FunctionalType TENSED_INDIVIDUAL_TRUTH_RELATION =
-        new FunctionalType(new SemanticType[]{TRUTH_VALUE, INDIVIDUAL, TIME}, TRUTH_VALUE);
-
 
 
     public static SemanticType Push(SemanticType t, SemanticType ts) {

@@ -229,7 +229,7 @@ public class ProofBases {
         StringBuilder s = new StringBuilder();
         s.Append("{\n");
         foreach (var basis in ProofBasisCollection) {
-            s.Append(basis);
+            s.Append("\t" + basis);
             s.Append('\n');
         }
         s.Append('}');
