@@ -56,6 +56,15 @@ public class Testing : MonoBehaviour {
         var ff = new Expression(new Name(TRUTH_VALUE, "FF"));
         var gg = new Expression(new Name(TRUTH_VALUE, "GG"));
         var hh = new Expression(new Name(TRUTH_VALUE, "HH"));
+        var ii = new Expression(new Name(TRUTH_VALUE, "II"));
+        var jj = new Expression(new Name(TRUTH_VALUE, "JJ"));
+        var kk = new Expression(new Name(TRUTH_VALUE, "KK"));
+        var ll = new Expression(new Name(TRUTH_VALUE, "LL"));
+        var mm = new Expression(new Name(TRUTH_VALUE, "MM"));
+        var nn = new Expression(new Name(TRUTH_VALUE, "NN"));
+        var oo = new Expression(new Name(TRUTH_VALUE, "OO"));
+        var pp = new Expression(new Name(INDIVIDUAL, "pp"));
+        var qq = new Expression(new Name(INDIVIDUAL, "qq"));
 
         MentalState.Initialize(new Expression[]{
             a,
@@ -83,11 +92,11 @@ public class Testing : MonoBehaviour {
             new Expression(IF, t, a),
             new Expression(ALL, PEPPER, SPICY),
             new Expression(PEPPER, h),
-            new Expression(GEN, APPLE, SWEET),
+            new Expression(NOT, new Expression(SPICY, pp)),
             new Expression(APPLE, j),
             new Expression(NOT, new Expression(SOME, APPLE, SPICY)),
+            new Expression(SPICY, qq),
             new Expression(ALL, BLUE, new Expression(KNOW, u)),
-            new Expression(GEN, BLUE, new Expression(KNOW, v)),
             new Expression(SINCE, w, x),
             new Expression(IF, new Expression(MAKE, o, SELF), new Expression(DF, MAKE, o, SELF)),
             new Expression(OR, aa, bb),
@@ -98,91 +107,114 @@ public class Testing : MonoBehaviour {
             ee,
             new Expression(NOT, new Expression(AND, gg, hh)),
             hh,
+            new Expression(TRULY, new Expression(TRULY, ii)),
+            new Expression(NOT, new Expression(NOT, new Expression(NOT, new Expression(NOT, jj)))),
+            new Expression(NOT, new Expression(DF, KNOW, a, BOB)),
+            new Expression(NOT, new Expression(PAST, kk)),
+            new Expression(IF, mm, ll),
+            new Expression(NOT, mm),
+            new Expression(NOT, new Expression(STAR, oo)),
         });
 
-        StartCoroutine(LogBasesStream(MentalState, VERUM));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, FALSUM)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IDENTITY, SELF, SELF)));
-        StartCoroutine(LogBasesStream(MentalState, a));
-        var trulyA = a;
-        for (int i = 0; i < 5; i++) {
-            trulyA = new Expression(TRULY, trulyA);
-        }
-        StartCoroutine(LogBasesStream(MentalState, trulyA));
-        var notNotA = a;
-        for (int i = 0; i < 6; i++) {
-            notNotA = new Expression(NOT, notNotA);
-        }
-        StartCoroutine(LogBasesStream(MentalState, notNotA));
-        StartCoroutine(LogBasesStream(MentalState, notNotA.GetArgAsExpression(0)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(STAR, z)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(IDENTITY, ALICE, BOB))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(VERY, c))));
-        StartCoroutine(LogBasesStream(MentalState, e));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(DF, KNOW, e, ALICE)));
+        // StartCoroutine(LogBasesStream(MentalState, VERUM));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, FALSUM)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(IDENTITY, SELF, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, a));
+        // var trulyA = a;
+        // for (int i = 0; i < 5; i++) {
+        //     trulyA = new Expression(TRULY, trulyA);
+        // }
+        // StartCoroutine(LogBasesStream(MentalState, trulyA));
+        // var notNotA = a;
+        // for (int i = 0; i < 6; i++) {
+        //     notNotA = new Expression(NOT, notNotA);
+        // }
+        // StartCoroutine(LogBasesStream(MentalState, notNotA));
+        // StartCoroutine(LogBasesStream(MentalState, notNotA.GetArgAsExpression(0)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(STAR, z)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(IDENTITY, ALICE, BOB))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(VERY, c))));
+        // StartCoroutine(LogBasesStream(MentalState, e));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(DF, KNOW, e, ALICE)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, a)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, a)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GOOD, f))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GOOD, f))));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, a, b)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(OR, c, d))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(OR, a, b)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(AND, c, d))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(AND, a, b)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(OR, c, d))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(OR, a, b)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(AND, c, d))));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, RED, BLUE)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(ALL, RED, GREEN))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, RED, BLUE)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(ALL, RED, GREEN))));
 
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(IF,
-                new Expression(SOME, BLUE, YELLOW),
-                new Expression(YELLOW, ALICE))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(IF,
+        //         new Expression(SOME, BLUE, YELLOW),
+        //         new Expression(YELLOW, ALICE))));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, b)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, g)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, b)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, g)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IDENTITY, j, h)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(IDENTITY, l, k))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(IDENTITY, j, h)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(IDENTITY, l, k))));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(FRUIT, h)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(FRUIT, j)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(BANANA, k))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(TOMATO, k))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(FRUIT, h)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(FRUIT, j)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(BANANA, k))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(TOMATO, k))));
 
-        StartCoroutine(LogBasesStream(MentalState, m));
+        // StartCoroutine(LogBasesStream(MentalState, m));
 
-        var veryN = n;
-        for (int i = 0; i < 15; i++) {
-            veryN = new Expression(VERY, veryN);
-        }
-        StartCoroutine(LogBasesStream(MentalState, veryN));
-        // @Note higher order omega logic is still broken
+        // var veryN = n;
+        // for (int i = 0; i < 15; i++) {
+        //     veryN = new Expression(VERY, veryN);
+        // }
+        // StartCoroutine(LogBasesStream(MentalState, veryN));
+        // // @Note higher order omega logic is still broken
         
-        StartCoroutine(LogBasesStream(MentalState, o));
-        StartCoroutine(LogBasesStream(MentalState, p));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, r)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, s)));
+        // StartCoroutine(LogBasesStream(MentalState, o));
+        // StartCoroutine(LogBasesStream(MentalState, p));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, r)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, s)));
 
-        StartCoroutine(LogBasesStream(MentalState, t));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(SPICY, h)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(SWEET, j)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(SPICY, j))));
+        // StartCoroutine(LogBasesStream(MentalState, t));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SPICY, h)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SWEET, j)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(SPICY, j))));
 
-        StartCoroutine(LogBasesStream(MentalState, u));
-        StartCoroutine(LogBasesStream(MentalState, v));
+        // StartCoroutine(LogBasesStream(MentalState, u));
+        // StartCoroutine(LogBasesStream(MentalState, v));
         
-        StartCoroutine(LogBasesStream(MentalState, w));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, x)));
+        // StartCoroutine(LogBasesStream(MentalState, w));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, x)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, a, SELF)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(KNOW, y, SELF))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, a, SELF)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(KNOW, y, SELF))));
 
-        StartCoroutine(LogBasesStream(MentalState, o, Plan));
+        // StartCoroutine(LogBasesStream(MentalState, o, Plan));
 
-        StartCoroutine(LogBasesStream(MentalState, bb));
-        StartCoroutine(LogBasesStream(MentalState, cc));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, ff)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, gg)));
+        // StartCoroutine(LogBasesStream(MentalState, bb));
+        // StartCoroutine(LogBasesStream(MentalState, cc));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, ff)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, gg)));
+
+        // StartCoroutine(LogBasesStream(MentalState, ii));
+        // StartCoroutine(LogBasesStream(MentalState, jj));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(KNOW, a, BOB))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, kk)));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, ll)));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(IF, nn, a))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(STAR, c)));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(oo)));
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(PEPPER, pp))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(APPLE, qq))));
     }
 
     public static void TestInferenceRule(InferenceRule rule, Expression e) {

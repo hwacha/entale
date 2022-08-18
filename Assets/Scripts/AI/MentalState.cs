@@ -601,6 +601,13 @@ public class MentalState : MonoBehaviour {
                                 current.KnowledgeState,
                                 nextDepth, current, i, current.Omega,
                                 isAssumption: true));
+
+                            // knowledge of negation entails ignorance of proposition
+                            // M |- ~A => M |- *A
+                            PushNode(new ProofNode(
+                                new Expression(NOT, currentLemma.GetArgAsExpression(0)),
+                                current.KnowledgeState,
+                                nextDepth, current, i, current.Omega));
                         }
 
                         // nonidentity assumption
@@ -612,6 +619,7 @@ public class MentalState : MonoBehaviour {
                                 isAssumption: true));
                         }
 
+                        // double negation introduction
                         if (currentLemma.PrejacentHeadedBy(NOT, NOT)) {
                             PushNode(new ProofNode(
                                 currentLemma.GetArgAsExpression(0).GetArgAsExpression(0),
@@ -636,6 +644,21 @@ public class MentalState : MonoBehaviour {
                                 currentLemma.GetArgAsExpression(2));
                             PushNode(new ProofNode(
                                 factive, current.KnowledgeState, nextDepth,
+                                current, i, current.Omega));
+                        }
+                        // contraposed
+                        // @Note I assume every ITR is
+                        // factive by default
+                        if (currentLemma.HeadedBy(NOT) &&
+                            currentLemma.GetArgAsExpression(0).Head.Type.Equals(INDIVIDUAL_TRUTH_RELATION)) {
+                            var factive = currentLemma.GetArgAsExpression(0);
+                            var head = new Expression(factive.Head);
+                            var prop = factive.GetArgAsExpression(0);
+                            var subject = factive.GetArgAsExpression(1);
+                            var notDefactive = new Expression(NOT, new Expression(DF, head, prop, subject));
+
+                            PushNode(new ProofNode(
+                                notDefactive, current.KnowledgeState, nextDepth,
                                 current, i, current.Omega));
                         }
 
@@ -698,6 +721,23 @@ public class MentalState : MonoBehaviour {
 
                             PushNode(aNode);
                             PushNode(bNode);
+                        }
+
+                        // contraposed modus ponens: star is premise
+                        // M |- A, M |- *B => M |- ~(A -> B)
+                        if (currentLemma.PrejacentHeadedBy(NOT, IF)) {
+                            var starConsequent = new Expression(STAR, currentLemma.GetArgAsExpression(0).GetArgAsExpression(0));
+                            var antecedent  = currentLemma.GetArgAsExpression(0).GetArgAsExpression(1);
+
+                            var consequentNode = new ProofNode(
+                                starConsequent, current.KnowledgeState, nextDepth,
+                                current, i, current.Omega, hasYoungerSibling: true);
+                            var antecedentNode = new ProofNode(
+                                antecedent, current.KnowledgeState, nextDepth,
+                                current, i, current.Omega, consequentNode);
+
+                            PushNode(antecedentNode);
+                            PushNode(consequentNode);
                         }
 
                         // some +, ~all +
@@ -1293,11 +1333,28 @@ public class MentalState : MonoBehaviour {
             knowledgeState.Basis.Add(knowledge);
         }
 
-        if (knowledge.HeadedBy(VERY, KNOW, MAKE, SEE, INFORMED)) {
+        if (knowledge.HeadedBy(TRULY, VERY, KNOW, MAKE, SEE, INFORMED)) {
             var subclause = knowledge.GetArgAsExpression(0);
             AddToKnowledgeState(knowledgeState, subclause, false, signature);
-            AddRule(knowledgeState, signature, new InferenceRule("K-",
+            AddRule(knowledgeState, signature, new InferenceRule("factive-",
                 e => e.Equals(subclause),
+                e => new List<Expression>{knowledge}));
+        }
+
+        if (knowledge.PrejacentHeadedBy(NOT, NOT)) {
+            var subSubclause = knowledge.GetArgAsExpression(0).GetArgAsExpression(0);
+            AddToKnowledgeState(knowledgeState, subSubclause, false, signature);
+            AddRule(knowledgeState, signature, new InferenceRule("double negation elimination",
+                e => e.Equals(subSubclause),
+                e => new List<Expression>{knowledge}));
+        }
+
+        // ~*A |- A
+        if (knowledge.PrejacentHeadedBy(NOT, STAR)) {
+            var subSubclause = knowledge.GetArgAsExpression(0).GetArgAsExpression(0);
+            AddToKnowledgeState(knowledgeState, subSubclause, false, signature);
+            AddRule(knowledgeState, signature, new InferenceRule("~*A |- A",
+                e => e.Equals(subSubclause),
                 e => new List<Expression>{knowledge}));
         }
 
@@ -1373,28 +1430,34 @@ public class MentalState : MonoBehaviour {
         if (knowledge.HeadedBy(IF)) {
             var consequent = knowledge.GetArgAsExpression(0);
             var antecedent = knowledge.GetArgAsExpression(1);
+            var notConsequent = new Expression(NOT, consequent);
+            var notAntecedent = new Expression(NOT, antecedent);
+
             AddRule(knowledgeState, signature, new InferenceRule("Modus Ponens",
                 e => e.Equals(consequent),
                 e => new List<Expression>{knowledge, antecedent}));
 
+            AddRule(knowledgeState, signature, new InferenceRule("Modus Tollens",
+                e => e.Equals(notAntecedent),
+                e => new List<Expression>{knowledge, notConsequent}));
+
             AddToKnowledgeState(knowledgeState, consequent, false, signature);
         }
 
-        if (knowledge.HeadedBy(ALL, GEN) ||
+        // ~some(F, G),  G(x) |- ~F(x)
+        //   all(F, G), ~G(x) |- ~F(x)
+        if (knowledge.HeadedBy(ALL) ||
             knowledge.PrejacentHeadedBy(NOT, SOME)) {
             var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
+            var f  = query.GetArgAsExpression(0);
             var g  = query.GetArgAsExpression(1);
             var x  = new Expression(GetUnusedVariable(INDIVIDUAL, g.GetVariables()));
             var gx = new Expression(g, x);
+            var notFx = new Expression(NOT, new Expression(f, x));
+            var ruleName = "∀-";
+
             if (knowledge.HeadedBy(NOT)) {
                 gx = new Expression(NOT, gx);
-            }
-
-            var ruleName = "∀-";
-            if (knowledge.HeadedBy(GEN)) {
-                ruleName = "Gen-";
-            }
-            if (knowledge.PrejacentHeadedBy(NOT, SOME)) {
                 ruleName = "~∃-";
             }
 
@@ -1405,18 +1468,32 @@ public class MentalState : MonoBehaviour {
 
                     foreach (var gxMatch in gxMatches) {
                         var c = gxMatch[x.Head as Variable];
-                        var fc = new Expression(query.GetArgAsExpression(0), c);
+                        var fc = new Expression(f, c);
                         var premises = new List<Expression>{knowledge, fc};
+                        return premises;
+                    }
+                    return null;
+                }));
 
-                        if (knowledge.HeadedBy(GEN)) {
-                            premises.Add(new Expression(STAR, new Expression(NOT, new Expression(g, c))));
+            AddRule(knowledgeState, signature, new InferenceRule(ruleName,
+                e => notFx.GetMatches(e) != null,
+                e => {
+                    var notFxMatches = notFx.GetMatches(e);
+
+                    foreach (var notFxMatch in notFxMatches) {
+                        var c = notFxMatch[x.Head as Variable];
+                        var notGc = new Expression(NOT, new Expression(g, c));
+                        if (knowledge.HeadedBy(NOT)) {
+                            notGc = notGc.GetArgAsExpression(0);
                         }
+                        var premises = new List<Expression>{knowledge, notGc};
                         return premises;
                     }
                     return null;
                 }));
 
             AddToKnowledgeState(knowledgeState, gx, false, signature);
+            AddToKnowledgeState(knowledgeState, notFx, false, signature);
         }
 
         if (knowledge.HeadedBy(GEACH_T_QUANTIFIER_PHRASE)) {
@@ -1428,6 +1505,17 @@ public class MentalState : MonoBehaviour {
 
             // AddToKnowledgeState(knowledgeState, ungeached, false, signature);
         }
+
+        // contraposed past introduction
+        // ~past(A) |- ~A
+        if (knowledge.PrejacentHeadedBy(NOT, PAST)) {
+            var notPresent = new Expression(NOT, knowledge.GetArgAsExpression(0).GetArgAsExpression(0));
+            AddToKnowledgeState(knowledgeState, notPresent, false, signature);
+
+            AddRule(knowledgeState, signature, new InferenceRule("~past(A) |- ~A",
+                e => e.Equals(notPresent),
+                e => new List<Expression>{knowledge}));
+            }
 
         if (knowledge.HeadedBy(SINCE)) {
             var topic = knowledge.GetArgAsExpression(0);
