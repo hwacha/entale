@@ -996,6 +996,7 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression SOME = new Expression(new Name(QUANTIFIER, "∃"));
     public static readonly Expression ALL  = new Expression(new Name(QUANTIFIER, "∀"));
     public static readonly Expression GEN  = new Expression(new Name(QUANTIFIER, "gen"));
+    public static readonly Expression INS  = new Expression(new Name(QUANTIFIER, "ins"));
 
     // weird function words
     public static readonly Expression ITSELF   = new Expression(new Name(RELATION_2_REDUCER, "itself"));

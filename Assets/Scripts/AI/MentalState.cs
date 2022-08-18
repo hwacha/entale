@@ -1446,7 +1446,7 @@ public class MentalState : MonoBehaviour {
 
         // ~some(F, G),  G(x) |- ~F(x)
         //   all(F, G), ~G(x) |- ~F(x)
-        if (knowledge.HeadedBy(ALL) ||
+        if (knowledge.HeadedBy(ALL, GEN) ||
             knowledge.PrejacentHeadedBy(NOT, SOME)) {
             var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
             var f  = query.GetArgAsExpression(0);
@@ -1461,6 +1461,10 @@ public class MentalState : MonoBehaviour {
                 ruleName = "~∃-";
             }
 
+            if (knowledge.HeadedBy(GEN)) {
+                ruleName = "gen-";
+            }
+
             AddRule(knowledgeState, signature, new InferenceRule(ruleName,
                 e => gx.GetMatches(e) != null,
                 e => {
@@ -1470,6 +1474,12 @@ public class MentalState : MonoBehaviour {
                         var c = gxMatch[x.Head as Variable];
                         var fc = new Expression(f, c);
                         var premises = new List<Expression>{knowledge, fc};
+
+                        if (knowledge.HeadedBy(GEN)) {
+                            premises.Add(new Expression(STAR, new Expression(NOT,
+                                    new Expression(INS, knowledge.GetArgAsExpression(0), knowledge.GetArgAsExpression(1)))));
+                        }
+
                         return premises;
                     }
                     return null;
@@ -1487,6 +1497,11 @@ public class MentalState : MonoBehaviour {
                             notGc = notGc.GetArgAsExpression(0);
                         }
                         var premises = new List<Expression>{knowledge, notGc};
+
+                        if (knowledge.HeadedBy(GEN)) {
+                            premises.Add(new Expression(STAR, new Expression(NOT,
+                                    new Expression(INS, knowledge.GetArgAsExpression(0), knowledge.GetArgAsExpression(1)))));
+                        }
                         return premises;
                     }
                     return null;
