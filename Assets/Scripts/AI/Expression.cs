@@ -892,9 +892,10 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression ZE = new Expression(new Variable(INDIVIDUAL, 2));
 
     // Truth Value constants
-    public static readonly Expression VERUM   = new Expression(new Name(TRUTH_VALUE, "⊤"));
-    public static readonly Expression FALSUM  = new Expression(new Name(TRUTH_VALUE, "⊥"));
-    public static readonly Expression NEUTRAL = new Expression(new Name(TRUTH_VALUE, "neutral"));
+    public static readonly Expression VERUM  = new Expression(new Name(TRUTH_VALUE, "⊤"));
+    public static readonly Expression FALSUM = new Expression(new Name(TRUTH_VALUE, "⊥"));
+    public static readonly Expression NEUTRAL = new Expression(new Name(TRUTH_VALUE, "⦵"));
+    public static readonly Expression TEST   = new Expression(new Parameter(TRUTH_VALUE, -1));
 
     // Truth Value variables
     public static readonly Expression ST = new Expression(new Variable(TRUTH_VALUE, 0));
@@ -933,7 +934,7 @@ public class Expression : Argument, IComparable<Expression> {
     // 1-place truth functions
     public static readonly Expression STAR   = new Expression(new Name(TRUTH_FUNCTION, "*"));
     public static readonly Expression NOT    = new Expression(new Name(TRUTH_FUNCTION, "~"));
-    public static readonly Expression TRULY  = new Expression(new Name(TRUTH_FUNCTION, "_"));
+    public static readonly Expression TRULY  = new Expression(new Name(TRUTH_FUNCTION, "t"));
     // the question of whether "A" is closed,
     // so you either believe A or ~A
     public static readonly Expression CLOSED = new Expression(new Name(TRUTH_FUNCTION, "closed"));
@@ -960,10 +961,6 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression AND = new Expression(new Name(TRUTH_FUNCTION_2, "and"));
     public static readonly Expression OR  = new Expression(new Name(TRUTH_FUNCTION_2, "or"));
     public static readonly Expression IF  = new Expression(new Name(TRUTH_FUNCTION_2, "if"));
-
-    // value operators
-    public static readonly Expression BETTER     = new Expression(new Name(TRUTH_FUNCTION_2, "better"));
-    public static readonly Expression AS_GOOD_AS = new Expression(new Name(TRUTH_FUNCTION_2, "~"));
 
     // tense operators
     public static readonly Expression SINCE  = new Expression(new Name(TRUTH_FUNCTION_2, "since"));
