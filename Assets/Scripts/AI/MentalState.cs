@@ -562,15 +562,23 @@ public class MentalState : MonoBehaviour {
                                 current, i));
                         }
 
-                        // defactivizer +
+                        // factive -
                         if (currentLemma.HeadedBy(DF)) {
                             var factive = new Expression(
                                 currentLemma.GetArgAsExpression(0),
                                 currentLemma.GetArgAsExpression(1),
                                 currentLemma.GetArgAsExpression(2));
-                            PushNode(new ProofNode(
-                                factive, current.KnowledgeState, nextDepth,
-                                current, i));
+                            PushNode(new ProofNode(factive, current.KnowledgeState, nextDepth, current, i));
+                        }
+                        if (currentLemma.HeadedBy(IF) &&
+                            currentLemma.GetArgAsExpression(1).HeadedBy(DF) &&
+                            currentLemma.GetArgAsExpression(0).Equals(
+                                currentLemma.GetArgAsExpression(1).GetArgAsExpression(1))) {
+                            var factive = new Expression(
+                                currentLemma.GetArgAsExpression(1).GetArgAsExpression(0),
+                                currentLemma.GetArgAsExpression(0),
+                                currentLemma.GetArgAsExpression(1).GetArgAsExpression(2));
+                            PushNode(new ProofNode(factive, current.KnowledgeState, nextDepth, current, i));
                         }
                         // contraposed
                         // @Note I assume every ITR is
@@ -581,11 +589,32 @@ public class MentalState : MonoBehaviour {
                             var head = new Expression(factive.Head);
                             var prop = factive.GetArgAsExpression(0);
                             var subject = factive.GetArgAsExpression(1);
-                            var notDefactive = new Expression(NOT, new Expression(DF, head, prop, subject));
+                            var df = new Expression(DF, head, prop, subject);
+                            var notDf = new Expression(NOT, df);
+                            var notPIfDf = new Expression(NOT, new Expression(IF, prop, notDf));
 
-                            PushNode(new ProofNode(
-                                notDefactive, current.KnowledgeState, nextDepth,
-                                current, i));
+                            PushNode(new ProofNode(notDf, current.KnowledgeState, nextDepth, current, i));
+                            PushNode(new ProofNode(notPIfDf, current.KnowledgeState, nextDepth, current, i));
+                        }
+
+                        // factive +
+                        if (currentLemma.Head.Type.Equals(INDIVIDUAL_TRUTH_RELATION)) {
+                            var df =
+                                new Expression(DF,
+                                    new Expression(currentLemma.Head),
+                                    currentLemma.GetArgAsExpression(0),
+                                    currentLemma.GetArgAsExpression(1));
+                            var pIfDf = new Expression(IF, currentLemma.GetArgAsExpression(0), df);
+
+                            var pIfDfNode =
+                                new ProofNode(pIfDf,
+                                    current.KnowledgeState,
+                                    nextDepth, current, i,
+                                    hasYoungerSibling: true);
+                            var dfNode = new ProofNode(df, current.KnowledgeState, nextDepth, current, i, pIfDfNode);
+
+                            PushNode(dfNode);
+                            PushNode(pIfDfNode);
                         }
 
                         // M |- A => M |- past(A)
@@ -828,13 +857,25 @@ public class MentalState : MonoBehaviour {
                             } else {
                                 fTestIfTestNode = new ProofNode(fTestIfTest, current.KnowledgeState, nextDepth, current, i, hasYoungerSibling: true);
                                 fpNode = new ProofNode(fp, current.KnowledgeState, nextDepth, current, i, fTestIfTestNode);    
-                            }
-                            
+                            }                            
 
                             PushNode(fpNode);
                             PushNode(fTestIfTestNode);
+
+                            // M |-  omega(F, P) => M |-  omega(F, F(P))
+                            // M |- ~omega(F, P) => M |- ~omega(F, F(P))
+                            if (query.GetArgAsExpression(1).HeadedBy(query.GetArgAsExpression(0))) {
+                                var newOmega = new Expression(OMEGA,
+                                    query.GetArgAsExpression(0), query.GetArgAsExpression(1).GetArgAsExpression(0));
+
+                                if (currentLemma.HeadedBy(NOT)) {
+                                    newOmega = new Expression(NOT, newOmega);
+                                }
+
+                                var newOmegaNode = new ProofNode(newOmega, current.KnowledgeState, nextDepth, current, i);
+                                PushNode(newOmegaNode);
+                            }
                         }
-                        
                         
                         // END OMEGA MADNESS
                         
@@ -1297,11 +1338,26 @@ public class MentalState : MonoBehaviour {
             knowledgeState.Basis.Add(knowledge);
         }
 
-        if (knowledge.HeadedBy(TRULY, VERY, KNOW, MAKE, SEE, INFORMED)) {
+        if (knowledge.HeadedBy(TRULY, VERY)) {
             var subclause = knowledge.GetArgAsExpression(0);
             AddToKnowledgeState(knowledgeState, subclause, false, signature);
-            AddRule(knowledgeState, signature, new InferenceRule("factive-",
+            AddRule(knowledgeState, signature, new InferenceRule(knowledge.Head + "-",
                 e => e.Equals(subclause),
+                e => new List<Expression>{knowledge}));
+        }
+
+        if (knowledge.HeadedBy(KNOW, MAKE, SEE, INFORMED)) {
+            var pIfDf =
+                new Expression(IF,
+                    knowledge.GetArgAsExpression(0),
+                    new Expression(DF,
+                        new Expression(knowledge.Head),
+                        knowledge.GetArgAsExpression(0),
+                        knowledge.GetArgAsExpression(1)));
+
+            AddToKnowledgeState(knowledgeState, pIfDf, false, signature);
+            AddRule(knowledgeState, pIfDf, new InferenceRule("factive-",
+                e => e.Equals(pIfDf),
                 e => new List<Expression>{knowledge}));
         }
 
@@ -1484,7 +1540,11 @@ public class MentalState : MonoBehaviour {
 
             var ungeached = new Expression(qp, new Expression(itr, t));
 
-            // AddToKnowledgeState(knowledgeState, ungeached, false, signature);
+            AddToKnowledgeState(knowledgeState, ungeached, false, signature);
+
+            AddRule(knowledgeState, signature, new InferenceRule("geach -",
+                e => e.Equals(ungeached),
+                e => new List<Expression>{knowledge}));
         }
 
         // contraposed past introduction

@@ -29,10 +29,10 @@ public class Testing : MonoBehaviour {
         var e = new Expression(new Name(TRUTH_VALUE, "E"));
         var f = new Expression(new Name(TRUTH_VALUE, "F"));
         var g = new Expression(new Name(TRUTH_VALUE, "G"));
-        var h = new Expression(new Name(TRUTH_VALUE,  "h"));
-        var j = new Expression(new Name(TRUTH_VALUE,  "j"));
-        var k = new Expression(new Name(TRUTH_VALUE,  "k"));
-        var l = new Expression(new Name(TRUTH_VALUE,  "l"));
+        var h = new Expression(new Name(TRUTH_VALUE, "H"));
+        var j = new Expression(new Name(TRUTH_VALUE, "J"));
+        var k = new Expression(new Name(TRUTH_VALUE, "K"));
+        var l = new Expression(new Name(TRUTH_VALUE, "L"));
         var m = new Expression(new Name(TRUTH_VALUE, "M"));
         var n = new Expression(new Name(TRUTH_VALUE, "N"));
         var o = new Expression(new Name(TRUTH_VALUE, "O"));
@@ -54,41 +54,60 @@ public class Testing : MonoBehaviour {
             new Expression(OMEGA, new Expression(OMEGA, VERY), c),
             d,
             new Expression(NOT, e),
+            new Expression(OMEGA, new Expression(GEACH_T_QUANTIFIER_PHRASE, new Expression(ALL, PERSON), KNOW), f),
+            new Expression(PERSON, ALICE),
+            new Expression(DF, KNOW, g, BOB),
+            g,
+            new Expression(DF, KNOW, h, BOB),
+            new Expression(IF, h, new Expression(DF, KNOW, h, BOB)),
+            new Expression(MAKE, j, CHARLIE),
+
+            new Expression(IF, new Expression(MAKE, j, SELF), new Expression(DF, MAKE, j, SELF))
         });
 
         var va = a;
 
         for (int i = 0; i < 5; i++) {
-            StartCoroutine(LogBasesStream(MentalState, va));
+            // StartCoroutine(LogBasesStream(MentalState, va));
             va = new Expression(VERY, va);
         }
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, TRULY, d)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, new Expression(AND, d), d)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, new Expression(OMEGA, TRULY), d)));
+        // M |- omega(F, P), M, omega(F, P) |- Q, => M |- F(P)
+        // M |- omega(F, P) |- F(P)
+        // M |- omega(F, P) => M |- omega(F, F(P))
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, VERY, va)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression()));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, TRULY, d)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, new Expression(AND, d), d)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, new Expression(OMEGA, TRULY), d)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(ALL, PERSON, new Expression(KNOW, f))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, f, ALICE)));
+        StartCoroutine(LogBasesStream(MentalState, f));
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, g, BOB)));
+
+        StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, h, BOB)));
+
+        StartCoroutine(LogBasesStream(MentalState, j));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, j, new Expression(DF, MAKE, j, CHARLIE))));
+
+        StartCoroutine(LogBasesStream(MentalState, j, Plan));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(MAKE, j, SELF), Plan));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(DF, MAKE, j, SELF), Plan));
 
         // this should be working
-        StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, new Expression(KNOW, new Empty(TRUTH_VALUE), SELF), d)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, new Expression(KNOW, new Empty(TRUTH_VALUE), SELF), d)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(OMEGA, NOT, d))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(OMEGA, TRULY, e))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(OMEGA, NOT, d))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(OMEGA, TRULY, e))));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(OMEGA, TRULY, f), f)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(OMEGA, TRULY, f), f)));
 
         // var bb = b;
         // for (int i = 0; i < 5; i++) {
         //     StartCoroutine(LogBasesStream(MentalState, bb));
         //     bb = new Expression(DF, KNOW, bb, ALICE);
-        // }
-        
-        // var ovb = b;
-        // for (int i = 0; i < 5; i++) {
-        //     ovb = new Expression(VERY, ovb);
-            
-        // }
-        // for (int i = 0; i < 5; i++) {
-        //     ovb = new Expression(OMEGA, VERY, ovb);
-        //     StartCoroutine(LogBasesStream(MentalState, ovb));
         // }
 
         // var vc = c;
@@ -103,24 +122,24 @@ public class Testing : MonoBehaviour {
         //     oc = new Expression(OMEGA, VERY, oc);
         // }
 
-        // var ovc = c;
-        // for (int i = 0; i < 5; i++) {
-        //     ovc = new Expression(VERY, ovc);
+        var ovc = c;
+        for (int i = 0; i < 5; i++) {
+            ovc = new Expression(VERY, ovc);
             
-        // }
-        // for (int i = 0; i < 5; i++) {
-        //     ovc = new Expression(OMEGA, VERY, ovc);
-        //     StartCoroutine(LogBasesStream(MentalState, ovc));
-        // }
+        }
+        for (int i = 0; i < 5; i++) {
+            ovc = new Expression(OMEGA, VERY, ovc);
+            // StartCoroutine(LogBasesStream(MentalState, ovc));
+        }
 
-        // var voc = c;
-        // for (int i = 0; i < 5; i++) {
-        //     voc = new Expression(OMEGA, VERY, voc);
-        // }
-        // for (int i = 0; i < 5; i++) {
-        //     voc = new Expression(VERY, voc);
-        //     StartCoroutine(LogBasesStream(MentalState, voc));
-        // }
+        var voc = c;
+        for (int i = 0; i < 5; i++) {
+            voc = new Expression(OMEGA, VERY, voc);
+        }
+        for (int i = 0; i < 5; i++) {
+            voc = new Expression(VERY, voc);
+            // StartCoroutine(LogBasesStream(MentalState, voc));
+        }
     }
 
     public static void TestInferenceRule(InferenceRule rule, Expression e) {
