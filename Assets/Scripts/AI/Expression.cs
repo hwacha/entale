@@ -703,6 +703,10 @@ public class Expression : Argument, IComparable<Expression> {
         return GetMatches(that, initialSubstitutions);
     }
 
+    public bool Matches(Expression that) {
+        return GetMatches(that).Count > 0;
+    }
+
     public override String ToString() {
         StringBuilder s = new StringBuilder();
 
@@ -714,15 +718,14 @@ public class Expression : Argument, IComparable<Expression> {
             return s.ToString();
         }
 
-        bool hasOneExpression = false;
+        int lastNonEmptyIndex = -1;
         for (int i = 0; i < Args.Length; i++) {
             if (Args[i] is Expression) {
-                hasOneExpression = true;
-                break;
+                lastNonEmptyIndex = i;
             }
         }
 
-        if (!hasOneExpression) {
+        if (lastNonEmptyIndex == -1) {
             return s.ToString();
         }
 
@@ -735,7 +738,7 @@ public class Expression : Argument, IComparable<Expression> {
             s.Append("(");
         }
 
-        for (int i = 0; i < Args.Length; i++) {
+        for (int i = 0; i <= lastNonEmptyIndex; i++) {
             s.Append(Args[i]);
             s.Append(", ");
         }
@@ -927,6 +930,7 @@ public class Expression : Argument, IComparable<Expression> {
     // 2-place relation constants
     public static readonly Expression IDENTITY = new Expression(new Name(RELATION_2, "="));
     public static readonly Expression AT       = new Expression(new Name(RELATION_2, "at"));
+    public static readonly Expression YIELDS   = new Expression(new Name(RELATION_2, "yields"));
 
     // 2-place relation variables
     public static readonly Expression REET = new Expression(new Variable(RELATION_2, 0));
@@ -1001,16 +1005,9 @@ public class Expression : Argument, IComparable<Expression> {
     // 'shift': ABC -> CAB and 'swap': ABC -> BAC should do the trick
     public static readonly Expression CONVERSE = new Expression(new Name(RELATION_2_MODIFIER, "converse"));
     // more function words: Geach
-    public static readonly Expression GEACH_E_TRUTH_FUNCTION    = new Expression(new Name(
-        SemanticType.Push(TRUTH_FUNCTION, SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION)), "geach"));
-    public static readonly Expression GEACH_T_TRUTH_FUNCTION    = new Expression(new Name(
-        SemanticType.Push(TRUTH_FUNCTION, SemanticType.Geach(TRUTH_VALUE, TRUTH_FUNCTION)), "geach"));
-    public static readonly Expression GEACH_E_TRUTH_FUNCTION_2  = new Expression(new Name(
-        SemanticType.Push(TRUTH_FUNCTION_2, SemanticType.Geach(INDIVIDUAL, TRUTH_FUNCTION_2)), "geach"));
-    public static readonly Expression GEACH_E_QUANTIFIER_PHRASE = new Expression(new Name(
-        SemanticType.Push(QUANTIFIER_PHRASE, SemanticType.Geach(INDIVIDUAL, QUANTIFIER_PHRASE)), "geach"));
-    public static readonly Expression GEACH_T_QUANTIFIER_PHRASE = new Expression(new Name(
-        SemanticType.Push(QUANTIFIER_PHRASE, SemanticType.Geach(TRUTH_VALUE, QUANTIFIER_PHRASE)), "geach"));
+    public static Expression Geach(SemanticType functorType, SemanticType baseType) {
+        return new Expression(new Name(SemanticType.Push(baseType, SemanticType.Geach(functorType, baseType)), "𝔾"));
+    }
 
     // compose
     public static readonly Expression COMPOSE_TRUTH_FUNCTION = new Expression(new Name(

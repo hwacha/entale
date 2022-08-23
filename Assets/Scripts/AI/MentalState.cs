@@ -316,8 +316,8 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
-            // Debug.Log("================================================");
-            // Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
+            Debug.Log("================================================");
+            Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
 
             bases.Clear();
 
@@ -345,7 +345,7 @@ public class MentalState : MonoBehaviour {
                 
                 var sends = new List<KeyValuePair<ProofBases, bool>>();
 
-                // Debug.Log("searching " + current);
+                Debug.Log("searching " + current);
  
                 bool allExhaustive = current.YoungerSiblingBases.Count == 0;
                 for (int i = 0; i < current.YoungerSiblingBases.Count; i++) {
@@ -769,6 +769,21 @@ public class MentalState : MonoBehaviour {
                             PushNode(converseNode);
                         }
 
+                        // converse rules
+                        if (currentLemma.HeadedBy(CONVERSE) ||
+                            currentLemma.PrejacentHeadedBy(NOT, CONVERSE)) {
+                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
+                            var rel = new Expression(
+                                query.GetArgAsExpression(0),
+                                query.GetArgAsExpression(2),
+                                query.GetArgAsExpression(1));
+                            if (currentLemma.HeadedBy(NOT)) {
+                                rel = new Expression(NOT, rel);
+                            }
+                            var relNode = new ProofNode(rel, current.KnowledgeState, nextDepth, current, i);
+                            PushNode(relNode);
+                        }
+
                         // M |- banana(x) => M |- fruit(x)
                         // M |- tomato(x) => M |- fruit(x)
                         if (currentLemma.HeadedBy(FRUIT)) {
@@ -954,80 +969,32 @@ public class MentalState : MonoBehaviour {
                         var f1 = GetUnusedVariable(PREDICATE, currentVariables);
                         var x1 = GetUnusedVariable(INDIVIDUAL, currentVariables);
 
-                        // geach: (t -> t), (e -> t), e -> t
-                        // M |- geach(T, F, x) => M |- T(F(x))
-                        var tf1 = GetUnusedVariable(TRUTH_FUNCTION, currentVariables);
-                        var tfxFormula = new Expression(
-                            new Expression(tf1),
-                                new Expression(new Expression(f1), new Expression(x1)));
-
-                        var tfxMatches = tfxFormula.GetMatches(currentLemma);
-
-                        foreach (var tfxBinding in tfxMatches) {
-                            var geachedTfx =
-                                new Expression(GEACH_E_TRUTH_FUNCTION,
-                                    tfxBinding[tf1],
-                                    tfxBinding[f1],
-                                    tfxBinding[x1]);
-
-                            // PushNode(new ProofNode(geachedTfx, current.KnowledgeState,
-                            //     nextDepth, current, i));
-                        }
-                        // M |- T(F(x)) => M |- geach(T, F, x)
-                        if (currentLemma.HeadedBy(GEACH_E_TRUTH_FUNCTION, GEACH_T_QUANTIFIER_PHRASE)) {
-                            var ungeachedTfx = new Expression(currentLemma.GetArgAsExpression(0),
-                                    new Expression(currentLemma.GetArgAsExpression(1),
-                                        currentLemma.GetArgAsExpression(2)));
-
-                            // PushNode(new ProofNode(ungeachedTfx, current.KnowledgeState,
-                            //     nextDepth, current, i));
-                        }
-
-                        // geach - : (t -> t), (t -> t), t -> t
-                        // M |- geach(T1, T2, S) => M |- T1(T2(S))
-                        var geachTTFAugmentedVariables = new HashSet<Variable>{tf1};
-                        geachTTFAugmentedVariables.UnionWith(currentVariables);
-                        var tf2 = GetUnusedVariable(TRUTH_FUNCTION, geachTTFAugmentedVariables);
-                        var t1 = GetUnusedVariable(TRUTH_VALUE, currentVariables);
-                        var tf1tf2tFormula = new Expression(
-                            new Expression(tf1),
-                                new Expression(
-                                    new Expression(tf2),
-                                    new Expression(t1)));
-
-                        var tf1tf2tMatches = tf1tf2tFormula.GetMatches(currentLemma);
-
-                        foreach (var tf1tf2tBinding in tf1tf2tMatches) {                           
-                            var geachedTf1tf2t =
-                                new Expression(GEACH_T_TRUTH_FUNCTION,
-                                    tf1tf2tBinding[tf1],
-                                    tf1tf2tBinding[tf2],
-                                    tf1tf2tBinding[t1]);
-
-                            // PushNode(new ProofNode(
-                            //     geachedTf1tf2t, current.KnowledgeState,
-                            //     nextDepth, current, i));
-                        }
-
-                        // geach - : (e -> t) -> t, (t, e -> t), t -> t
-                        // g(qp, i, t) => qp(i(t))
-                        var qp1 = GetUnusedVariable(QUANTIFIER_PHRASE, currentVariables);
-                        var i1  = GetUnusedVariable(INDIVIDUAL_TRUTH_RELATION, currentVariables);
-                        var qpitFormula = new Expression(
-                            new Expression(qp1),
-                                new Expression(new Expression(i1), new Expression(t1)));
-
-                        var qpitMatches = qpitFormula.GetMatches(currentLemma);
-
-                        foreach (var qpitBinding in qpitMatches) {
-                            var geachedQpit =
-                                new Expression(GEACH_T_QUANTIFIER_PHRASE,
-                                    qpitBinding[qp1],
-                                    qpitBinding[i1],
-                                    qpitBinding[t1]);
-
-                            // PushNode(new ProofNode(geachedQpit, current.KnowledgeState,
-                            //     nextDepth, current, i));
+                        // generalized geach introduction
+                        // (at least for geaches with truth values
+                        // at the end of them)
+                        // 
+                        // @Note if geached functions with other types
+                        // as output are necessary, then we'll need to
+                        // recursively descend through an expression
+                        // and transform them all
+                        // 
+                        // R(X1, ..., X2) |- 𝔾_x(R, X->x1, ..., X->x2, x)
+                        // P |- G_x(P, x)
+                        if ((currentLemma.Head is Name) && (currentLemma.Head as Name).ID == "𝔾" ||
+                            currentLemma.HeadedBy(NOT) && (currentLemma.GetArgAsExpression(0).Head is Name)
+                            && (currentLemma.GetArgAsExpression(0).Head as Name).ID == "𝔾") {
+                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
+                            var head = query.GetArgAsExpression(0);
+                            var lift = query.GetArgAsExpression(query.NumArgs - 1);
+                            Argument[] appliedArgs = new Expression[query.NumArgs - 2];
+                            for (int j = 0; j < appliedArgs.Length; j++) {
+                                appliedArgs[j] = new Expression(query.GetArgAsExpression(j + 1), lift);
+                            }
+                            var ungeached = new Expression(head, appliedArgs);
+                            if (currentLemma.HeadedBy(NOT)) {
+                                ungeached = new Expression(NOT, ungeached);
+                            }
+                            PushNode(new ProofNode(ungeached, current.KnowledgeState, nextDepth, current, i));
                         }
 
                         // here we reverse the order of new proof nodes.
@@ -1386,7 +1353,7 @@ public class MentalState : MonoBehaviour {
                 e => new List<Expression>{knowledge}));
             AddToLemmaPool(knowledgeState, knowledge);
         }
-        
+
         if (knowledge.HeadedBy(AND) ||
             knowledge.PrejacentHeadedBy(NOT, OR)) {
             var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
@@ -1406,11 +1373,15 @@ public class MentalState : MonoBehaviour {
             AddToKnowledgeState(knowledgeState, b, false, signature);
 
             AddRule(knowledgeState, signature, new InferenceRule(leftRuleName,
-                e => e.Equals(a),
-                e => new List<Expression>{knowledge}));
+                e => a.Matches(e),
+                e => new List<Expression>{
+                        knowledge.Substitute(a.GetMatches(e).First())
+                    }));
             AddRule(knowledgeState, signature, new InferenceRule(rightRuleName,
-                e => e.Equals(b),
-                e => new List<Expression>{knowledge}));
+                e => b.Matches(e),
+                e => new List<Expression>{
+                        knowledge.Substitute(b.GetMatches(e).First())
+                    }));
         }
 
         // disjunctive syllogism and conjunctive syllogism
@@ -1429,20 +1400,20 @@ public class MentalState : MonoBehaviour {
                 AddToKnowledgeState(knowledgeState, notAdjunctB, false, signature);
 
                 AddRule(knowledgeState, signature, new InferenceRule("conjunctive syllogism left",
-                    e => e.Equals(notAdjunctA),
+                    e => notAdjunctA.Matches(e),
                     e => new List<Expression>{knowledge, adjunctB}));
                 AddRule(knowledgeState, signature, new InferenceRule("conjunctive syllogism right",
-                    e => e.Equals(notAdjunctB),
+                    e => notAdjunctB.Matches(e),
                     e => new List<Expression>{knowledge, adjunctA}));
             } else {
                 AddToKnowledgeState(knowledgeState, adjunctA, false, signature);
                 AddToKnowledgeState(knowledgeState, adjunctB, false, signature);
 
                 AddRule(knowledgeState, signature, new InferenceRule("disjunctive syllogism left",
-                    e => e.Equals(adjunctA),
+                    e => adjunctA.Matches(e),
                     e => new List<Expression>{knowledge, notAdjunctB}));
                 AddRule(knowledgeState, signature, new InferenceRule("disjunctive syllogism right",
-                    e => e.Equals(adjunctB),
+                    e => adjunctB.Matches(e),
                     e => new List<Expression>{knowledge, notAdjunctA}));
             }
         }
@@ -1453,6 +1424,9 @@ public class MentalState : MonoBehaviour {
             var notConsequent = new Expression(NOT, consequent);
             var notAntecedent = new Expression(NOT, antecedent);
 
+            AddToKnowledgeState(knowledgeState, consequent, false, signature);
+            AddToKnowledgeState(knowledgeState, notAntecedent, false, signature);
+
             AddRule(knowledgeState, signature, new InferenceRule("Modus Ponens",
                 e => e.Equals(consequent),
                 e => new List<Expression>{knowledge, antecedent}));
@@ -1461,9 +1435,34 @@ public class MentalState : MonoBehaviour {
                 e => e.Equals(notAntecedent),
                 e => new List<Expression>{knowledge, notConsequent}));
 
-            AddToKnowledgeState(knowledgeState, consequent, false, signature);
-
             AddToLemmaPool(knowledgeState, knowledge);
+        }
+
+        // some -
+        // some(F, G) |- F(c), some(F, G) |- G(c)
+        // ~all(F, G) |- F(c), ~all(F, G) |- ~G(c)
+        if (knowledge.HeadedBy(SOME) ||
+            knowledge.PrejacentHeadedBy(NOT, ALL)) {
+            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
+
+            var c = new Expression(new Parameter(INDIVIDUAL, GetNextParameterID()));
+
+            var fc = new Expression(query.GetArgAsExpression(0), c);
+            var gc = new Expression(query.GetArgAsExpression(1), c);
+
+            if (knowledge.HeadedBy(NOT)) {
+                gc = new Expression(NOT, gc);
+            }
+
+            AddToKnowledgeState(knowledgeState, fc, false, signature);
+            AddToKnowledgeState(knowledgeState, gc, false, signature);
+
+            AddRule(knowledgeState, signature, new InferenceRule("some -",
+                e => e.Matches(fc),
+                e => new List<Expression>{knowledge.Substitute(e.GetMatches(fc).First())}));
+            AddRule(knowledgeState, signature, new InferenceRule("some -",
+                e => e.Matches(gc),
+                e => new List<Expression>{knowledge.Substitute(e.GetMatches(gc).First())}));
         }
 
         // ~some(F, G),  G(x) |- ~F(x)
@@ -1488,7 +1487,7 @@ public class MentalState : MonoBehaviour {
             }
 
             AddRule(knowledgeState, signature, new InferenceRule(ruleName,
-                e => gx.GetMatches(e).Count > 0,
+                e => gx.Matches(e),
                 e => {
                     var gxMatches = gx.GetMatches(e);
 
@@ -1508,7 +1507,7 @@ public class MentalState : MonoBehaviour {
                 }));
 
             AddRule(knowledgeState, signature, new InferenceRule(ruleName,
-                e => notFx.GetMatches(e) != null,
+                e => notFx.Matches(e),
                 e => {
                     var notFxMatches = notFx.GetMatches(e);
 
@@ -1533,18 +1532,47 @@ public class MentalState : MonoBehaviour {
             AddToKnowledgeState(knowledgeState, notFx, false, signature);
         }
 
-        if (knowledge.HeadedBy(GEACH_T_QUANTIFIER_PHRASE)) {
-            var qp  = knowledge.GetArgAsExpression(0);
-            var itr = knowledge.GetArgAsExpression(1);
-            var t   = knowledge.GetArgAsExpression(2);
+        if (knowledge.HeadedBy(Expression.CONVERSE) ||
+            knowledge.PrejacentHeadedBy(NOT, CONVERSE)) {
+            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
+            var rel = new Expression(
+                query.GetArgAsExpression(0),
+                query.GetArgAsExpression(2),
+                query.GetArgAsExpression(1));
 
-            var ungeached = new Expression(qp, new Expression(itr, t));
+            if (knowledge.HeadedBy(NOT)) {
+                rel = new Expression(NOT, rel);
+            }
+
+            AddToKnowledgeState(knowledgeState, rel, false, signature);
+            AddRule(knowledgeState, signature, new InferenceRule("converse-",
+                e => e.Equals(rel),
+                e => new List<Expression>{knowledge}));
+        }
+
+        // general geach elimination
+        // 𝔾_x(R, X->x1, ..., X->x2, x) |- R(X1, ..., X2)
+        if (((knowledge.Head is Name) && (knowledge.Head as Name).ID == "𝔾") ||
+            (knowledge.HeadedBy(NOT) &&
+                (knowledge.GetArgAsExpression(0).Head is Name) &&
+                (knowledge.GetArgAsExpression(0).Head as Name).ID == "𝔾")) {
+            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
+            var head = query.GetArgAsExpression(0);
+            var lift = query.GetArgAsExpression(query.NumArgs - 1);
+            Argument[] appliedArgs = new Expression[query.NumArgs - 2];
+            for (int j = 0; j < appliedArgs.Length; j++) {
+                appliedArgs[j] = new Expression(query.GetArgAsExpression(j + 1), lift);
+            }
+            var ungeached = new Expression(head, appliedArgs);
+            if (knowledge.HeadedBy(NOT)) {
+                ungeached = new Expression(NOT, ungeached);
+            }
 
             AddToKnowledgeState(knowledgeState, ungeached, false, signature);
+            AddRule(knowledgeState, signature, new InferenceRule("𝔾-",
+                e => ungeached.Matches(e),
+                e => new List<Expression>{knowledge.Substitute(ungeached.GetMatches(e).First())}));
 
-            AddRule(knowledgeState, signature, new InferenceRule("geach -",
-                e => e.Equals(ungeached),
-                e => new List<Expression>{knowledge}));
         }
 
         // contraposed past introduction

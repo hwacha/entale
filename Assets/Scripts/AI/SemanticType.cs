@@ -124,6 +124,10 @@ public abstract class SemanticType : IComparable<SemanticType> {
     // and the lift type is l, then
     // the geach type is (l -> i1), ..., (l -> in), l -> o
     public static SemanticType Geach(SemanticType lift, SemanticType input) {
+        // we make this assumption so that our inference rule is simpler.
+        // if geached types with other output types are necessary, we can
+        // remove this assertion.
+        UnityEngine.Debug.Assert(input.Equals(TRUTH_VALUE) || (input as FunctionalType).Output.Equals(TRUTH_VALUE));
         if (input is AtomicType) {
             return new FunctionalType(new SemanticType[]{lift}, (AtomicType) input);
         }

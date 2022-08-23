@@ -48,98 +48,99 @@ public class Testing : MonoBehaviour {
         var y = new Expression(new Name(TRUTH_VALUE, "Y"));
         var z = new Expression(new Name(TRUTH_VALUE, "Z"));
 
-        MentalState.Initialize(new Expression[]{
-            new Expression(OMEGA, VERY, a),
-            new Expression(OMEGA, new Expression(DF, KNOW, new Empty(TRUTH_VALUE), ALICE), b),
-            new Expression(OMEGA, new Expression(OMEGA, VERY), c),
-            d,
-            new Expression(NOT, e),
-            new Expression(OMEGA, new Expression(GEACH_T_QUANTIFIER_PHRASE, new Expression(ALL, PERSON), KNOW), f),
-            new Expression(PERSON, ALICE),
-            new Expression(DF, KNOW, g, BOB),
-            g,
-            new Expression(DF, KNOW, h, BOB),
-            new Expression(IF, h, new Expression(DF, KNOW, h, BOB)),
-            new Expression(MAKE, j, CHARLIE),
+        var aa = new Expression(new Name(INDIVIDUAL, "a"));
+        var bb = new Expression(new Name(INDIVIDUAL, "b"));
+        var cc = new Expression(new Name(INDIVIDUAL, "c"));
+        var dd = new Expression(new Name(INDIVIDUAL, "d"));
+        var ee = new Expression(new Name(INDIVIDUAL, "e"));
+        var ff = new Expression(new Name(INDIVIDUAL, "f"));
 
-            new Expression(IF, new Expression(MAKE, j, SELF), new Expression(DF, MAKE, j, SELF))
+        MentalState.Initialize(new Expression[]{
+            // a,
+            // new Expression(NOT, new Expression(ROUND, bb)),
+            // new Expression(BANANA, cc),
+            // new Expression(TOMATO, dd),
+            // new Expression(YELLOW, cc),
+            // new Expression(RED, dd),
+            // new Expression(TREE, ee),
+            // new Expression(YIELDS, ee, cc),
+            // new Expression(ALL, PERSON,
+            //     new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION_2),
+            //         AND, BLUE, ROUND)),
+            // new Expression(ALL, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION), NOT, BANANA), TOMATO),
+            // // new Expression(AND, a, b),
+            // new Expression(PERSON, ALICE),
+            // new Expression(PERSON, BOB),
+            // new Expression(NOT, new Expression(BANANA, ff)),
+            new Expression(ALL, TREE,
+                new Expression(Expression.Geach(INDIVIDUAL, QUANTIFIER_PHRASE),
+                    new Expression(ALL, FRUIT), YIELDS)),
+            new Expression(TREE, ee),
+            new Expression(TOMATO, ff),
+            // new Expression(SOME, PERSON, BANANA),
         });
 
-        var va = a;
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_VALUE), VERUM, aa)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_VALUE), a, aa)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION), NOT, ROUND, bb)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION_2), AND, TOMATO, BANANA, cc)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION_2), OR, TOMATO, BANANA, cc)));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME,
+        //         new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION_2), OR, TOMATO, BANANA),
+        //         RED)));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME,
+        //         new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION_2), OR, TOMATO, BANANA),
+        //         YELLOW)));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME, TREE,
+        //         new Expression(Expression.Geach(INDIVIDUAL, QUANTIFIER_PHRASE),
+        //             new Expression(SOME, FRUIT), YIELDS))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME, FRUIT,
+        //         new Expression(Expression.Geach(INDIVIDUAL, QUANTIFIER_PHRASE),
+        //             new Expression(SOME, TREE), YIELDS))));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME,
+        //         new Expression(Expression.Geach(INDIVIDUAL, QUANTIFIER_PHRASE),
+        //             new Expression(SOME, TREE), YIELDS),
+        //         FRUIT)));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME,
+        //         new Expression(Expression.Geach(INDIVIDUAL, QUANTIFIER_PHRASE),
+        //             new Expression(SOME, FRUIT), YIELDS),
+        //         TREE)));
 
-        for (int i = 0; i < 5; i++) {
-            // StartCoroutine(LogBasesStream(MentalState, va));
-            va = new Expression(VERY, va);
-        }
+        // StartCoroutine(LogBasesStream(MentalState, a));
+        // StartCoroutine(LogBasesStream(MentalState, b));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, ALICE)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(ROUND, BOB)));
 
-        // M |- omega(F, P), M, omega(F, P) |- Q, => M |- F(P)
-        // M |- omega(F, P) |- F(P)
-        // M |- omega(F, P) => M |- omega(F, F(P))
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, VERY, va)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression()));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(TOMATO, ff)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(YIELDS, ee, ff)));
 
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, TRULY, d)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, new Expression(AND, d), d)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, new Expression(OMEGA, TRULY), d)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(ALL, PERSON, new Expression(KNOW, f))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, f, ALICE)));
-        StartCoroutine(LogBasesStream(MentalState, f));
+        // var i0 = new Expression(new Parameter(INDIVIDUAL, 0));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, g, BOB)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(FRUIT, XE)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, PERSON, FRUIT)));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(KNOW, h, BOB)));
+        // Debug.Log(new Expression(Expression.Geach(INDIVIDUAL, INDIVIDUAL), SELF, aa));
+        // Debug.Log(new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION), NOT, ROUND, aa));
+        // Debug.Log(new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION_2), AND, ROUND, SPICY, aa));
 
-        StartCoroutine(LogBasesStream(MentalState, j));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, j, new Expression(DF, MAKE, j, CHARLIE))));
+        // Debug.Log(new Expression(Expression.Geach(TRUTH_VALUE, TRUTH_FUNCTION),
+        //     NOT, new Expression(DF, KNOW, new Empty(TRUTH_VALUE), SELF), VERUM));
 
-        StartCoroutine(LogBasesStream(MentalState, j, Plan));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(MAKE, j, SELF), Plan));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(DF, MAKE, j, SELF), Plan));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(CONVERSE, YIELDS, cc, bb)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(YIELDS, dd, ee)));
 
-        // this should be working
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(OMEGA, new Expression(KNOW, new Empty(TRUTH_VALUE), SELF), d)));
+        // StartCoroutine(LogBasesStream(MentalState,
+        //     new Expression(SOME, TREE, new Expression(YIELDS, new Empty(INDIVIDUAL), ff))));
 
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(OMEGA, NOT, d))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(OMEGA, TRULY, e))));
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, new Expression(OMEGA, TRULY, f), f)));
-
-        // var bb = b;
-        // for (int i = 0; i < 5; i++) {
-        //     StartCoroutine(LogBasesStream(MentalState, bb));
-        //     bb = new Expression(DF, KNOW, bb, ALICE);
-        // }
-
-        // var vc = c;
-        // for (int i = 0; i < 5; i++) {
-        //     StartCoroutine(LogBasesStream(MentalState, vc));
-        //     vc = new Expression(VERY, vc);
-        // }
-
-        // var oc = c;
-        // for (int i = 0; i < 5; i++) {
-        //     StartCoroutine(LogBasesStream(MentalState, oc));
-        //     oc = new Expression(OMEGA, VERY, oc);
-        // }
-
-        var ovc = c;
-        for (int i = 0; i < 5; i++) {
-            ovc = new Expression(VERY, ovc);
-            
-        }
-        for (int i = 0; i < 5; i++) {
-            ovc = new Expression(OMEGA, VERY, ovc);
-            // StartCoroutine(LogBasesStream(MentalState, ovc));
-        }
-
-        var voc = c;
-        for (int i = 0; i < 5; i++) {
-            voc = new Expression(OMEGA, VERY, voc);
-        }
-        for (int i = 0; i < 5; i++) {
-            voc = new Expression(VERY, voc);
-            // StartCoroutine(LogBasesStream(MentalState, voc));
-        }
+        // TODO: some elimination: do some(F, G) |- F(test) and some(F, G) |- G(test) in AddToKnowledgeBase
+        // the rule will have to pattern match and not just check for equality though
+        
     }
 
     public static void TestInferenceRule(InferenceRule rule, Expression e) {
