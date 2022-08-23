@@ -27,16 +27,17 @@ public class ProofBasis {
     // there may be repetition of premises, but
     // this won't spell trouble for the proof,
     // and may be necessary for resolutions.
-    public readonly List<Expression> Premises;
+    // 
+    // @Note 8/22/22 repititions removed tentatively
+    public readonly HashSet<Expression> Premises;
     // a common variable assignment for
     // all formulas in this proof.
     public Substitution Substitution;
 
     public List<int> MaxValue {get; protected set;}
 
-    public ProofBasis(List<Expression> premises,
-        Substitution substitution) {
-        Premises = premises;
+    public ProofBasis(List<Expression> premises, Substitution substitution) {
+        Premises = new HashSet<Expression>(premises);
         Substitution = substitution;
 
         MaxValue = null;
@@ -50,9 +51,9 @@ public class ProofBasis {
 
     // the product basis a x b.
     public ProofBasis(ProofBasis a, ProofBasis b) {
-        var productPremises = new List<Expression>();
+        var productPremises = new HashSet<Expression>();
 
-        productPremises.AddRange(a.Premises);
+        productPremises.UnionWith(a.Premises);
         foreach (var bPremise in b.Premises) {
             productPremises.Add(bPremise.Substitute(a.Substitution));
         }
@@ -90,12 +91,12 @@ public class ProofBasis {
     public override String ToString() {
         StringBuilder s = new StringBuilder();
         s.Append("<");
+        foreach (var premise in Premises) {
+            s.Append(premise);
+            s.Append(", ");
+        }
         if (Premises.Count > 0) {
-            s.Append(Premises[0]);
-            for (int i = 1; i < Premises.Count; i++) {
-                s.Append(", ");
-                s.Append(Premises[i]);
-            }
+            s.Remove(s.Length - 2, 2);
         }
 
         s.Append("> with {");
@@ -131,26 +132,18 @@ public class ProofBasis {
 
         ProofBasis that = o as ProofBasis;
 
-        if (this.Premises.Count != that.Premises.Count) {
+        if (this.Premises.Count != that.Premises.Count ||
+            !this.Premises.SetEquals(that.Premises) ||
+            this.Substitution.Count != that.Substitution.Count) {
             return false;
         }
 
-        for (int i = 0; i < Premises.Count; i++) {
-            if (!this.Premises[i].Equals(that.Premises[i])) {
-                return false;
-            }
-        }
-
-        if (this.Substitution.Count != that.Substitution.Count) {
-            return false;
-        }
-
-        foreach (var assignment in this.Substitution.Keys) {
-            if (!that.Substitution.ContainsKey(assignment)) {
+        foreach (var thisSub in this.Substitution) {
+            if (!that.Substitution.ContainsKey(thisSub.Key)) {
                 return false;
             }
 
-            if (!this.Substitution[assignment].Equals(that.Substitution[assignment])) {
+            if (!that.Substitution[thisSub.Key].Equals(thisSub.Value)) {
                 return false;
             }
         }

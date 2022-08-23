@@ -316,8 +316,8 @@ public class MentalState : MonoBehaviour {
                 yield return null;
             }
 
-            Debug.Log("================================================");
-            Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
+            // Debug.Log("================================================");
+            // Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
 
             bases.Clear();
 
@@ -345,7 +345,7 @@ public class MentalState : MonoBehaviour {
                 
                 var sends = new List<KeyValuePair<ProofBases, bool>>();
 
-                Debug.Log("searching " + current);
+                // Debug.Log("searching " + current);
  
                 bool allExhaustive = current.YoungerSiblingBases.Count == 0;
                 for (int i = 0; i < current.YoungerSiblingBases.Count; i++) {
