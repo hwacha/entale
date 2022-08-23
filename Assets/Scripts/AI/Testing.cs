@@ -58,31 +58,21 @@ public class Testing : MonoBehaviour {
         var tryA = new Expression(DF, MAKE, a, SELF);
 
         MentalState.Initialize(new Expression[]{
+            a,
+            // new Expression(NOT, a),
+            b,
+            // new Expression(NOT, b),
         });
 
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(AND,
-                new Expression(AND, tryA, tryA),
-                new Expression(AND, tryA, tryA)),
-            Plan));
+        StartCoroutine(LogBasesStream(MentalState, a));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, a)));
+        StartCoroutine(LogBasesStream(MentalState, b));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, b)));
 
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(OR,
-                new Expression(OR, tryA, tryA),
-                new Expression(OR, tryA, tryA)),
-            Plan));
-
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(OR,
-                new Expression(AND, tryA, tryA),
-                new Expression(AND, tryA, tryA)),
-            Plan));
-
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(AND,
-                new Expression(OR, tryA, tryA),
-                new Expression(OR, tryA, tryA)),
-            Plan));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, a, b)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, new Expression(NOT, a), b)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, a, new Expression(NOT, b))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, new Expression(NOT, a), new Expression(NOT, b))));
     }
 
     public static void TestInferenceRule(InferenceRule rule, Expression e) {

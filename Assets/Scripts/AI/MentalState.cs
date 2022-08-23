@@ -666,31 +666,31 @@ public class MentalState : MonoBehaviour {
                                 b = new Expression(NOT, b);
                             }
 
-                            // var starANode = new ProofNode(
-                            //     a.HeadedBy(NOT) ? a.GetArgAsExpression(0) : new Expression(NOT, a),
-                            //     current.KnowledgeState, nextDepth,
-                            //     current, i,
-                            //     hasYoungerSibling: true,
-                            //     isAssumption: true);
+                            var starANode = new ProofNode(
+                                new Expression(STAR,
+                                    a.HeadedBy(NOT) ? a.GetArgAsExpression(0) : new Expression(NOT, a)),
+                                current.KnowledgeState, nextDepth,
+                                current, i,
+                                hasYoungerSibling: true);
                             var bNodeToStarA = new ProofNode(
                                 b, current.KnowledgeState, nextDepth,
                                 current, i,
-                                // olderSibling: starANode,
+                                olderSibling: starANode,
                                 hasYoungerSibling: true);
                             var aNodeToStarA = new ProofNode(
                                 a, current.KnowledgeState, nextDepth,
                                 current, i, bNodeToStarA);
 
-                            // var starBNode = new ProofNode(
-                            //     b.HeadedBy(NOT) ? b.GetArgAsExpression(0) : new Expression(NOT, b),
-                            //     current.KnowledgeState, nextDepth,
-                            //     current, i,
-                            //     hasYoungerSibling: true,
-                            //     isAssumption: true);
+                            var starBNode = new ProofNode(
+                                new Expression(STAR,
+                                    b.HeadedBy(NOT) ? b.GetArgAsExpression(0) : new Expression(NOT, b)),
+                                current.KnowledgeState, nextDepth,
+                                current, i,
+                                hasYoungerSibling: true);
                             var bNodeToStarB = new ProofNode(
                                 b, current.KnowledgeState, nextDepth,
                                 current, i,
-                                // olderSibling: starBNode,
+                                olderSibling: starBNode,
                                 hasYoungerSibling: true);
                             var aNodeToStarB = new ProofNode(
                                 a, current.KnowledgeState, nextDepth,
@@ -699,11 +699,11 @@ public class MentalState : MonoBehaviour {
                             
                             PushNode(aNodeToStarA);
                             PushNode(bNodeToStarA);
-                            // PushNode(starANode);
+                            PushNode(starANode);
 
                             PushNode(aNodeToStarB);
                             PushNode(bNodeToStarB);
-                            // PushNode(starBNode);
+                            PushNode(starBNode);
                         }
 
                         // some +, ~all +
