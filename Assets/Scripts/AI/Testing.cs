@@ -58,21 +58,24 @@ public class Testing : MonoBehaviour {
         var tryA = new Expression(DF, MAKE, a, SELF);
 
         MentalState.Initialize(new Expression[]{
-            a,
-            // new Expression(NOT, a),
-            b,
-            // new Expression(NOT, b),
+            new Expression(IF, c, new Expression(DF, MAKE, c, SELF)),
+            new Expression(VERY, new Expression(VERY, new Expression(VERY, new Expression(VERY, d)))),
+
+
         });
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, a)));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(AND, a, b))));
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(IF, b, a))));
 
-        StartCoroutine(LogBasesStream(MentalState, a));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, a)));
-        StartCoroutine(LogBasesStream(MentalState, b));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, b)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, d, d)));
+        StartCoroutine(LogBasesStream(MentalState, d));
 
-        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, a, b)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, new Expression(NOT, a), b)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, a, new Expression(NOT, b))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, new Expression(NOT, a), new Expression(NOT, b))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(THEREFORE, d, new Expression(VERY, d))));
+
+        StartCoroutine(LogBasesStream(MentalState,
+            new Expression(IF, new Expression(IF, b, new Expression(NOT, a)), new Expression(OR, a, b))));
+
+        // StartCoroutine(LogBasesStream(MentalState, new Expression(MAKE, c, SELF), Plan));
     }
 
     public static void TestInferenceRule(InferenceRule rule, Expression e) {

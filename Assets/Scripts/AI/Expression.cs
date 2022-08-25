@@ -965,6 +965,7 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression AND = new Expression(new Name(TRUTH_FUNCTION_2, "and"));
     public static readonly Expression OR  = new Expression(new Name(TRUTH_FUNCTION_2, "or"));
     public static readonly Expression IF  = new Expression(new Name(TRUTH_FUNCTION_2, "if"));
+    public static readonly Expression THEREFORE = new Expression(new Name(TRUTH_FUNCTION_2, "therefore"));
 
     // tense operators
     public static readonly Expression SINCE  = new Expression(new Name(TRUTH_FUNCTION_2, "since"));
@@ -977,6 +978,7 @@ public class Expression : Argument, IComparable<Expression> {
     // and is interpreted as a promise when expression in public language
     public static readonly Expression WILL  = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "will"));
     public static readonly Expression WOULD = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "would"));
+    public static readonly Expression REQUIRE = new Expression(new Name(TRUTH_CONFORMITY_FUNCTION, "require"));
 
     // FACTIVES
     // evidentials
