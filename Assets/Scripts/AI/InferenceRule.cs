@@ -7,13 +7,10 @@ using static Expression;
 
 public class InferenceRule
 {
-    public bool IsContractive { protected set; get; }
     protected List<Expression> Premises;
     protected List<Expression> Conclusions;
-    protected bool IsContraposable;
     public Expression Require     { protected set; get; }
     public Expression Supposition { protected set; get; }
-    
 
     public InferenceRule(
         List<Expression> premises,
@@ -26,8 +23,83 @@ public class InferenceRule
         Supposition = supposition;
     }
 
+    // 
+    // is the rule premise-expansive?
+    // 
+    // e.g. very(P) |- P
+    // 
+    // gives an estimate of how likely
+    // a rule is to apply to unwanted lemmas
+    // in their conclusion
+    // 
+    // this rule is especially problematic
+    // as the premise applies to its own conclusion.
+    // But it's also for rules which are likely to
+    // match the premises of other rules and lead
+    // to nowhere.
+    // 
+    // any rule that's expansive is not directly
+    // matched against. Instead, they're instantiated
+    // when a sentence is added to the knowledge base
+    // 
+    public bool IsExpansive() {
+        // simple check.
+        // 
+        // A more thorough approach would do some sort
+        // of network analysis of which rules matched
+        // which sentences on random assumptions and
+        // inputs
+        // 
+        // but here, we just check to see if the head
+        // of any of the conclusions is a variable.
+        foreach (var conclusion in Conclusions) {
+            if (conclusion.Head is Variable) {
+                return true;
+            }
+
+            if (conclusion.HeadedBy(NOT, VERY, STAR) &&
+               (conclusion.GetArgAsExpression(0).Head is Variable)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // for now, we don't contrapose because
+    // we don't know what to do with conclusion-side
+    // star sentences.
+    public bool IsContraposable() {
+        foreach (var premise in Premises) {
+            if (premise.HeadedBy(STAR) || premise.PrejacentHeadedBy(NOT, NOT)) {
+                return false;
+            }
+        }
+        foreach (var conclusion in Conclusions) {
+            if (conclusion.HeadedBy(STAR) || conclusion.PrejacentHeadedBy(NOT, NOT)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // 
+    public bool IsPlusifiable() {
+        foreach (var premise in Premises) {
+            if (premise.HeadedBy(STAR, VERY)) {
+                return false;
+            }
+        }
+        foreach (var conclusion in Conclusions) {
+            if (conclusion.HeadedBy(STAR, VERY)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public List<Expression> Apply(Expression e) {
-        UnityEngine.Debug.Assert(IsContraposable || Conclusions.Count == 1);
+        UnityEngine.Debug.Assert(IsContraposable() || Conclusions.Count == 1);
 
         var lemmas = new List<Expression>();
 
@@ -60,17 +132,24 @@ public class InferenceRule
     public InferenceRule Contrapose() {
         var newPremises = new List<Expression>();
         foreach (var conclusion in Conclusions) {
-            newPremises.Add(conclusion.HeadedBy(NOT) ?
-                conclusion.GetArgAsExpression(0) :
-                new Expression(NOT, conclusion));
+            newPremises.Add(conclusion.HeadedBy(NOT) ? conclusion.GetArgAsExpression(0) : new Expression(NOT, conclusion));
         }
         var newConclusions = new List<Expression>();
         foreach (var premise in Premises) {
-            newConclusions.Add(premise.HeadedBy(NOT) ?
-                premise.GetArgAsExpression(0) :
-                new Expression(NOT, premise));
+            newConclusions.Add(premise.HeadedBy(NOT) ? premise.GetArgAsExpression(0) : new Expression(NOT, premise));
         }
+        return new InferenceRule(newPremises, newConclusions, Require, Supposition);
+    }
 
+    public InferenceRule Plusify() {
+        var newPremises = new List<Expression>();
+        foreach (var premise in Premises) {
+            newPremises.Add(new Expression(VERY, premise));
+        }
+        var newConclusions = new List<Expression>();
+        foreach (var conclusion in Conclusions) {
+            newConclusions.Add(new Expression(VERY, conclusion));
+        }
         return new InferenceRule(newPremises, newConclusions, Require, Supposition);
     }
 
@@ -134,7 +213,7 @@ public class InferenceRule
         return s.ToString();
     }
 
-    public static readonly InferenceRule[] DEFAULT_RULES = new InferenceRule[]{
+    private static readonly InferenceRule[] BASE_RULES = new InferenceRule[]{
         // verum
         new InferenceRule(new List<Expression>{}, new List<Expression>{VERUM}),
         // falsum
@@ -163,6 +242,10 @@ public class InferenceRule
         new InferenceRule(
             new List<Expression>{ST}, new List<Expression>{new Expression(IF, ST, TT)},
             require: TT,
+            supposition: TT),
+        new InferenceRule(
+            new List<Expression>{new Expression(STAR, ST)}, new List<Expression>{new Expression(NOT, new Expression(IF, ST, TT))},
+            require: TT, 
             supposition: TT),
         new InferenceRule(
             new List<Expression>{new Expression(IF, ST, TT), TT},
@@ -210,4 +293,39 @@ public class InferenceRule
         new InferenceRule(new List<Expression>{new Expression(TOMATO, XE)}, new List<Expression>{new Expression(FRUIT, XE)}),
         new InferenceRule(new List<Expression>{new Expression(BANANA, XE)}, new List<Expression>{new Expression(FRUIT, XE)}),
     };
+
+    private static (List<InferenceRule>, List<InferenceRule>) SortRules() {
+        var contractiveRules = new List<InferenceRule>();
+        var expansiveRules   = new List<InferenceRule>();
+        for (int i = 0; i < BASE_RULES.Length; i++) {
+            var rule = BASE_RULES[i];
+            if (rule.IsExpansive()) {
+                expansiveRules.Add(rule);
+            } else {
+                contractiveRules.Add(rule);
+            }
+
+            if (rule.IsContraposable()) {
+                var contraposedRule = rule.Contrapose();
+                if (contraposedRule.IsExpansive()) {
+                    expansiveRules.Add(contraposedRule);
+                } else {
+                    contractiveRules.Add(contraposedRule);
+                }
+            }
+
+            if (rule.IsPlusifiable()) {
+                var plusifiedRule = rule.Plusify();
+                if (plusifiedRule.IsExpansive()) {
+                    expansiveRules.Add(plusifiedRule);
+                } else {
+                    contractiveRules.Add(plusifiedRule);
+                }
+            }
+        }
+
+        return (contractiveRules, expansiveRules);
+    }
+
+    public static (List<InferenceRule>, List<InferenceRule>) RULES = SortRules();
 }

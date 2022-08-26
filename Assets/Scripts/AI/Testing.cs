@@ -57,6 +57,17 @@ public class Testing : MonoBehaviour {
 
         MentalState.Initialize(new Expression[]{
         });
+
+        var (CONTRACTIVE_RULES, EXPANSIVE_RULES) = InferenceRule.RULES;
+
+        Log("CONTRACTIVE RULES");
+        foreach (var rule in CONTRACTIVE_RULES) {
+            Log(rule);
+        }
+        Log("EXPANSIVE RULES");
+        foreach (var rule in EXPANSIVE_RULES) {
+            Log(rule);
+        }
     }
 
     public static void TestInferenceRule(InferenceRule rule, Expression e) {

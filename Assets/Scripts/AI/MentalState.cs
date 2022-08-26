@@ -623,6 +623,10 @@ public class MentalState : MonoBehaviour {
                             PushNode(pNode);
                         }
 
+                        // @Note this just has to be replaced with
+                        // A & A -> B because of cases like
+                        // M = {a, b}, |- (A & B) therefore (A v B)
+                        // current setup won't prove this when it should
                         if (currentLemma.HeadedBy(THEREFORE)) {
                             var consequent = currentLemma.GetArgAsExpression(0);
                             var antecedent = currentLemma.GetArgAsExpression(1);
