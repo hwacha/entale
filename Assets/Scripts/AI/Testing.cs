@@ -55,27 +55,8 @@ public class Testing : MonoBehaviour {
         var ee = new Expression(new Name(INDIVIDUAL, "e"));
         var ff = new Expression(new Name(INDIVIDUAL, "f"));
 
-        var tryA = new Expression(DF, MAKE, a, SELF);
-
         MentalState.Initialize(new Expression[]{
-            new Expression(IF, c, new Expression(DF, MAKE, c, SELF)),
-            new Expression(VERY, new Expression(VERY, new Expression(VERY, new Expression(VERY, d)))),
-
-
         });
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, a)));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(AND, a, b))));
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(IF, b, a))));
-
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, d, d)));
-        StartCoroutine(LogBasesStream(MentalState, d));
-
-        StartCoroutine(LogBasesStream(MentalState, new Expression(THEREFORE, d, new Expression(VERY, d))));
-
-        StartCoroutine(LogBasesStream(MentalState,
-            new Expression(IF, new Expression(IF, b, new Expression(NOT, a)), new Expression(OR, a, b))));
-
-        // StartCoroutine(LogBasesStream(MentalState, new Expression(MAKE, c, SELF), Plan));
     }
 
     public static void TestInferenceRule(InferenceRule rule, Expression e) {
@@ -189,7 +170,7 @@ public class Testing : MonoBehaviour {
     }
 
     public static String MatchesString(Expression a, Expression b) {
-        return a + ", " + b + ": " + SubstitutionString(a.GetMatches(b));
+        return a + ", " + b + ": " + SubstitutionString(a.Unify(b));
     }
 
     public static IEnumerator LogBasesStream(MentalState m, Expression e, ProofType pt = Proof, float timeout = -1) {
@@ -213,7 +194,10 @@ public class Testing : MonoBehaviour {
                 // Log(foundResult);
                 // Log(isProvedByString + result);
             }
-            yield return null;
+
+            if (m.FrameTimer.FrameDuration >= MentalState.TIME_BUDGET) {
+                yield return null;
+            }
         }
         Log(isProvedByString + result);
         yield break;

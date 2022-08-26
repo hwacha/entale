@@ -111,7 +111,7 @@ public class Variable : Atom {
     }
 
     public override string ToString() {
-        return "{" + ID + "}";
+        return "{" + ID + "#" + Type + "}";
     }
 }
 
@@ -475,7 +475,7 @@ public class Expression : Argument, IComparable<Expression> {
     // 
     // @Note we want to change this to be pattern matching instead
     // of unification (or closer to pattern matching, in any case.)
-    private HashSet<Dictionary<Variable, Expression>> GetMatches(Expression that,
+    private HashSet<Dictionary<Variable, Expression>> Unify(Expression that,
         HashSet<Dictionary<Variable, Expression>> substitutions) {
         // if the types don't match or the substitutions are empty, we fail.
         if (substitutions.Count == 0 || !this.Type.Equals(that.Type)) {
@@ -521,6 +521,8 @@ public class Expression : Argument, IComparable<Expression> {
         // we have a singular variable. Do variable assignment here.
         if (this.Head is Variable && this.Head.Type.Equals(this.Type)) {
             return AddAssignment((Variable) this.Head, that, substitutions);
+        } else if (that.Head is Variable && that.Head.Type.Equals(that.Type)) {
+            return AddAssignment((Variable) that.Head, this, substitutions);
         }
 
         // @Note: this is commented out to make it so unification
@@ -566,7 +568,7 @@ public class Expression : Argument, IComparable<Expression> {
                 // if x is bound to anything 
                 // Let see if it's necessary in testing.
                 currentSubstitutions =
-                    ((Expression) this.Args[i]).GetMatches((Expression) that.Args[i],
+                    ((Expression) this.Args[i]).Unify((Expression) that.Args[i],
                         currentSubstitutions);
             }
 
@@ -641,7 +643,7 @@ public class Expression : Argument, IComparable<Expression> {
             // similar logic to that found in the code with two constants, except with
             // the decomposed expressions instead of the expressions themselves.
             foreach (var decompositionOfMatch in decompositionsOfMatch) {
-                var currentSubstitutions = (new Expression(pattern.Head)).GetMatches(decompositionOfMatch.Key, substitutions);
+                var currentSubstitutions = (new Expression(pattern.Head)).Unify(decompositionOfMatch.Key, substitutions);
                 for (int i = 0; i < pattern.Args.Length; i++) {
                     if (currentSubstitutions.Count == 0) {
                         break;
@@ -657,7 +659,7 @@ public class Expression : Argument, IComparable<Expression> {
                         break;
                     }
 
-                    currentSubstitutions = ((Expression) pattern.Args[i]).GetMatches((Expression) matchArg, currentSubstitutions);
+                    currentSubstitutions = ((Expression) pattern.Args[i]).Unify((Expression) matchArg, currentSubstitutions);
                 }
 
                 if (currentSubstitutions.Count != 0) {
@@ -682,29 +684,29 @@ public class Expression : Argument, IComparable<Expression> {
             }
         }
 
-        // // @Note this is commented out because we want unification
-        // // to only occur from the left to the right.
+        // @Note this is commented out because we want unification
+        // to only occur from the left to the right.
         
-        // if (patternSubstitutions.Count == 0) {
-        //     var thatMatchThisSubstitutions = patternMatch(that, this);
+        if (patternSubstitutions.Count == 0) {
+            var thatMatchThisSubstitutions = patternMatch(that, this);
 
-        //     foreach (var thatMatchThisSubstitution in thatMatchThisSubstitutions) {
-        //         patternSubstitutions.UnionWith(thatMatchThisSubstitution);
-        //     }            
-        // }
+            foreach (var thatMatchThisSubstitution in thatMatchThisSubstitutions) {
+                patternSubstitutions.UnionWith(thatMatchThisSubstitution);
+            }            
+        }
 
         return patternSubstitutions;
     }
 
-    public HashSet<Dictionary<Variable, Expression>> GetMatches(Expression that) {
+    public HashSet<Dictionary<Variable, Expression>> Unify(Expression that) {
         var initialSubstitution = new Dictionary<Variable, Expression>();
         var initialSubstitutions = new HashSet<Dictionary<Variable, Expression>>();
         initialSubstitutions.Add(initialSubstitution);
-        return GetMatches(that, initialSubstitutions);
+        return Unify(that, initialSubstitutions);
     }
 
     public bool Matches(Expression that) {
-        return GetMatches(that).Count > 0;
+        return Unify(that).Count > 0;
     }
 
     public override String ToString() {

@@ -106,6 +106,9 @@ public class ProofBasis {
             s.Append(assignment.Value);
             s.Append(", ");
         }
+        if (Substitution.Count > 0) {
+            s.Remove(s.Length - 2, 2);
+        }
         s.Append("}");
 
         return s.ToString();
