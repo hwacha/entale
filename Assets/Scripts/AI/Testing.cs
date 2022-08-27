@@ -81,6 +81,9 @@ public class Testing : MonoBehaviour {
             new Expression(VERY, new Expression(AND, r, s)),
             new Expression(ALL, PERSON, new Expression(KNOW, t)),
             new Expression(PERSON, ALICE),
+            new Expression(IF, c, u),
+            new Expression(NOT, new Expression(ROUND, gg)),
+            new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION_2), AND, BLUE, YELLOW, CHARLIE),
         });
 
         StartCoroutine(LogBasesStream(MentalState, VERUM));
@@ -122,6 +125,10 @@ public class Testing : MonoBehaviour {
         StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, s)));
         StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, s)));
         StartCoroutine(LogBasesStream(MentalState, t));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, u)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION), NOT, ROUND, gg)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, CHARLIE)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(YELLOW, CHARLIE)));
     }
 
     public static string ValueString(List<int> value) {

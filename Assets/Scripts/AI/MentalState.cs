@@ -738,6 +738,7 @@ public class MentalState : MonoBehaviour {
                                 AddToKnowledgeState(newKnowledgeState, supposition);
                             }
                             if (premises != null) {
+                                // Debug.Log(rule);
                                 if (premises.Count == 0) {
                                     searchBases.Add(new ProofBasis());
                                 } else if (premises.Count == 1) {
@@ -1101,7 +1102,11 @@ public class MentalState : MonoBehaviour {
 
             if (instantiatedRule != null) {
                 AddRule(knowledgeState, signature, instantiatedRule);
+                var negKnowledge = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : new Expression(NOT, knowledge);
                 foreach (var conclusion in instantiatedRule.Conclusions) {
+                    if (conclusion.Matches(negKnowledge)) {
+                        continue;
+                    }
                     AddToKnowledgeState(knowledgeState, conclusion, false, signature);
                 }
             }

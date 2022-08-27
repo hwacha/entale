@@ -23,6 +23,15 @@ public class InferenceRule
         Supposition = supposition;
     }
 
+    private static bool IsExpressionPermissive(Expression e, params Expression[] prejacents) {
+        if (e.Head is Variable) {
+            return true;
+        }
+
+        return e.HeadedBy(prejacents) &&
+               (e.GetArgAsExpression(0).Head is Variable);
+    }
+
     // 
     // is the rule premise-expansive?
     // 
@@ -53,12 +62,7 @@ public class InferenceRule
         // but here, we just check to see if the head
         // of any of the conclusions is a variable.
         foreach (var conclusion in Conclusions) {
-            if (conclusion.Head is Variable) {
-                return true;
-            }
-
-            if (conclusion.HeadedBy(NOT, VERY, STAR) &&
-               (conclusion.GetArgAsExpression(0).Head is Variable)) {
+            if (IsExpressionPermissive(conclusion, NOT, STAR, VERY)) {
                 return true;
             }
         }
@@ -113,11 +117,16 @@ public class InferenceRule
                     // in case strengthening structural rule fails :)
                     bool conclusionMatchedOnce = false;
                     foreach (var otherConclusion in Conclusions) {
-                        if (!conclusionMatchedOnce && !otherConclusion.Equals(conclusion)) {
+                        if (!conclusionMatchedOnce && otherConclusion.Equals(conclusion)) {
                             conclusionMatchedOnce = true;
                             continue;
                         }
-                        lemmas.Add(new Expression(NOT, otherConclusion.Substitute(match)));
+                        var subbedConclusion = otherConclusion.Substitute(match);
+                        var negConclusion =
+                            subbedConclusion.HeadedBy(NOT) ?
+                            subbedConclusion.GetArgAsExpression(0) :
+                            new Expression(NOT, subbedConclusion);
+                        lemmas.Add(negConclusion);
                     }
                 }
             }
@@ -156,14 +165,36 @@ public class InferenceRule
     }
 
     public InferenceRule Instantiate(Expression e) {
+        if ((e.Head.Type.Equals(SemanticType.TRUTH_VALUE)) ||
+            e.HeadedBy(NOT, STAR) &&
+            (e.GetArgAsExpression(0).Head.Type.Equals(SemanticType.TRUTH_VALUE))) {
+            return null;
+        }
         Dictionary<Variable, Expression> match = null;
         foreach (var premise in Premises) {
+            if (IsExpressionPermissive(premise, NOT, STAR)) {
+                continue;
+            }
             var matches = premise.Unify(e);
             if (matches.Count == 0) {
                 continue;
             }
             match = matches.First();
             break;
+        }
+        if (Conclusions.Count > 1) {
+            foreach (var conclusion in Conclusions) {
+                if (IsExpressionPermissive(conclusion, NOT, STAR)) {
+                    continue;
+                }
+                var negE = e.HeadedBy(NOT) ? e.GetArgAsExpression(0) : new Expression(NOT, e);
+                var matches = conclusion.Unify(negE);
+                if (matches.Count == 0) {
+                    continue;
+                }
+                match = matches.First();
+                break;
+            }
         }
         if (match == null) {
             return null;
@@ -189,6 +220,8 @@ public class InferenceRule
         if (instantiatedRule.IsExpansive()) {
             return null;
         }
+
+        // UnityEngine.Debug.Log(this + " <- " + e + " := " + instantiatedRule);
 
         return instantiatedRule;
     }
