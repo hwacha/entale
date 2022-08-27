@@ -420,22 +420,6 @@ public class MentalState : MonoBehaviour {
                         searchBases.Add(new ProofBasis(new List<Expression>{currentLemma}, new Substitution()));
                     // these are some base cases that we run programatically.
                     } else {
-                        // M |- verum
-                        if (currentLemma.Equals(VERUM)) {
-                            searchBases.Add(new ProofBasis());
-                        }
-
-                        // M |- ~falsum
-                        if (currentLemma.Equals(new Expression(NOT, FALSUM))) {
-                            searchBases.Add(new ProofBasis());
-                        }
-
-                        // M |- x = x
-                        if (currentLemma.HeadedBy(IDENTITY) &&
-                            currentLemma.GetArgAsExpression(0).Equals(currentLemma.GetArgAsExpression(1))) {
-                            searchBases.Add(new ProofBasis());
-                        }
-
                         // de se performative resolution
                         // will(P) |- df(make, P, self)
                         if (pt == Plan && currentLemma.HeadedBy(DF) &&
@@ -515,20 +499,6 @@ public class MentalState : MonoBehaviour {
                             exhaustive = false;
                         }
 
-                        // truly +
-                        if (currentLemma.HeadedBy(TRULY)) {
-                            var subclause = currentLemma.GetArgAsExpression(0);
-                            PushNode(new ProofNode(subclause, current.KnowledgeState,
-                                nextDepth, current, i, require));
-                        }
-
-                        // truly - contraposed
-                        if (currentLemma.PrejacentHeadedBy(NOT, TRULY)) {
-                            var subclause = currentLemma.GetArgAsExpression(0).GetArgAsExpression(0);
-                            PushNode(new ProofNode(new Expression(NOT, subclause), current.KnowledgeState,
-                                nextDepth, current, i, require));
-                        }
-
                         // star + 
                         // M |/- A => M |- *A
                         if (currentLemma.HeadedBy(STAR)) {
@@ -537,40 +507,6 @@ public class MentalState : MonoBehaviour {
                                 current.KnowledgeState,
                                 nextDepth, current, i, require,
                                 isFailure: true));
-                        }
-
-                        // M |- A => M |- ~*A
-                        if (currentLemma.PrejacentHeadedBy(NOT, STAR)) {
-                            PushNode(new ProofNode(
-                                currentLemma.GetArgAsExpression(0).GetArgAsExpression(0),
-                                current.KnowledgeState,
-                                nextDepth, current, i, require));
-                        }
-
-                        // nonidentity assumption
-                        if (currentLemma.PrejacentHeadedBy(NOT, IDENTITY)) {
-                            PushNode(new ProofNode(
-                                currentLemma.GetArgAsExpression(0),
-                                current.KnowledgeState,
-                                nextDepth, current, i, require,
-                                isFailure: true));
-                        }
-
-                        // double negation introduction
-                        if (currentLemma.PrejacentHeadedBy(NOT, NOT)) {
-                            PushNode(new ProofNode(
-                                currentLemma.GetArgAsExpression(0).GetArgAsExpression(0),
-                                current.KnowledgeState, nextDepth,
-                                current, i, require));
-                        }
-
-                        // contraposed very +
-                        // M |- ~A => M |- ~+A
-                        if (currentLemma.PrejacentHeadedBy(NOT, VERY)) {
-                            PushNode(new ProofNode(
-                                new Expression(NOT, currentLemma.GetArgAsExpression(0).GetArgAsExpression(0)),
-                                current.KnowledgeState, nextDepth,
-                                current, i, require));
                         }
 
                         // factive -
@@ -591,6 +527,7 @@ public class MentalState : MonoBehaviour {
                                 currentLemma.GetArgAsExpression(1).GetArgAsExpression(2));
                             PushNode(new ProofNode(factive, current.KnowledgeState, nextDepth, current, i, require));
                         }
+
                         // contraposed
                         // @Note I assume every ITR is
                         // factive by default
@@ -622,230 +559,6 @@ public class MentalState : MonoBehaviour {
 
                             PushNode(pNode);
                         }
-
-                        // @Note this just has to be replaced with
-                        // A & A -> B because of cases like
-                        // M = {a, b}, |- (A & B) therefore (A v B)
-                        // current setup won't prove this when it should
-                        if (currentLemma.HeadedBy(THEREFORE)) {
-                            var consequent = currentLemma.GetArgAsExpression(0);
-                            var antecedent = currentLemma.GetArgAsExpression(1);
-
-                            var consequentNode = new ProofNode(consequent, current.KnowledgeState, nextDepth, current, i, antecedent);
-
-                            PushNode(consequentNode);
-                        }
-
-                        // M |- A => M |- past(A)
-                        if (currentLemma.HeadedBy(PAST)) {
-                            var subclause = currentLemma.GetArgAsExpression(0);
-                            PushNode(new ProofNode(
-                                subclause, current.KnowledgeState, nextDepth,
-                                current, i, require));
-                        }
-
-                        // M |- good(~A) => M |- ~good(A)
-                        if (currentLemma.PrejacentHeadedBy(NOT, GOOD)) {
-                            var goodNotA = new Expression(GOOD,
-                                new Expression(NOT, currentLemma.GetArgAsExpression(0).GetArgAsExpression(0)));
-                            PushNode(new ProofNode(
-                                goodNotA, current.KnowledgeState, nextDepth,
-                                current, i, require));
-                        }
-
-                        // or +, ~and +
-                        if (currentLemma.HeadedBy(OR)  ||
-                            currentLemma.PrejacentHeadedBy(NOT, AND)) {
-                            var adjunction = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
-                            var a = adjunction.GetArgAsExpression(0);
-                            var b = adjunction.GetArgAsExpression(1);
-
-                            if (currentLemma.HeadedBy(NOT)) {
-                                a = new Expression(NOT, a);
-                                b = new Expression(NOT, b);
-                            }
-
-                            PushNode(new ProofNode(
-                                a, current.KnowledgeState, nextDepth,
-                                current, i, require));
-                            PushNode(new ProofNode(
-                                b, current.KnowledgeState, nextDepth,
-                                current, i, require));
-                        }
-
-                        // and +, ~or +
-                        if (currentLemma.HeadedBy(AND) ||
-                            currentLemma.PrejacentHeadedBy(NOT, OR)) {
-                            var adjunction = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
-                            var a = adjunction.GetArgAsExpression(0);
-                            var b = adjunction.GetArgAsExpression(1);
-
-                            if (currentLemma.HeadedBy(NOT)) {
-                                a = new Expression(NOT, a);
-                                b = new Expression(NOT, b);
-                            }
-
-                            var starANode = new ProofNode(
-                                new Expression(STAR,
-                                    a.HeadedBy(NOT) ? a.GetArgAsExpression(0) : new Expression(NOT, a)),
-                                current.KnowledgeState, nextDepth,
-                                current, i, require,
-                                hasYoungerSibling: true);
-                            var bNodeToStarA = new ProofNode(
-                                b, current.KnowledgeState, nextDepth,
-                                current, i, require,
-                                olderSibling: starANode,
-                                hasYoungerSibling: true);
-                            var aNodeToStarA = new ProofNode(
-                                a, current.KnowledgeState, nextDepth,
-                                current, i, require, bNodeToStarA);
-
-                            var starBNode = new ProofNode(
-                                new Expression(STAR,
-                                    b.HeadedBy(NOT) ? b.GetArgAsExpression(0) : new Expression(NOT, b)),
-                                current.KnowledgeState, nextDepth,
-                                current, i, require,
-                                hasYoungerSibling: true);
-                            var bNodeToStarB = new ProofNode(
-                                b, current.KnowledgeState, nextDepth,
-                                current, i, require,
-                                olderSibling: starBNode,
-                                hasYoungerSibling: true);
-                            var aNodeToStarB = new ProofNode(
-                                a, current.KnowledgeState, nextDepth,
-                                current, i, require, bNodeToStarB);
-
-                            
-                            PushNode(aNodeToStarA);
-                            PushNode(bNodeToStarA);
-                            PushNode(starANode);
-
-                            PushNode(aNodeToStarB);
-                            PushNode(bNodeToStarB);
-                            PushNode(starBNode);
-                        }
-
-                        // some +, ~all +
-                        if (currentLemma.HeadedBy(SOME) ||
-                            currentLemma.PrejacentHeadedBy(NOT, ALL)) {
-                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
-                            var f = query.GetArgAsExpression(0);
-                            var g = query.GetArgAsExpression(1);
-
-                            var x = new Expression(GetUnusedVariable(INDIVIDUAL, query.GetVariables()));
-
-                            var fx = new Expression(f, x);
-                            var gx = new Expression(g, x);
-
-                            if (currentLemma.HeadedBy(NOT)) {
-                                gx = new Expression(NOT, gx);
-                            }
-
-                            var gxNode = new ProofNode(gx, current.KnowledgeState, nextDepth, current, i, require,
-                                hasYoungerSibling: true);
-                            var fxNode = new ProofNode(fx, current.KnowledgeState, nextDepth, current, i, require, gxNode);
-
-                            PushNode(fxNode);
-                            PushNode(gxNode);
-                        }
-
-                        // conditional proof
-                        // M, A |- B => M |- A -> B
-                        // 
-                        // TODO figure out logic for conditional
-                        // with antecedent known to be false
-                        if (currentLemma.HeadedBy(IF) || currentLemma.PrejacentHeadedBy(NOT, IF)) {
-                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
-                            // @Note this is not a typo ---
-                            // antecedent is the second argument of the conditional
-                            var consequent = query.GetArgAsExpression(0);
-                            var antecedent = query.GetArgAsExpression(1);
-
-                            var newKnowledgeState = new KnowledgeState(current.KnowledgeState.Basis, current.KnowledgeState.Rules, current.KnowledgeState.LemmaPool);
-
-                            AddToKnowledgeState(newKnowledgeState, antecedent);
-
-                            var consequentNode = new ProofNode(consequent, newKnowledgeState, nextDepth, current, i,
-                                require: antecedent,
-                                isFailure: currentLemma.HeadedBy(NOT), supposition: antecedent);
-
-                            PushNode(consequentNode);
-                        }
-
-                        // symmetry of identity
-                        // M |- a = b => M |- b = a
-                        if (currentLemma.HeadedBy(IDENTITY) ||
-                            currentLemma.PrejacentHeadedBy(NOT, IDENTITY)) {
-                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
-                            var converse = new Expression(IDENTITY, query.GetArgAsExpression(1), query.GetArgAsExpression(0));
-                            if (currentLemma.HeadedBy(NOT)) {
-                                converse = new Expression(NOT, converse);
-                            }
-                            var converseNode = new ProofNode(converse, current.KnowledgeState, nextDepth, current, i, require);
-                            PushNode(converseNode);
-                        }
-
-                        // converse rules
-                        if (currentLemma.HeadedBy(CONVERSE) ||
-                            currentLemma.PrejacentHeadedBy(NOT, CONVERSE)) {
-                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
-                            var rel = new Expression(
-                                query.GetArgAsExpression(0),
-                                query.GetArgAsExpression(2),
-                                query.GetArgAsExpression(1));
-                            if (currentLemma.HeadedBy(NOT)) {
-                                rel = new Expression(NOT, rel);
-                            }
-                            var relNode = new ProofNode(rel, current.KnowledgeState, nextDepth, current, i, require);
-                            PushNode(relNode);
-                        }
-
-                        // M |- banana(x) => M |- fruit(x)
-                        // M |- tomato(x) => M |- fruit(x)
-                        if (currentLemma.HeadedBy(FRUIT)) {
-                            var tomatoX = new Expression(TOMATO, currentLemma.GetArgAsExpression(0));
-                            var bananaX = new Expression(BANANA, currentLemma.GetArgAsExpression(0));
-                            PushNode(new ProofNode(tomatoX, current.KnowledgeState, nextDepth, current, i, require));
-                            PushNode(new ProofNode(bananaX, current.KnowledgeState, nextDepth, current, i, require));
-                        }
-                        // contraposed
-                        if (currentLemma.PrejacentHeadedBy(NOT, TOMATO, BANANA)) {
-                            var fruitX = new Expression(NOT, new Expression(FRUIT, currentLemma.GetArgAsExpression(0).GetArgAsExpression(0)));
-                            PushNode(new ProofNode(fruitX, current.KnowledgeState, nextDepth, current, i, require));
-                        }
-
-                        // PREMISE-EXPANSIVE RULES
-
-                        // here, we check against rules that
-                        // would otherwise be premise-expansive.
-                        
-                        foreach (var rules in current.KnowledgeState.Rules.Values) {
-                            foreach (var rule in rules) {
-                                var premises = rule.Apply(currentLemma);
-                                if (premises != null) {
-                                    if (premises.Count == 0) {
-                                        searchBases.Add(new ProofBasis());
-                                    } else if (premises.Count == 1) {
-                                        PushNode(new ProofNode(premises[0], current.KnowledgeState, nextDepth, current, i, require));
-                                    } else {
-                                        ProofNode nextPremNode = null;
-                                        var nodes = new Stack<ProofNode>();
-                                        for (int j = premises.Count - 1; j >= 0; j--) {
-                                            var curPremNode = new ProofNode(
-                                                premises[j], current.KnowledgeState, nextDepth, current, i, require,
-                                                nextPremNode, hasYoungerSibling: j > 0);
-                                            nodes.Push(curPremNode);
-                                            nextPremNode = curPremNode;
-                                        }
-                                        while (nodes.Count > 0 ) {
-                                            PushNode(nodes.Pop());    
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // END PREMISE-EXPANSIVE RULES
                         
                         // OMEGA MADNESS
                         // 
@@ -980,10 +693,6 @@ public class MentalState : MonoBehaviour {
                         }
 
                         // end abilities
-                        
-                        var currentVariables = currentLemma.GetVariables();
-                        var f1 = GetUnusedVariable(PREDICATE, currentVariables);
-                        var x1 = GetUnusedVariable(INDIVIDUAL, currentVariables);
 
                         // generalized geach introduction
                         // (at least for geaches with truth values
@@ -1012,6 +721,64 @@ public class MentalState : MonoBehaviour {
                             }
                             PushNode(new ProofNode(ungeached, current.KnowledgeState, nextDepth, current, i, require));
                         }
+
+                        void SpawnProofNodes(InferenceRule rule) {
+                            var (premises, ruleRequire, supposition) = rule.Apply(currentLemma);
+                            var newRequire = ruleRequire;
+                            var newKnowledgeState = current.KnowledgeState;
+                            if (newRequire == null) {
+                                newRequire = require;
+                            }
+                            if (supposition != null) {
+                                newKnowledgeState =
+                                new KnowledgeState(
+                                    current.KnowledgeState.Basis,
+                                    current.KnowledgeState.Rules,
+                                    current.KnowledgeState.LemmaPool);
+                                AddToKnowledgeState(newKnowledgeState, supposition);
+                            }
+                            if (premises != null) {
+                                if (premises.Count == 0) {
+                                    searchBases.Add(new ProofBasis());
+                                } else if (premises.Count == 1) {
+                                    PushNode(new ProofNode(premises[0], newKnowledgeState,
+                                        nextDepth, current, i, newRequire,
+                                        supposition: supposition));
+                                } else {
+                                    ProofNode nextPremNode = null;
+                                    var nodes = new Stack<ProofNode>();
+                                    for (int j = premises.Count - 1; j >= 0; j--) {
+                                        var curPremNode = new ProofNode(
+                                            premises[j], newKnowledgeState,
+                                            nextDepth, current, i, newRequire,
+                                            nextPremNode, hasYoungerSibling: j > 0,
+                                            supposition: supposition);
+                                        nodes.Push(curPremNode);
+                                        nextPremNode = curPremNode;
+                                    }
+                                    while (nodes.Count > 0 ) {
+                                        PushNode(nodes.Pop());    
+                                    }
+                                }
+                            }
+                        }
+
+                        // PREMISE-CONTRACTIVE RULES
+                        foreach (var rule in InferenceRule.RULES.Item1) {
+                            SpawnProofNodes(rule);
+                        }
+                        // PREMISE-EXPANSIVE RULES
+
+                        // here, we check against rules that
+                        // would otherwise be premise-expansive.
+                        
+                        foreach (var rules in current.KnowledgeState.Rules.Values) {
+                            foreach (var rule in rules) {
+                                SpawnProofNodes(rule);
+                            }
+                        }
+
+                        // END PREMISE-EXPANSIVE RULES
 
                         // here we reverse the order of new proof nodes.
                         if (newStack.Count > 0) {
@@ -1329,11 +1096,15 @@ public class MentalState : MonoBehaviour {
             knowledgeState.Basis.Add(knowledge);
         }
 
-        if (knowledge.HeadedBy(TRULY, VERY)) {
-            var subclause = knowledge.GetArgAsExpression(0);
-            AddToKnowledgeState(knowledgeState, subclause, false, signature);
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{subclause}));
+        foreach (var rule in InferenceRule.RULES.Item2) {
+            var instantiatedRule = rule.Instantiate(knowledge);
+
+            if (instantiatedRule != null) {
+                AddRule(knowledgeState, signature, instantiatedRule);
+                foreach (var conclusion in instantiatedRule.Conclusions) {
+                    AddToKnowledgeState(knowledgeState, conclusion, false, signature);
+                }
+            }
         }
 
         if (knowledge.HeadedBy(KNOW, MAKE, SEE, INFORMED)) {
@@ -1350,184 +1121,12 @@ public class MentalState : MonoBehaviour {
                 new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{pIfDf}));
         }
 
-        if (knowledge.PrejacentHeadedBy(NOT, TRULY)) {
-            var justNot = new Expression(NOT, knowledge.GetArgAsExpression(0).GetArgAsExpression(0));
-            AddToKnowledgeState(knowledgeState, justNot, false, signature);
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{justNot}));
-        }
-
-        if (knowledge.PrejacentHeadedBy(NOT, NOT) ||
-            knowledge.PrejacentHeadedBy(NOT, STAR)) {
-            var subSubclause = knowledge.GetArgAsExpression(0).GetArgAsExpression(0);
-            AddToKnowledgeState(knowledgeState, subSubclause, false, signature);
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{subSubclause}));
-        }
-
         if (knowledge.HeadedBy(OMEGA)) {
             var functor = new Expression(knowledge.GetArgAsExpression(0), knowledge.GetArgAsExpression(1));
             AddToKnowledgeState(knowledgeState, functor, false, signature);
             AddRule(knowledgeState, signature,
                 new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{functor}));
             AddToLemmaPool(knowledgeState, knowledge);
-        }
-
-        if (knowledge.HeadedBy(AND) ||
-            knowledge.PrejacentHeadedBy(NOT, OR)) {
-            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
-            var a = query.GetArgAsExpression(0);
-            var b = query.GetArgAsExpression(1);
-
-            if (knowledge.HeadedBy(NOT)) {
-                a = new Expression(NOT, a);
-                b = new Expression(NOT, b);
-            }
-            
-            AddToKnowledgeState(knowledgeState, a, false, signature);
-            AddToKnowledgeState(knowledgeState, b, false, signature);
-
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{a}));
-
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{b}));
-        }
-
-        // disjunctive syllogism and conjunctive syllogism
-        // A v B, ~A |- B; A v B, ~B |- A
-        // ~(A v B), A |- ~B; ~(A v B), B |- ~A
-        if (knowledge.HeadedBy(OR) ||
-            knowledge.PrejacentHeadedBy(NOT, AND)) {
-            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
-            var adjunctA = query.GetArgAsExpression(0);
-            var adjunctB = query.GetArgAsExpression(1);
-            var notAdjunctA = new Expression(NOT, adjunctA);
-            var notAdjunctB = new Expression(NOT, adjunctB);
-
-            if (knowledge.HeadedBy(NOT)) {
-                AddToKnowledgeState(knowledgeState, notAdjunctA, false, signature);
-                AddToKnowledgeState(knowledgeState, notAdjunctB, false, signature);
-
-                AddRule(knowledgeState, signature,
-                    new InferenceRule(new List<Expression>{knowledge, adjunctB}, new List<Expression>{notAdjunctA}));
-                AddRule(knowledgeState, signature,
-                    new InferenceRule(new List<Expression>{knowledge, adjunctA}, new List<Expression>{notAdjunctB}));
-            } else {
-                AddToKnowledgeState(knowledgeState, adjunctA, false, signature);
-                AddToKnowledgeState(knowledgeState, adjunctB, false, signature);
-
-                AddRule(knowledgeState, signature,
-                    new InferenceRule(new List<Expression>{knowledge, notAdjunctB}, new List<Expression>{adjunctA}));
-                AddRule(knowledgeState, signature,
-                    new InferenceRule(new List<Expression>{knowledge, notAdjunctA}, new List<Expression>{adjunctB}));
-            }
-        }
-
-        if (knowledge.HeadedBy(IF)) {
-            var consequent = knowledge.GetArgAsExpression(0);
-            var antecedent = knowledge.GetArgAsExpression(1);
-            var notConsequent = new Expression(NOT, consequent);
-            var notAntecedent = new Expression(NOT, antecedent);
-
-            AddToKnowledgeState(knowledgeState, consequent, false, signature);
-            AddToKnowledgeState(knowledgeState, notAntecedent, false, signature);
-
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge, antecedent}, new List<Expression>{consequent}));
-
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge, notConsequent}, new List<Expression>{notAntecedent}));
-        }
-
-        // some -
-        // some(F, G) |- F(c), some(F, G) |- G(c)
-        // ~all(F, G) |- F(c), ~all(F, G) |- ~G(c)
-        if (knowledge.HeadedBy(SOME) ||
-            knowledge.PrejacentHeadedBy(NOT, ALL)) {
-            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
-
-            var c = new Expression(new Parameter(INDIVIDUAL, GetNextParameterID()));
-
-            var fc = new Expression(query.GetArgAsExpression(0), c);
-            var gc = new Expression(query.GetArgAsExpression(1), c);
-
-            if (knowledge.HeadedBy(NOT)) {
-                gc = new Expression(NOT, gc);
-            }
-
-            AddToKnowledgeState(knowledgeState, fc, false, signature);
-            AddToKnowledgeState(knowledgeState, gc, false, signature);
-
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{fc}));
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{gc}));
-        }
-
-        // ~some(F, G),  G(x) |- ~F(x)
-        //   all(F, G), ~G(x) |- ~F(x)
-        if (knowledge.HeadedBy(ALL, GEN) ||
-            knowledge.PrejacentHeadedBy(NOT, SOME)) {
-            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
-            var f  = query.GetArgAsExpression(0);
-            var g  = query.GetArgAsExpression(1);
-            var x  = new Expression(GetUnusedVariable(INDIVIDUAL, g.GetVariables()));
-            var fx = new Expression(f, x);
-            var gx = new Expression(g, x);
-            var notFx = new Expression(NOT, new Expression(f, x));
-            var notGx = new Expression(NOT, gx);
-
-            if (knowledge.HeadedBy(NOT)) {
-                notGx = gx;
-                gx = new Expression(NOT, gx);
-            }
-
-            var premises = new List<Expression>{knowledge, fx};
-
-            if (knowledge.HeadedBy(GEN)) {
-                premises.Add(new Expression(STAR, new Expression(NOT,
-                        new Expression(INS,
-                            knowledge.GetArgAsExpression(0),
-                            knowledge.GetArgAsExpression(1)))));
-            }
-
-            var ir1 = new InferenceRule(premises, new List<Expression>{gx});
-
-            AddRule(knowledgeState, signature, ir1);
-
-            premises = new List<Expression>{knowledge, notGx};
-
-            if (knowledge.HeadedBy(GEN)) {
-                premises.Add(new Expression(STAR, new Expression(NOT,
-                    new Expression(INS,
-                        knowledge.GetArgAsExpression(0),
-                        knowledge.GetArgAsExpression(1)))));
-            }
-
-            var ir2 = new InferenceRule(premises, new List<Expression>{notFx});
-
-            AddRule(knowledgeState, signature, ir2);
-
-            AddToKnowledgeState(knowledgeState, gx, false, signature);
-            AddToKnowledgeState(knowledgeState, notFx, false, signature);
-        }
-
-        if (knowledge.HeadedBy(Expression.CONVERSE) ||
-            knowledge.PrejacentHeadedBy(NOT, CONVERSE)) {
-            var query = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : knowledge;
-            var rel = new Expression(
-                query.GetArgAsExpression(0),
-                query.GetArgAsExpression(2),
-                query.GetArgAsExpression(1));
-
-            if (knowledge.HeadedBy(NOT)) {
-                rel = new Expression(NOT, rel);
-            }
-
-            AddToKnowledgeState(knowledgeState, rel, false, signature);
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge},new List<Expression>{rel}));
         }
 
         // general geach elimination
@@ -1551,29 +1150,6 @@ public class MentalState : MonoBehaviour {
             AddToKnowledgeState(knowledgeState, ungeached, false, signature);
             AddRule(knowledgeState, signature,
                 new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{ungeached}));
-        }
-
-        // contraposed past introduction
-        // ~past(A) |- ~A
-        if (knowledge.PrejacentHeadedBy(NOT, PAST)) {
-            var notPresent = new Expression(NOT, knowledge.GetArgAsExpression(0).GetArgAsExpression(0));
-            AddToKnowledgeState(knowledgeState, notPresent, false, signature);
-
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{notPresent}));
-            }
-
-        if (knowledge.HeadedBy(SINCE)) {
-            var topic = knowledge.GetArgAsExpression(0);
-            var anchor = new Expression(PAST, knowledge.GetArgAsExpression(1));
-
-            AddToKnowledgeState(knowledgeState, topic, false, signature);
-            AddToKnowledgeState(knowledgeState, anchor, false, signature);
-
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{topic}));
-            AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{anchor}));
         }
 
         return true;

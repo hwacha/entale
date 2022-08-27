@@ -7,8 +7,8 @@ using static Expression;
 
 public class InferenceRule
 {
-    protected List<Expression> Premises;
-    protected List<Expression> Conclusions;
+    public readonly List<Expression> Premises;
+    public readonly List<Expression> Conclusions;
     public Expression Require     { protected set; get; }
     public Expression Supposition { protected set; get; }
 
@@ -98,8 +98,8 @@ public class InferenceRule
         return true;
     }
 
-    public List<Expression> Apply(Expression e) {
-        UnityEngine.Debug.Assert(IsContraposable() || Conclusions.Count == 1);
+    public (List<Expression>, Expression, Expression) Apply(Expression e) {
+        // UnityEngine.Debug.Assert(IsContraposable() || Conclusions.Count == 1);
 
         var lemmas = new List<Expression>();
 
@@ -122,11 +122,13 @@ public class InferenceRule
                 }
             }
             if (matches.Count > 0) {
-                return lemmas;
+                return (lemmas,
+                    Require == null ? null : Require.Substitute(matches.First()),
+                    Supposition == null ? null : Supposition.Substitute(matches.First()));
             }
         }
 
-        return null;
+        return (null, null, null);
     }
 
     public InferenceRule Contrapose() {
@@ -178,11 +180,17 @@ public class InferenceRule
         var instantiatedRequire = Require == null ? null : Require.Substitute(match);
         var instantiatedSupposition = Supposition == null ? null : Supposition.Substitute(match);
 
-        return new InferenceRule(
+        var instantiatedRule = new InferenceRule(
             instantiatedPremises,
             instantiatedConclusions,
             instantiatedRequire,
             instantiatedSupposition);
+
+        if (instantiatedRule.IsExpansive()) {
+            return null;
+        }
+
+        return instantiatedRule;
     }
 
     public override string ToString() {
@@ -270,8 +278,12 @@ public class InferenceRule
         new InferenceRule(new List<Expression>{}, new List<Expression>{new Expression(IDENTITY, XE, XE)}),
         new InferenceRule(new List<Expression>{new Expression(IDENTITY, YE, XE)}, new List<Expression>{new Expression(IDENTITY, XE, YE)}),
         new InferenceRule(
-            new List<Expression>{new Expression(STAR, new Expression(NOT, new Expression(IDENTITY, XE, YE)))},
+            new List<Expression>{new Expression(STAR,new Expression(IDENTITY, XE, YE))},
             new List<Expression>{new Expression(NOT, new Expression(IDENTITY, XE, YE))}),
+
+        // factive
+        // new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(DF, ITET, ST, XE)}),
+        // new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(IF, ST, new Expression(DF, ITET, ST, XE))}),
 
         // converse
         new InferenceRule(
@@ -283,6 +295,10 @@ public class InferenceRule
 
         // past
         new InferenceRule(new List<Expression>{ST}, new List<Expression>{new Expression(PAST, ST)}),
+
+        // since
+        new InferenceRule(new List<Expression>{new Expression(SINCE, ST, TT)}, new List<Expression>{ST}),
+        new InferenceRule(new List<Expression>{new Expression(SINCE, ST, TT)}, new List<Expression>{new Expression(PAST, TT)}),
 
         // good
         new InferenceRule(

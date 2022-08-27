@@ -992,6 +992,8 @@ public class Expression : Argument, IComparable<Expression> {
     // agentives
     public static readonly Expression MAKE = new Expression(new Name(INDIVIDUAL_TRUTH_RELATION, "make"));
 
+    public static readonly Expression ITET = new Expression(new Variable(INDIVIDUAL_TRUTH_RELATION, 0));
+
     // defactivizer: turns a sentence R(P, x) that entails P
     // into one that doesn't entail P
     // df(R, P, x) is also entailed by R(P, x)

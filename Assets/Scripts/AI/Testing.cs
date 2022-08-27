@@ -54,40 +54,74 @@ public class Testing : MonoBehaviour {
         var dd = new Expression(new Name(INDIVIDUAL, "d"));
         var ee = new Expression(new Name(INDIVIDUAL, "e"));
         var ff = new Expression(new Name(INDIVIDUAL, "f"));
+        var gg = new Expression(new Name(INDIVIDUAL, "g"));
 
         MentalState.Initialize(new Expression[]{
+            a,
+            b,
+            new Expression(NOT, c),
+            new Expression(NOT, d),
+            new Expression(TRULY, e),
+            new Expression(NOT, new Expression(NOT, f)),
+            new Expression(AND, g, h),
+            new Expression(NOT, new Expression(OR, j, k)),
+            new Expression(IF, l, a),
+            new Expression(RED, aa),
+            new Expression(ROUND, aa),
+            new Expression(ROUND, bb),
+            new Expression(ALL, FRUIT, RED),
+            new Expression(TOMATO, cc),
+            new Expression(VERY, m),
+            new Expression(IDENTITY, BOB, SELF),
+            new Expression(YIELDS, dd, ee),
+            new Expression(CONVERSE, YIELDS, ff, gg),
+            new Expression(SINCE, n, o),
+            new Expression(GOOD, p),
+            new Expression(GOOD, new Expression(NOT, q)),
+            new Expression(VERY, new Expression(AND, r, s)),
+            new Expression(ALL, PERSON, new Expression(KNOW, t)),
+            new Expression(PERSON, ALICE),
         });
 
-        var (CONTRACTIVE_RULES, EXPANSIVE_RULES) = InferenceRule.RULES;
-
-        Log("CONTRACTIVE RULES");
-        foreach (var rule in CONTRACTIVE_RULES) {
-            Log(rule);
-        }
-        Log("EXPANSIVE RULES");
-        foreach (var rule in EXPANSIVE_RULES) {
-            Log(rule);
-        }
-    }
-
-    public static void TestInferenceRule(InferenceRule rule, Expression e) {
-        var premises = rule.Apply(e);
-
-        var s = new StringBuilder();
-
-        s.Append(rule + " applied to " + e + " yields ");
-
-        if (premises == null) {
-            s.Append("NONE\n");
-            Debug.Log(s.ToString());
-            return;
-        }
-
-        foreach (var premise in premises) {
-            s.Append(premise + ", ");
-        }
-        s.Append("\n");
-        Debug.Log(s.ToString());
+        StartCoroutine(LogBasesStream(MentalState, VERUM));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, FALSUM)));
+        StartCoroutine(LogBasesStream(MentalState, a));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(TRULY, a)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(OR, a, b)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(OR, b, a)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(AND, c, d))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, a, b)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, b, a)));
+        StartCoroutine(LogBasesStream(MentalState, e));
+        StartCoroutine(LogBasesStream(MentalState, f));
+        StartCoroutine(LogBasesStream(MentalState, g));
+        StartCoroutine(LogBasesStream(MentalState, h));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, j)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, k)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, a)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(AND, a, b))));
+        StartCoroutine(LogBasesStream(MentalState, l));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, RED, ROUND)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, cc)));
+        StartCoroutine(LogBasesStream(MentalState, m));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(VERY, c))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IDENTITY, ALICE, ALICE)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(IDENTITY, ALICE, BOB))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(IDENTITY, SELF, BOB)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(CONVERSE, YIELDS, ee, dd)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(YIELDS, gg, ff)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, a)));
+        StartCoroutine(LogBasesStream(MentalState, n));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, o)));
+        StartCoroutine(LogBasesStream(MentalState, o));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GOOD, q))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GOOD, new Expression(NOT, p)))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(OR, m, a))));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, r)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, s)));
+        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, s)));
+        StartCoroutine(LogBasesStream(MentalState, t));
     }
 
     public static string ValueString(List<int> value) {
