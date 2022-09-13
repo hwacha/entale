@@ -28,8 +28,7 @@ public class InferenceRule
             return true;
         }
 
-        return e.HeadedBy(prejacents) &&
-               (e.GetArgAsExpression(0).Head is Variable);
+        return e.HeadedBy(prejacents) && (e.GetArgAsExpression(0).Head is Variable);
     }
 
     // 
@@ -294,6 +293,7 @@ public class InferenceRule
 
         // therefore
         new InferenceRule(new List<Expression>{ST}, new List<Expression>{new Expression(THEREFORE, ST, TT)}, require: TT),
+        new InferenceRule(new List<Expression>{new Expression(STAR, ST)}, new List<Expression>{new Expression(NOT, new Expression(THEREFORE, ST, TT))}, require: TT),
 
         // some
         new InferenceRule(
@@ -307,6 +307,13 @@ public class InferenceRule
         // very
         new InferenceRule(new List<Expression>{new Expression(VERY, ST)}, new List<Expression>{ST}),
 
+        // omega
+        new InferenceRule(new List<Expression>{new Expression(OMEGA, FTF, ST)},
+            new List<Expression>{new Expression(FTF, ST)}),
+        // contraposition causes problems, IsExpansive() should rule it out
+        // new InferenceRule(new List<Expression>{new Expression(OMEGA, FTF, ST)},
+        //     new List<Expression>{new Expression(OMEGA, FTF, new Expression(FTF, ST))}),
+
         // =
         new InferenceRule(new List<Expression>{}, new List<Expression>{new Expression(IDENTITY, XE, XE)}),
         new InferenceRule(new List<Expression>{new Expression(IDENTITY, YE, XE)}, new List<Expression>{new Expression(IDENTITY, XE, YE)}),
@@ -315,8 +322,8 @@ public class InferenceRule
             new List<Expression>{new Expression(NOT, new Expression(IDENTITY, XE, YE))}),
 
         // factive
-        // new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(DF, ITET, ST, XE)}),
-        // new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(IF, ST, new Expression(DF, ITET, ST, XE))}),
+        new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(DF, ITET, ST, XE)}),
+        new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(IF, ST, new Expression(DF, ITET, ST, XE))}),
 
         // converse
         new InferenceRule(
@@ -341,6 +348,17 @@ public class InferenceRule
         // fruit
         new InferenceRule(new List<Expression>{new Expression(TOMATO, XE)}, new List<Expression>{new Expression(FRUIT, XE)}),
         new InferenceRule(new List<Expression>{new Expression(BANANA, XE)}, new List<Expression>{new Expression(FRUIT, XE)}),
+
+        // abilities (TODO)
+        new InferenceRule(
+            new List<Expression>{new Expression(DF, MAKE, new Expression(AT, SELF, XE), SELF)},
+            new List<Expression>{new Expression(AT, SELF, XE)}),
+        new InferenceRule(
+            new List<Expression>{
+                new Expression(AT, SELF, XE),
+                new Expression(DF, MAKE, new Expression(INFORMED, ST, XE), SELF)
+            },
+            new List<Expression>{new Expression(INFORMED, ST, XE)}),
     };
 
     private static (List<InferenceRule>, List<InferenceRule>) SortRules() {
@@ -376,5 +394,5 @@ public class InferenceRule
         return (contractiveRules, expansiveRules);
     }
 
-    public static (List<InferenceRule>, List<InferenceRule>) RULES = SortRules();
+    public static readonly (List<InferenceRule>, List<InferenceRule>) RULES = SortRules();
 }

@@ -371,7 +371,7 @@ public class Expression : Argument, IComparable<Expression> {
     }
 
     public bool PrejacentHeadedBy(Expression f, params Expression[] exprs) {
-        if (!(f.Type is FunctionalType) || (f.Type as FunctionalType).GetNumArgs() != 1) {
+        if (!(f.Type is FunctionalType) /* || (f.Type as FunctionalType).GetNumArgs() != 1 */) {
             throw new ArgumentException("f(x) must be a one-place function");
         }
         if (!this.HeadedBy(f)) {
@@ -434,40 +434,6 @@ public class Expression : Argument, IComparable<Expression> {
         return new Expression(newHead, substitutedArgs);
     }
 
-    public Expression ZeroTimeIndices() {
-        if (Type.Equals(TIME)) {
-            return new Expression(new Parameter(TIME, 0));
-        }
-        Argument[] replacedArgs = new Argument[Args.Length];
-        for (int i = 0; i < Args.Length; i++) {
-            if (Args[i] is Expression) {
-                replacedArgs[i] = (Args[i] as Expression).ZeroTimeIndices();
-            } else {
-                replacedArgs[i] = Args[i];
-            }
-        }
-
-        return new Expression(new Expression(Head), replacedArgs);
-    }
-
-    private void GetSelfSubstitution(Dictionary<Variable, Expression> sub) {
-        if (Head is Variable) {
-            sub[(Variable) Head] = this;
-        }
-
-        foreach (var arg in Args) {
-            if (arg is Expression) {
-                ((Expression) arg).GetSelfSubstitution(sub);
-            }
-        }
-    }
-
-    public Dictionary<Variable, Expression> GetSelfSubstitution() {
-        var sub = new Dictionary<Variable, Expression>();
-        GetSelfSubstitution(sub);
-        return sub;
-    }
-
     // find the mgu (most general unifier) between this expression
     // and that expression. A unifier is a variable substitution that,
     // when applied to both expressions, leads the expressions to
@@ -521,8 +487,6 @@ public class Expression : Argument, IComparable<Expression> {
         // we have a singular variable. Do variable assignment here.
         if (this.Head is Variable && this.Head.Type.Equals(this.Type)) {
             return AddAssignment((Variable) this.Head, that, substitutions);
-        } else if (that.Head is Variable && that.Head.Type.Equals(that.Type)) {
-            return AddAssignment((Variable) that.Head, this, substitutions);
         }
 
         // @Note: this is commented out to make it so unification
@@ -874,6 +838,24 @@ public class Expression : Argument, IComparable<Expression> {
         return a.CompareTo(b) > 0;
     }
 
+    public (Expression, Expression) GetBounds() {
+        var variables = this.GetVariables();
+
+        Expression bottom = null;
+        Expression top = null;
+
+        var bottomSubstitution = new Dictionary<Variable, Expression>();
+        var topSubstitution    = new Dictionary<Variable, Expression>();
+        foreach (Variable v in variables) {
+            bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
+            topSubstitution.Add(v, new Expression(new Top(v.Type)));
+        }
+
+        bottom = this.Substitute(bottomSubstitution);
+        top    = this.Substitute(topSubstitution);
+        return (bottom, top);
+    }
+
     // Individual constants
     // function words
     public static readonly Expression THIS = new Expression(new Name(INDIVIDUAL, "this"));
@@ -1030,9 +1012,10 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression DENY   = new Expression(new Name(TRUTH_ASSERTION_FUNCTION, "deny"));
 
     // assertion constants
-    public static readonly Expression YES   = new Expression(new Name(ASSERTION, "assert"));
-    public static readonly Expression NO    = new Expression(new Name(ASSERTION, "deny"));
-    public static readonly Expression MAYBE = new Expression(new Name(ASSERTION, "maybe"));
+    public static readonly Expression YES    = new Expression(new Name(ASSERTION, "assert"));
+    public static readonly Expression NO     = new Expression(new Name(ASSERTION, "deny"));
+    public static readonly Expression POSIGN = new Expression(new Name(ASSERTION, "posign"));
+    public static readonly Expression NEGIGN = new Expression(new Name(ASSERTION, "negign"));
 
     // conformity constants
     public static readonly Expression ACCEPT = new Expression(new Name(CONFORMITY_VALUE, "accept"));

@@ -16,16 +16,6 @@ public class Actuator : MonoBehaviour {
     }
 
     protected IEnumerator Say(Expression e, float time) {
-        // TODO: figure this stuff out
-        // var eWithoutParameters = new Container<Expression>(null);
-        // Agent.MentalState.StartCoroutine(Agent.MentalState.ReplaceParameters(e, eWithoutParameters));
-
-        // while (eWithoutParameters.Item == null) {
-        //     yield return null;
-        // }
-
-        // GameObject eContainer = ArgumentContainer.From(eWithoutParameters.Item);
-
         var eContainer = ArgumentContainer.From(e);
         ArgumentContainer eContainerScript = eContainer.GetComponent<ArgumentContainer>();
 
@@ -46,91 +36,39 @@ public class Actuator : MonoBehaviour {
     public IEnumerator RespondTo(Expression utterance, Expression speaker) {
         if (utterance.Type.Equals(ASSERTION)) {
             if (utterance.Head.Equals(ASSERT.Head)) {
-                Agent.MentalState.ReceiveAssertion(
-                    utterance.GetArgAsExpression(0),
-                    speaker);
-
-                var negativeProofs = new ProofBases();
-                var doneNegative = new Container<bool>(false);
-
-                Agent.MentalState.StartCoroutine(
-                    Agent.MentalState.StreamProofs(
-                        negativeProofs,
-                        new Expression(NOT, utterance.GetArgAsExpression(0)),
-                        doneNegative));
-
-                while (!doneNegative.Item) {
-                    yield return new WaitForSeconds(0.5f);
-                }
-
-                if (negativeProofs.IsEmpty()) {
-                    StartCoroutine(Say(YES, 5));
-                    yield break;
-                } else {
-                    StartCoroutine(Say(NO, 5));
-                }
-
-                
-            }
-            if (utterance.Head.Equals(DENY.Head)) {
+                Agent.MentalState.ReceiveAssertion(utterance.GetArgAsExpression(0), speaker);
+                StartCoroutine(Say(YES, 5));
+            } else if (utterance.Head.Equals(DENY.Head)) {
                 Agent.MentalState.ReceiveAssertion(
                     new Expression(NOT, utterance.GetArgAsExpression(0)), speaker);
-
-                var positiveProofs = new ProofBases();
-                var donePositive = new Container<bool>(false);
-
-                Agent.MentalState.StartCoroutine(
-                    Agent.MentalState.StreamProofs(
-                        positiveProofs,
-                        new Expression(NOT, utterance.GetArgAsExpression(0)),
-                        donePositive));
-
-                while (!donePositive.Item) {
-                    yield return new WaitForSeconds(0.5f);
-                }
-
-                if (positiveProofs.IsEmpty()) {
-                    StartCoroutine(Say(NO, 5));
-                } else {
-                    StartCoroutine(Say(YES, 5));
-                }
+                StartCoroutine(Say(NO, 5));
             }
             yield break;
         }
 
         if (utterance.Type.Equals(QUESTION)) {
             if (utterance.Head.Equals(ASK.Head)) {
-                var positiveProofs = new ProofBases();
-                var donePositive = new Container<bool>(false);
-                Agent.MentalState.StartCoroutine(Agent.MentalState.StreamProofs(
-                    positiveProofs,
-                    utterance.GetArgAsExpression(0),
-                    donePositive));
+                var positiveProofs = Agent.MentalState.GetProofs(utterance.GetArgAsExpression(0));
+                var negativeProofs = Agent.MentalState.GetProofs(
+                        new Expression(NOT, utterance.GetArgAsExpression(0)));
 
-                var negativeProofs = new ProofBases();
-                var doneNegative = new Container<bool>(false);
-                
-                Agent.MentalState.StartCoroutine(
-                    Agent.MentalState.StreamProofs(
-                        negativeProofs,
-                        new Expression(NOT, utterance.GetArgAsExpression(0)),
-                        doneNegative));
-
-                while (!donePositive.Item || !doneNegative.Item) {
-                    yield return new WaitForSeconds(0.5f);
-                }
-
-                if (!positiveProofs.IsEmpty()) {
-                    StartCoroutine(Say(YES, 5));
+                if (positiveProofs.IsEmpty() && negativeProofs.IsEmpty()) {
+                    StartCoroutine(Say(NEGIGN, 5));
                     yield break;
                 }
 
-                if (!negativeProofs.IsEmpty()) {
+                if (positiveProofs.IsEmpty()) {
                     StartCoroutine(Say(NO, 5));
                     yield break;
                 }
 
-                StartCoroutine(Say(MAYBE, 5));
+                if (negativeProofs.IsEmpty()) {
+                    StartCoroutine(Say(YES, 5));
+                    yield break;
+                }
+
+                StartCoroutine(Say(POSIGN, 5));
+                yield break;
             }
 
             yield break;
@@ -139,21 +77,13 @@ public class Actuator : MonoBehaviour {
         if (utterance.Type.Equals(CONFORMITY_VALUE)) {
             if (utterance.Head.Equals(WOULD.Head)) {
                 var content = utterance.GetArgAsExpression(0);
-                var proofs = new ProofBases();
-                var done = new Container<bool>(false);
+                var abilityProofs = Agent.MentalState.GetProofs(new Expression(IF, content, new Expression(DF, MAKE, content, SELF)));
 
-                Agent.MentalState.StartCoroutine(
-                    Agent.MentalState.StreamProofs(proofs, content, done, ProofType.Plan));
-
-                while (!done.Item) {
-                    yield return new WaitForSeconds(0.5f);
-                }
-
-                if (!proofs.IsEmpty()) {
-                    StartCoroutine(Say(ACCEPT, 5));
+                if (abilityProofs.IsEmpty()) {
+                    StartCoroutine(Say(REFUSE, 5));
                     Agent.MentalState.ReceiveRequest(content, speaker);
                 } else {
-                    StartCoroutine(Say(REFUSE, 5));
+                    StartCoroutine(Say(ACCEPT, 5));
                 }
             }
             
@@ -167,13 +97,7 @@ public class Actuator : MonoBehaviour {
     // @Note we want this to be interruptible
     public IEnumerator ExecutePlan() {
         while (true) {
-            List<Expression> plan = new List<Expression>();
-            var done = new Container<bool>(false);
-            Agent.MentalState.StartCoroutine(Agent.MentalState.DecideCurrentPlan(plan, done));
-
-            while (!done.Item) {
-                yield return null;
-            }
+            List<Expression> plan = Agent.MentalState.DecideCurrentPlan();
 
             foreach (Expression action in plan) {
                 if (!action.Head.Equals(WILL.Head)) {
@@ -214,6 +138,7 @@ public class Actuator : MonoBehaviour {
 
             yield return null;
         }
+        yield break;
     }
 
 }

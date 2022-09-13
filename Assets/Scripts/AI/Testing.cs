@@ -57,78 +57,33 @@ public class Testing : MonoBehaviour {
         var gg = new Expression(new Name(INDIVIDUAL, "g"));
 
         MentalState.Initialize(new Expression[]{
-            a,
-            b,
-            new Expression(NOT, c),
-            new Expression(NOT, d),
-            new Expression(TRULY, e),
-            new Expression(NOT, new Expression(NOT, f)),
-            new Expression(AND, g, h),
-            new Expression(NOT, new Expression(OR, j, k)),
-            new Expression(IF, l, a),
-            new Expression(RED, aa),
-            new Expression(ROUND, aa),
-            new Expression(ROUND, bb),
-            new Expression(ALL, FRUIT, RED),
-            new Expression(TOMATO, cc),
-            new Expression(VERY, m),
-            new Expression(IDENTITY, BOB, SELF),
-            new Expression(YIELDS, dd, ee),
-            new Expression(CONVERSE, YIELDS, ff, gg),
-            new Expression(SINCE, n, o),
-            new Expression(GOOD, p),
-            new Expression(GOOD, new Expression(NOT, q)),
-            new Expression(VERY, new Expression(AND, r, s)),
-            new Expression(ALL, PERSON, new Expression(KNOW, t)),
-            new Expression(PERSON, ALICE),
-            new Expression(IF, c, u),
-            new Expression(NOT, new Expression(ROUND, gg)),
-            new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION_2), AND, BLUE, YELLOW, CHARLIE),
+            new Expression(OMEGA, VERY, a),
+            new Expression(OMEGA, new Expression(OMEGA, VERY), b),
+            new Expression(NOT, new Expression(RED, ALICE)),
+            c,
+            new Expression(VERY, d),
         });
+        
+        // PrintProofs(MentalState, a);
+        // PrintProofs(MentalState, new Expression(VERY, new Expression(VERY, new Expression(VERY, a))));
+        // PrintProofs(MentalState, new Expression(VERY, new Expression(VERY, new Expression(VERY, b))));
+        // PrintProofs(MentalState, new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, a))));
+        // PrintProofs(MentalState, new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, b))));
+        // PrintProofs(MentalState, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION), NOT, RED, ALICE));
 
-        StartCoroutine(LogBasesStream(MentalState, VERUM));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, FALSUM)));
-        StartCoroutine(LogBasesStream(MentalState, a));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(TRULY, a)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(NOT, a))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(OR, a, b)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(OR, b, a)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(AND, c, d))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, a, b)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(AND, b, a)));
-        StartCoroutine(LogBasesStream(MentalState, e));
-        StartCoroutine(LogBasesStream(MentalState, f));
-        StartCoroutine(LogBasesStream(MentalState, g));
-        StartCoroutine(LogBasesStream(MentalState, h));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, j)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, k)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, a)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IF, a, new Expression(AND, a, b))));
-        StartCoroutine(LogBasesStream(MentalState, l));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(SOME, RED, ROUND)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(RED, cc)));
-        StartCoroutine(LogBasesStream(MentalState, m));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(VERY, c))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IDENTITY, ALICE, ALICE)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(IDENTITY, ALICE, BOB))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(IDENTITY, SELF, BOB)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(CONVERSE, YIELDS, ee, dd)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(YIELDS, gg, ff)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, a)));
-        StartCoroutine(LogBasesStream(MentalState, n));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(PAST, o)));
-        StartCoroutine(LogBasesStream(MentalState, o));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GOOD, q))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, new Expression(GOOD, new Expression(NOT, p)))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, new Expression(OR, m, a))));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, r)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, s)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(VERY, s)));
-        StartCoroutine(LogBasesStream(MentalState, t));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(NOT, u)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION), NOT, ROUND, gg)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(BLUE, CHARLIE)));
-        StartCoroutine(LogBasesStream(MentalState, new Expression(YELLOW, CHARLIE)));
+        PrintProofs(MentalState, new Expression(TRULY, c));
+        PrintProofs(MentalState, new Expression(TRULY, new Expression(TRULY, c)));
+        PrintProofs(MentalState, new Expression(OMEGA, TRULY, c));
+
+        PrintProofs(MentalState, new Expression(KNOW, c, SELF));
+        PrintProofs(MentalState, new Expression(STAR, e));
+        PrintProofs(MentalState, new Expression(NOT, new Expression(KNOW, e, SELF)));
+
+        PrintProofs(MentalState, new Expression(IF, new Expression(KNOW, f, SELF), f));
+    }
+
+    public static void PrintProofs(MentalState m, Expression e) {
+        Debug.Log(e + " is proved by " + m.GetProofs(e));
     }
 
     public static string ValueString(List<int> value) {
@@ -152,52 +107,52 @@ public class Testing : MonoBehaviour {
         Debug.Log("u(" + e + ") = " + ValueString(eAsNumber));
     }
 
-    public static IEnumerator Assert(MentalState m, Expression content, Expression speaker) {
-        yield return new WaitForSeconds(5);
-        m.StartCoroutine(m.ReceiveAssertion(content, speaker));
-    }
+    // public static IEnumerator Assert(MentalState m, Expression content, Expression speaker) {
+    //     yield return new WaitForSeconds(5);
+    //     m.StartCoroutine(m.ReceiveAssertion(content, speaker));
+    // }
 
-    public static IEnumerator TestEstimateValueFor(MentalState m, List<Expression> goods, Expression goal) {
-        var estimates = new List<Expression>();
-        var done = new Container<bool>(false);
-        m.StartCoroutine(m.EstimateValueFor(goal, goods, estimates, done));
+    // public static IEnumerator TestEstimateValueFor(MentalState m, List<Expression> goods, Expression goal) {
+    //     var estimates = new List<Expression>();
+    //     var done = new Container<bool>(false);
+    //     m.StartCoroutine(m.EstimateValueFor(goal, goods, estimates, done));
 
-        while (!done.Item) {
-            yield return null;
-        }
+    //     while (!done.Item) {
+    //         yield return null;
+    //     }
 
-        var str = new StringBuilder();
-        str.Append("u(" + goal + ") is estimated by: {\n");
-        foreach (var estimate in estimates) {
-            str.Append("\t" + estimate + "\n");
-        }
-        str.Append("}");
+    //     var str = new StringBuilder();
+    //     str.Append("u(" + goal + ") is estimated by: {\n");
+    //     foreach (var estimate in estimates) {
+    //         str.Append("\t" + estimate + "\n");
+    //     }
+    //     str.Append("}");
 
-        Log(str.ToString());
-    }
+    //     Log(str.ToString());
+    // }
 
-    public static IEnumerator TestDecideCurrentPlan(MentalState m) {
-        var plan = new List<Expression>();
-        var done = new Container<bool>(false);
+    // public static IEnumerator TestDecideCurrentPlan(MentalState m) {
+    //     var plan = new List<Expression>();
+    //     var done = new Container<bool>(false);
 
-        m.StartCoroutine(m.DecideCurrentPlan(plan, done));
+    //     m.StartCoroutine(m.DecideCurrentPlan(plan, done));
 
-        while (!done.Item) {
-            yield return null;
-        }
+    //     while (!done.Item) {
+    //         yield return null;
+    //     }
 
-        var planString = new StringBuilder();
-        planString.Append("<");
-        foreach (var step in plan) {
-            planString.Append(step + ", ");
-        }
-        if (plan.Count > 0) {
-            planString.Remove(planString.Length - 2, 2);
-        }
-        planString.Append(">");
+    //     var planString = new StringBuilder();
+    //     planString.Append("<");
+    //     foreach (var step in plan) {
+    //         planString.Append(step + ", ");
+    //     }
+    //     if (plan.Count > 0) {
+    //         planString.Remove(planString.Length - 2, 2);
+    //     }
+    //     planString.Append(">");
 
-        Debug.Log(planString.ToString());
-    }
+    //     Debug.Log(planString.ToString());
+    // }
 
     public static String Verbose(Expression e) {
         return e.ToString() + " : " + e.Type.ToString() + " #" + e.Depth;
@@ -225,33 +180,33 @@ public class Testing : MonoBehaviour {
         return a + ", " + b + ": " + SubstitutionString(a.Unify(b));
     }
 
-    public static IEnumerator LogBasesStream(MentalState m, Expression e, ProofType pt = Proof, float timeout = -1) {
-        var result = new ProofBases();
-        var done = new Container<bool>(false);
+    // public static IEnumerator LogBasesStream(MentalState m, Expression e, ProofType pt = Proof, float timeout = -1) {
+    //     var result = new ProofBases();
+    //     var done = new Container<bool>(false);
         
-        var startTime = Time.time;
-        var proofRoutine = m.StreamProofs(result, e, done, pt);
-        m.StartCoroutine(proofRoutine);
+    //     var startTime = Time.time;
+    //     var proofRoutine = m.StreamProofs(result, e, done, pt);
+    //     m.StartCoroutine(proofRoutine);
 
-        var waitingString = "waiting for '" + e + "' to be proved...";
-        var foundResult = "found partial result. go to LogBasesStream() to see it.";
-        var isProvedByString = "'" + e + "'" + " is " + (pt == Proof ? "proved" : "planned") + " by: ";
-        while (!done.Item) {
-            if (startTime + timeout >= Time.time) {
-                m.StopCoroutine(proofRoutine);
-                break;
-            }
-            // Log(waitingString);
-            if (!result.IsEmpty()) {
-                // Log(foundResult);
-                // Log(isProvedByString + result);
-            }
+    //     var waitingString = "waiting for '" + e + "' to be proved...";
+    //     var foundResult = "found partial result. go to LogBasesStream() to see it.";
+    //     var isProvedByString = "'" + e + "'" + " is " + (pt == Proof ? "proved" : "planned") + " by: ";
+    //     while (!done.Item) {
+    //         if (startTime + timeout >= Time.time) {
+    //             m.StopCoroutine(proofRoutine);
+    //             break;
+    //         }
+    //         // Log(waitingString);
+    //         if (!result.IsEmpty()) {
+    //             // Log(foundResult);
+    //             // Log(isProvedByString + result);
+    //         }
 
-            if (m.FrameTimer.FrameDuration >= MentalState.TIME_BUDGET) {
-                yield return null;
-            }
-        }
-        Log(isProvedByString + result);
-        yield break;
-    }
+    //         if (m.FrameTimer.FrameDuration >= MentalState.TIME_BUDGET) {
+    //             yield return null;
+    //         }
+    //     }
+    //     Log(isProvedByString + result);
+    //     yield break;
+    // }
 }
