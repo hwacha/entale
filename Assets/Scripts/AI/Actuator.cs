@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -9,10 +10,37 @@ using static SemanticType;
 
 public class Actuator : MonoBehaviour {
     public Agent Agent;
+
+    protected bool actionInProgress = false;
+
     public NavMeshAgent NavMeshAgent { protected set; get; }
+    protected Queue<Expression> expressionsToSay;
+    protected Queue<Vector3> destinations;
 
     void Start() {
+        expressionsToSay = new Queue<Expression>();
+        destinations = new Queue<Vector3>();
         NavMeshAgent = Agent.GetComponent<NavMeshAgent>();
+    }
+
+    void Update() {
+        if (!actionInProgress && destinations.Count > 0) {
+            actionInProgress = true;
+            Walk(destinations.Dequeue());
+        }
+        if (!actionInProgress && expressionsToSay.Count > 0) {
+            actionInProgress = true;
+            StartCoroutine(Say(expressionsToSay.Dequeue(), 5));
+        }
+    }
+
+    protected IEnumerator Walk(Vector3 destination) {
+        NavMeshAgent.SetDestination(destination);
+        while (Vector3.Distance(transform.position, destination) > NavMeshAgent.stoppingDistance + 1) {
+            NavMeshAgent.SetDestination(destination);
+            yield return new WaitForSeconds(0.5f);
+        }
+        actionInProgress = false;
     }
 
     protected IEnumerator Say(Expression e, float time) {
@@ -29,21 +57,21 @@ public class Actuator : MonoBehaviour {
 
         yield return new WaitForSeconds(time);
         Destroy(eContainer);
-        yield break;
+        actionInProgress = false;
     }
 
     // @Note this should be removed when the planner is better.
-    public IEnumerator RespondTo(Expression utterance, Expression speaker) {
+    public void RespondTo(Expression utterance, Expression speaker) {
         if (utterance.Type.Equals(ASSERTION)) {
             if (utterance.Head.Equals(ASSERT.Head)) {
                 Agent.MentalState.ReceiveAssertion(utterance.GetArgAsExpression(0), speaker);
-                StartCoroutine(Say(YES, 5));
+                expressionsToSay.Enqueue(YES);
             } else if (utterance.Head.Equals(DENY.Head)) {
                 Agent.MentalState.ReceiveAssertion(
                     new Expression(NOT, utterance.GetArgAsExpression(0)), speaker);
-                StartCoroutine(Say(NO, 5));
+                expressionsToSay.Enqueue(NO);
             }
-            yield break;
+            return;
         }
 
         if (utterance.Type.Equals(QUESTION)) {
@@ -53,25 +81,16 @@ public class Actuator : MonoBehaviour {
                         new Expression(NOT, utterance.GetArgAsExpression(0)));
 
                 if (positiveProofs.IsEmpty() && negativeProofs.IsEmpty()) {
-                    StartCoroutine(Say(NEGIGN, 5));
-                    yield break;
+                    expressionsToSay.Enqueue(NEGIGN);
+                } else if (positiveProofs.IsEmpty()) {
+                    expressionsToSay.Enqueue(NO);
+                } else if (negativeProofs.IsEmpty()) {
+                    expressionsToSay.Enqueue(YES);
+                } else {
+                    expressionsToSay.Enqueue(POSIGN);
                 }
-
-                if (positiveProofs.IsEmpty()) {
-                    StartCoroutine(Say(NO, 5));
-                    yield break;
-                }
-
-                if (negativeProofs.IsEmpty()) {
-                    StartCoroutine(Say(YES, 5));
-                    yield break;
-                }
-
-                StartCoroutine(Say(POSIGN, 5));
-                yield break;
+                return;
             }
-
-            yield break;
         }
 
         if (utterance.Type.Equals(CONFORMITY_VALUE)) {
@@ -80,65 +99,61 @@ public class Actuator : MonoBehaviour {
                 var abilityProofs = Agent.MentalState.GetProofs(new Expression(IF, content, new Expression(DF, MAKE, content, SELF)));
 
                 if (abilityProofs.IsEmpty()) {
-                    StartCoroutine(Say(REFUSE, 5));
-                    Agent.MentalState.ReceiveRequest(content, speaker);
+                    expressionsToSay.Enqueue(REFUSE);
                 } else {
-                    StartCoroutine(Say(ACCEPT, 5));
+                    expressionsToSay.Enqueue(ACCEPT);
+                    Agent.MentalState.ReceiveRequest(content, speaker);
                 }
             }
-            
-            yield break;
+            return;
         }
-
-        yield break;
     }
 
 
     // @Note we want this to be interruptible
-    public IEnumerator ExecutePlan() {
-        while (true) {
-            List<Expression> plan = Agent.MentalState.DecideCurrentPlan();
+    public void ExecutePlan() {
+        List<Expression> plan = Agent.MentalState.DecideCurrentPlan();
 
-            foreach (Expression action in plan) {
-                if (!action.Head.Equals(WILL.Head)) {
-                    throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
-                }
-
-                // Debug.Log(action);
-                // StartCoroutine(Say(action, 1));
-
-                var content = action.GetArgAsExpression(0);
-
-                if (content.Equals(NEUTRAL)) {
-                    // Debug.Log("Busy doin' nothin'");
-                }
-
-                // at(self, X)
-                else if (content.Head.Equals(AT.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
-                    var destination = content.GetArgAsExpression(1);
-                    // assumption: if we find this in a plan,
-                    // then the location of X should be known.
-                    var location = Agent.MentalState.Locations[destination];
-                    NavMeshAgent.SetDestination(location);
-                    while (Vector3.Distance(transform.position, location) > NavMeshAgent.stoppingDistance + 1) {
-                        location = Agent.MentalState.Locations[destination];
-                        NavMeshAgent.SetDestination(location);
-                        yield return null;
-                    }
-                }
-
-                else if (content.Head.Equals(INFORMED.Head)) {
-                    var message = new Expression(ASSERT, content.GetArgAsExpression(0));
-                    // Debug.Log("saying " + message);
-                    StartCoroutine(Say(message, 1.5f));
-                }
-
-                yield return new WaitForSeconds(2);
+        foreach (Expression action in plan) {
+            if (!action.Head.Equals(WILL.Head)) {
+                throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
             }
 
-            yield return null;
+            // Debug.Log(action);
+            // expressionsToSay.Enqueue(action);
+
+            while (actionInProgress) {
+                Thread.Sleep(1000);
+            }
+
+            var content = action.GetArgAsExpression(0);
+
+            if (content.Equals(NEUTRAL)) {
+                // Debug.Log("Busy doin' nothin'");
+            }
+
+            // at(self, X)
+            else if (content.Head.Equals(AT.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
+                var destination = content.GetArgAsExpression(1);
+                // assumption: if we find this in a plan,
+                // then the location of X should be known.
+                if (Agent.MentalState.Locations.ContainsKey(destination)) {
+                    destinations.Enqueue(Agent.MentalState.Locations[destination]);
+                } else {
+                    break;
+                }
+            }
+
+            else if (content.Head.Equals(INFORMED.Head)) {
+                var message = new Expression(ASSERT, content.GetArgAsExpression(0));
+                // Debug.Log("saying " + message);
+                expressionsToSay.Enqueue(message);
+            }
+
+            while (actionInProgress) {
+                Thread.Sleep(1000);
+            }
         }
-        yield break;
     }
 
 }

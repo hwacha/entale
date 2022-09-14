@@ -14,6 +14,7 @@ public class Bob : Agent
                 new Expression(RED, SELF),
                 new Expression(GEN, TOMATO, RED),
                 new Expression(GEN, BANANA, YELLOW),
+                new Expression(GOOD, new Expression(INFORMED, new Expression(RED, SELF), EVAN)),
             }
         );
         base.Start();

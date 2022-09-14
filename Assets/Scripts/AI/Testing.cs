@@ -3,6 +3,7 @@ using System;
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using static UnityEngine.Debug;
 using static SemanticType;
 using static Expression;
@@ -15,6 +16,8 @@ public class Testing : MonoBehaviour {
     private FrameTimer FrameTimer;
 
     public MentalState MentalState;
+
+    Thread thread;
 
     void Start() {
         FrameTimer = gameObject.GetComponent<FrameTimer>();
@@ -56,30 +59,26 @@ public class Testing : MonoBehaviour {
         var ff = new Expression(new Name(INDIVIDUAL, "f"));
         var gg = new Expression(new Name(INDIVIDUAL, "g"));
 
-        MentalState.Initialize(new Expression[]{
-            new Expression(OMEGA, VERY, a),
-            new Expression(OMEGA, new Expression(OMEGA, VERY), b),
-            new Expression(NOT, new Expression(RED, ALICE)),
-            c,
-            new Expression(VERY, d),
+        MentalState.Initialize(new Expression[]{});
+
+        Expression nv = VERUM;
+
+        for (int i = 0; i < 10; i++) {
+            nv = new Expression(NOT, nv);
+        }
+
+        thread = new Thread(() => {
+            // while (true) {
+            //     PrintProofs(MentalState, nv);
+            //     Thread.Sleep(1000);
+            // }
         });
-        
-        // PrintProofs(MentalState, a);
-        // PrintProofs(MentalState, new Expression(VERY, new Expression(VERY, new Expression(VERY, a))));
-        // PrintProofs(MentalState, new Expression(VERY, new Expression(VERY, new Expression(VERY, b))));
-        // PrintProofs(MentalState, new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, a))));
-        // PrintProofs(MentalState, new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, new Expression(OMEGA, VERY, b))));
-        // PrintProofs(MentalState, new Expression(Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION), NOT, RED, ALICE));
 
-        PrintProofs(MentalState, new Expression(TRULY, c));
-        PrintProofs(MentalState, new Expression(TRULY, new Expression(TRULY, c)));
-        PrintProofs(MentalState, new Expression(OMEGA, TRULY, c));
+        thread.Start();
+    }
 
-        PrintProofs(MentalState, new Expression(KNOW, c, SELF));
-        PrintProofs(MentalState, new Expression(STAR, e));
-        PrintProofs(MentalState, new Expression(NOT, new Expression(KNOW, e, SELF)));
-
-        PrintProofs(MentalState, new Expression(IF, new Expression(KNOW, f, SELF), f));
+    void OnApplicationQuit() {
+        thread.Abort();
     }
 
     public static void PrintProofs(MentalState m, Expression e) {
@@ -179,34 +178,4 @@ public class Testing : MonoBehaviour {
     public static String MatchesString(Expression a, Expression b) {
         return a + ", " + b + ": " + SubstitutionString(a.Unify(b));
     }
-
-    // public static IEnumerator LogBasesStream(MentalState m, Expression e, ProofType pt = Proof, float timeout = -1) {
-    //     var result = new ProofBases();
-    //     var done = new Container<bool>(false);
-        
-    //     var startTime = Time.time;
-    //     var proofRoutine = m.StreamProofs(result, e, done, pt);
-    //     m.StartCoroutine(proofRoutine);
-
-    //     var waitingString = "waiting for '" + e + "' to be proved...";
-    //     var foundResult = "found partial result. go to LogBasesStream() to see it.";
-    //     var isProvedByString = "'" + e + "'" + " is " + (pt == Proof ? "proved" : "planned") + " by: ";
-    //     while (!done.Item) {
-    //         if (startTime + timeout >= Time.time) {
-    //             m.StopCoroutine(proofRoutine);
-    //             break;
-    //         }
-    //         // Log(waitingString);
-    //         if (!result.IsEmpty()) {
-    //             // Log(foundResult);
-    //             // Log(isProvedByString + result);
-    //         }
-
-    //         if (m.FrameTimer.FrameDuration >= MentalState.TIME_BUDGET) {
-    //             yield return null;
-    //         }
-    //     }
-    //     Log(isProvedByString + result);
-    //     yield break;
-    // }
 }

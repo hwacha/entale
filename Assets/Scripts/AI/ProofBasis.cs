@@ -46,8 +46,7 @@ public class ProofBasis {
         }
     }
 
-    public ProofBasis() : this(new List<Expression>(),
-        new Substitution()) {}
+    public ProofBasis() : this(new List<Expression>(), new Substitution()) {}
 
     // the product basis a x b.
     public ProofBasis(ProofBasis a, ProofBasis b) {

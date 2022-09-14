@@ -3,7 +3,6 @@ using System.Text;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
 using System.Reflection;
 using static SemanticType;
 using static Expression;
@@ -44,8 +43,6 @@ public class MentalState : MonoBehaviour {
     public FrameTimer FrameTimer;
 
     protected int ParameterID;
-
-    protected Thread thread;
 
     protected int numCalls = 0;
 
@@ -241,7 +238,8 @@ public class MentalState : MonoBehaviour {
         return new ProofBasis(basis.Premises.ToList(), trimmedSubstitution);
     }
 
-    private ProofBases GetProofs(Expression lemma,
+    private ProofBases GetProofs(
+        Expression lemma,
         HashSet<Expression> triedExpressions,
         KnowledgeState knowledgeState,
         ProofType pt,

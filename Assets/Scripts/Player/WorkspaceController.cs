@@ -686,8 +686,7 @@ public class WorkspaceController : MonoBehaviour
                         var targetedActuator = targetedObject.GetComponent<Actuator>();
 
                         if (targetedMentalState != null && targetedActuator != null) {
-                            targetedActuator.StartCoroutine(
-                                targetedActuator.RespondTo(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression, Expression.CHARLIE));
+                            targetedActuator.RespondTo(EquippedExpression.GetComponent<ArgumentContainer>().Argument as Expression, Expression.CHARLIE);
 
                             Destroy(EquippedExpression);
                             EquippedExpression = null;

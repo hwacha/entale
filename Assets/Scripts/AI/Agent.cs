@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 using static Expression;
@@ -9,10 +10,23 @@ public abstract class Agent : MonoBehaviour
     public MentalState MentalState;
     public Actuator Actuator;
 
+    public Thread thread;
+
     protected virtual void Start()
     {
-        // @Note: is the best way to customize this
-        // class inheretance?
-        StartCoroutine(Actuator.ExecutePlan());
+        thread = new Thread(() => {
+            while (true) {
+                Actuator.ExecutePlan();
+                Thread.Sleep(2000);
+            }
+        });
+
+        thread.Start();
+    }
+
+    void OnApplicationQuit() {
+        if (thread != null) {
+            thread.Abort();
+        }
     }
 }

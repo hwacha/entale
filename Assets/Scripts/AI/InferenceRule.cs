@@ -345,6 +345,16 @@ public class InferenceRule
             new List<Expression>{new Expression(GOOD, new Expression(NOT, ST))},
             new List<Expression>{new Expression(NOT, new Expression(GOOD, ST))}),
 
+        // at
+        // reflexivity
+        new InferenceRule(
+            new List<Expression>{},
+            new List<Expression>{new Expression(AT, XE, XE)}),
+        // symmetry
+        new InferenceRule(
+            new List<Expression>{new Expression(AT, XE, YE)},
+            new List<Expression>{new Expression(AT, YE, XE)}),
+
         // fruit
         new InferenceRule(new List<Expression>{new Expression(TOMATO, XE)}, new List<Expression>{new Expression(FRUIT, XE)}),
         new InferenceRule(new List<Expression>{new Expression(BANANA, XE)}, new List<Expression>{new Expression(FRUIT, XE)}),
