@@ -14,31 +14,30 @@ public class Actuator : MonoBehaviour {
     protected bool actionInProgress = false;
 
     public NavMeshAgent NavMeshAgent { protected set; get; }
-    protected Queue<Expression> expressionsToSay;
-    protected Queue<Vector3> destinations;
+
+    protected Queue<Action> todo;
 
     void Start() {
-        expressionsToSay = new Queue<Expression>();
-        destinations = new Queue<Vector3>();
+        todo = new Queue<Action>();
         NavMeshAgent = Agent.GetComponent<NavMeshAgent>();
     }
 
     void Update() {
-        if (!actionInProgress && destinations.Count > 0) {
+        if (!actionInProgress && todo.Count > 0) {
             actionInProgress = true;
-            Walk(destinations.Dequeue());
-        }
-        if (!actionInProgress && expressionsToSay.Count > 0) {
-            actionInProgress = true;
-            StartCoroutine(Say(expressionsToSay.Dequeue(), 5));
+            todo.Dequeue()();
         }
     }
 
-    protected IEnumerator Walk(Vector3 destination) {
+    public bool IsBusy() {
+        return todo.Count > 0;
+    }
+
+    protected IEnumerator WalkTo(Vector3 destination) {
         NavMeshAgent.SetDestination(destination);
         while (Vector3.Distance(transform.position, destination) > NavMeshAgent.stoppingDistance + 1) {
             NavMeshAgent.SetDestination(destination);
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(0.2f);
         }
         actionInProgress = false;
     }
@@ -65,11 +64,11 @@ public class Actuator : MonoBehaviour {
         if (utterance.Type.Equals(ASSERTION)) {
             if (utterance.Head.Equals(ASSERT.Head)) {
                 Agent.MentalState.ReceiveAssertion(utterance.GetArgAsExpression(0), speaker);
-                expressionsToSay.Enqueue(YES);
+                todo.Enqueue(() => StartCoroutine(Say(YES, 5000)));
             } else if (utterance.Head.Equals(DENY.Head)) {
                 Agent.MentalState.ReceiveAssertion(
                     new Expression(NOT, utterance.GetArgAsExpression(0)), speaker);
-                expressionsToSay.Enqueue(NO);
+                todo.Enqueue(() => StartCoroutine(Say(NO, 5000)));
             }
             return;
         }
@@ -81,13 +80,13 @@ public class Actuator : MonoBehaviour {
                         new Expression(NOT, utterance.GetArgAsExpression(0)));
 
                 if (positiveProofs.IsEmpty() && negativeProofs.IsEmpty()) {
-                    expressionsToSay.Enqueue(NEGIGN);
+                    todo.Enqueue(() => StartCoroutine(Say(NEGIGN, 5000)));
                 } else if (positiveProofs.IsEmpty()) {
-                    expressionsToSay.Enqueue(NO);
+                    todo.Enqueue(() => StartCoroutine(Say(NO, 5000)));
                 } else if (negativeProofs.IsEmpty()) {
-                    expressionsToSay.Enqueue(YES);
+                    todo.Enqueue(() => StartCoroutine(Say(YES, 5000)));
                 } else {
-                    expressionsToSay.Enqueue(POSIGN);
+                    todo.Enqueue(() => StartCoroutine(Say(POSIGN, 5000)));
                 }
                 return;
             }
@@ -99,9 +98,9 @@ public class Actuator : MonoBehaviour {
                 var abilityProofs = Agent.MentalState.GetProofs(new Expression(IF, content, new Expression(DF, MAKE, content, SELF)));
 
                 if (abilityProofs.IsEmpty()) {
-                    expressionsToSay.Enqueue(REFUSE);
+                    todo.Enqueue(() => StartCoroutine(Say(REFUSE, 5000)));
                 } else {
-                    expressionsToSay.Enqueue(ACCEPT);
+                    todo.Enqueue(() => StartCoroutine(Say(ACCEPT, 5000)));
                     Agent.MentalState.ReceiveRequest(content, speaker);
                 }
             }
@@ -120,7 +119,7 @@ public class Actuator : MonoBehaviour {
             }
 
             // Debug.Log(action);
-            // expressionsToSay.Enqueue(action);
+            // todo.Enqueue(() => StartCoroutine(Say(action, 5000)));
 
             while (actionInProgress) {
                 Thread.Sleep(1000);
@@ -138,7 +137,7 @@ public class Actuator : MonoBehaviour {
                 // assumption: if we find this in a plan,
                 // then the location of X should be known.
                 if (Agent.MentalState.Locations.ContainsKey(destination)) {
-                    destinations.Enqueue(Agent.MentalState.Locations[destination]);
+                    todo.Enqueue(() => StartCoroutine(WalkTo(Agent.MentalState.Locations[destination])));
                 } else {
                     break;
                 }
@@ -147,7 +146,7 @@ public class Actuator : MonoBehaviour {
             else if (content.Head.Equals(INFORMED.Head)) {
                 var message = new Expression(ASSERT, content.GetArgAsExpression(0));
                 // Debug.Log("saying " + message);
-                expressionsToSay.Enqueue(message);
+                todo.Enqueue(() => StartCoroutine(Say(message, 5000)));
             }
 
             while (actionInProgress) {

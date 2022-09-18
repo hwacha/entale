@@ -63,7 +63,7 @@ public class Testing : MonoBehaviour {
 
         Expression nv = VERUM;
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10_000; i++) {
             nv = new Expression(NOT, nv);
         }
 

@@ -303,12 +303,12 @@ public class ArgumentContainer : MonoBehaviour {
 
     // to be seen
     void OnWillRenderObject() {
-        var mentalStateRef = Camera.current.GetComponent<ReferenceToMentalState>();
-        if (mentalStateRef != null) {
+        var agentRef = Camera.current.GetComponent<ReferenceToAgent>();
+        if (agentRef != null) {
             // check if this object is actually visible
             int layerMask = 1 << 11;
 
-            var seerPosition = mentalStateRef.transform.position;
+            var seerPosition = agentRef.transform.position;
             var objPosition  = transform.position;
 
             bool collided = Physics.Raycast(seerPosition, objPosition - seerPosition, Mathf.Infinity, layerMask);
