@@ -13,7 +13,7 @@ public class UnnamedObject : VisibleObject
         Characteristic = new Expression(new Name(PREDICATE, characteristicName));
     }
 
-    override protected void OnSendPercept(MentalState m, Vector3 position) {
-        m.ConstructPercept(Characteristic, position);
+    override protected void OnSendPercept(Agent agent, Vector3 position) {
+        agent.EnqueueAction(() => agent.MentalState.ConstructPercept(Characteristic, position));
     }
 }

@@ -9,24 +9,40 @@ public abstract class VisibleObject : MonoBehaviour
 {
     protected Expression Characteristic;
 
-    protected abstract void OnSendPercept(MentalState m, Vector3 position);
+    static int PERIOD_IN_FRAMES = 60;
+
+    protected int currentFrame = 0;
+
+    protected abstract void OnSendPercept(Agent agent, Vector3 position);
+
+    void Update() {
+        currentFrame++;
+        currentFrame %= PERIOD_IN_FRAMES;
+    }
 
     void OnWillRenderObject() {
-        var mentalStateRef = Camera.current.GetComponent<ReferenceToMentalState>();
-        if (mentalStateRef != null) {
+        if (currentFrame > 0) {
+            return;
+        }
+
+        var agentRef = Camera.current.GetComponent<ReferenceToAgent>();
+        if (agentRef != null) {
             // check if this object is actually visible
             int layerMask = 1 << 11;
 
-            var seerPosition = mentalStateRef.transform.position;
+            var seerPosition = agentRef.transform.position;
             var objPosition  = transform.position;
             var difference = objPosition - seerPosition;
 
             // for now, just assume any NPC is in frame
             if (gameObject.name.Equals("EthanBody")) {
-                OnSendPercept(mentalStateRef.MentalState, gameObject.transform.position);
+                // Debug.Log(gameObject);
+                OnSendPercept(agentRef.Agent, gameObject.transform.position);
                 Debug.DrawRay(seerPosition, difference, Color.green);
                 return;
             }
+
+            Debug.DrawRay(seerPosition, difference, Color.black);
 
             RaycastHit hit;
             Physics.Raycast(seerPosition, difference, out hit, Mathf.Infinity, layerMask);
@@ -38,7 +54,7 @@ public abstract class VisibleObject : MonoBehaviour
 
                 if (expectedObject) {
                     Debug.DrawRay(seerPosition, difference, Color.blue);
-                    OnSendPercept(mentalStateRef.MentalState, gameObject.transform.position);
+                    OnSendPercept(agentRef.Agent, gameObject.transform.position);
                 } else {
                     // Debug.Log("hit " + hit.transform.gameObject.name + ", expected " + gameObject.name);
                     Debug.DrawRay(seerPosition, difference, Color.red);

@@ -18,7 +18,7 @@ public class NamedObject : VisibleObject
         Characteristic = new Expression(new Name(INDIVIDUAL, iName));
     }
 
-    override protected void OnSendPercept(MentalState m, Vector3 position) {
-        m.AddNamedPercept(Characteristic, gameObject.transform.position);
+    override protected void OnSendPercept(Agent agent, Vector3 position) {
+        agent.EnqueueAction(() => agent.MentalState.AddNamedPercept(Characteristic, position));
     }
 }

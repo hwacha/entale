@@ -23,6 +23,14 @@ public class InferenceRule
         Supposition = supposition;
     }
 
+    private static bool IsExpressionPermissive(Expression e, params Expression[] prejacents) {
+        if (e.Head is Variable) {
+            return true;
+        }
+
+        return e.HeadedBy(prejacents) && (e.GetArgAsExpression(0).Head is Variable);
+    }
+
     // 
     // is the rule premise-expansive?
     // 
@@ -53,12 +61,7 @@ public class InferenceRule
         // but here, we just check to see if the head
         // of any of the conclusions is a variable.
         foreach (var conclusion in Conclusions) {
-            if (conclusion.Head is Variable) {
-                return true;
-            }
-
-            if (conclusion.HeadedBy(NOT, VERY, STAR) &&
-               (conclusion.GetArgAsExpression(0).Head is Variable)) {
+            if (IsExpressionPermissive(conclusion, NOT, STAR, VERY)) {
                 return true;
             }
         }
@@ -113,11 +116,16 @@ public class InferenceRule
                     // in case strengthening structural rule fails :)
                     bool conclusionMatchedOnce = false;
                     foreach (var otherConclusion in Conclusions) {
-                        if (!conclusionMatchedOnce && !otherConclusion.Equals(conclusion)) {
+                        if (!conclusionMatchedOnce && otherConclusion.Equals(conclusion)) {
                             conclusionMatchedOnce = true;
                             continue;
                         }
-                        lemmas.Add(new Expression(NOT, otherConclusion.Substitute(match)));
+                        var subbedConclusion = otherConclusion.Substitute(match);
+                        var negConclusion =
+                            subbedConclusion.HeadedBy(NOT) ?
+                            subbedConclusion.GetArgAsExpression(0) :
+                            new Expression(NOT, subbedConclusion);
+                        lemmas.Add(negConclusion);
                     }
                 }
             }
@@ -156,14 +164,36 @@ public class InferenceRule
     }
 
     public InferenceRule Instantiate(Expression e) {
+        if ((e.Head.Type.Equals(SemanticType.TRUTH_VALUE)) ||
+            e.HeadedBy(NOT, STAR) &&
+            (e.GetArgAsExpression(0).Head.Type.Equals(SemanticType.TRUTH_VALUE))) {
+            return null;
+        }
         Dictionary<Variable, Expression> match = null;
         foreach (var premise in Premises) {
+            if (IsExpressionPermissive(premise, NOT, STAR)) {
+                continue;
+            }
             var matches = premise.Unify(e);
             if (matches.Count == 0) {
                 continue;
             }
             match = matches.First();
             break;
+        }
+        if (Conclusions.Count > 1) {
+            foreach (var conclusion in Conclusions) {
+                if (IsExpressionPermissive(conclusion, NOT, STAR)) {
+                    continue;
+                }
+                var negE = e.HeadedBy(NOT) ? e.GetArgAsExpression(0) : new Expression(NOT, e);
+                var matches = conclusion.Unify(negE);
+                if (matches.Count == 0) {
+                    continue;
+                }
+                match = matches.First();
+                break;
+            }
         }
         if (match == null) {
             return null;
@@ -189,6 +219,8 @@ public class InferenceRule
         if (instantiatedRule.IsExpansive()) {
             return null;
         }
+
+        // UnityEngine.Debug.Log(this + " <- " + e + " := " + instantiatedRule);
 
         return instantiatedRule;
     }
@@ -261,6 +293,7 @@ public class InferenceRule
 
         // therefore
         new InferenceRule(new List<Expression>{ST}, new List<Expression>{new Expression(THEREFORE, ST, TT)}, require: TT),
+        new InferenceRule(new List<Expression>{new Expression(STAR, ST)}, new List<Expression>{new Expression(NOT, new Expression(THEREFORE, ST, TT))}, require: TT),
 
         // some
         new InferenceRule(
@@ -274,6 +307,13 @@ public class InferenceRule
         // very
         new InferenceRule(new List<Expression>{new Expression(VERY, ST)}, new List<Expression>{ST}),
 
+        // omega
+        new InferenceRule(new List<Expression>{new Expression(OMEGA, FTF, ST)},
+            new List<Expression>{new Expression(FTF, ST)}),
+        // contraposition causes problems, IsExpansive() should rule it out
+        // new InferenceRule(new List<Expression>{new Expression(OMEGA, FTF, ST)},
+        //     new List<Expression>{new Expression(OMEGA, FTF, new Expression(FTF, ST))}),
+
         // =
         new InferenceRule(new List<Expression>{}, new List<Expression>{new Expression(IDENTITY, XE, XE)}),
         new InferenceRule(new List<Expression>{new Expression(IDENTITY, YE, XE)}, new List<Expression>{new Expression(IDENTITY, XE, YE)}),
@@ -282,8 +322,8 @@ public class InferenceRule
             new List<Expression>{new Expression(NOT, new Expression(IDENTITY, XE, YE))}),
 
         // factive
-        // new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(DF, ITET, ST, XE)}),
-        // new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(IF, ST, new Expression(DF, ITET, ST, XE))}),
+        new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(DF, ITET, ST, XE)}),
+        new InferenceRule(new List<Expression>{new Expression(ITET, ST, XE)}, new List<Expression>{new Expression(IF, ST, new Expression(DF, ITET, ST, XE))}),
 
         // converse
         new InferenceRule(
@@ -305,9 +345,30 @@ public class InferenceRule
             new List<Expression>{new Expression(GOOD, new Expression(NOT, ST))},
             new List<Expression>{new Expression(NOT, new Expression(GOOD, ST))}),
 
+        // at
+        // reflexivity
+        new InferenceRule(
+            new List<Expression>{},
+            new List<Expression>{new Expression(AT, XE, XE)}),
+        // symmetry
+        new InferenceRule(
+            new List<Expression>{new Expression(AT, XE, YE)},
+            new List<Expression>{new Expression(AT, YE, XE)}),
+
         // fruit
         new InferenceRule(new List<Expression>{new Expression(TOMATO, XE)}, new List<Expression>{new Expression(FRUIT, XE)}),
         new InferenceRule(new List<Expression>{new Expression(BANANA, XE)}, new List<Expression>{new Expression(FRUIT, XE)}),
+
+        // abilities (TODO)
+        new InferenceRule(
+            new List<Expression>{new Expression(DF, MAKE, new Expression(AT, SELF, XE), SELF)},
+            new List<Expression>{new Expression(AT, SELF, XE)}),
+        new InferenceRule(
+            new List<Expression>{
+                new Expression(AT, SELF, XE),
+                new Expression(DF, MAKE, new Expression(INFORMED, ST, XE), SELF)
+            },
+            new List<Expression>{new Expression(INFORMED, ST, XE)}),
     };
 
     private static (List<InferenceRule>, List<InferenceRule>) SortRules() {
@@ -343,5 +404,5 @@ public class InferenceRule
         return (contractiveRules, expansiveRules);
     }
 
-    public static (List<InferenceRule>, List<InferenceRule>) RULES = SortRules();
+    public static readonly (List<InferenceRule>, List<InferenceRule>) RULES = SortRules();
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -9,23 +10,39 @@ using static SemanticType;
 
 public class Actuator : MonoBehaviour {
     public Agent Agent;
+
+    protected bool actionInProgress = false;
+
     public NavMeshAgent NavMeshAgent { protected set; get; }
 
+    protected Queue<Action> todo;
+
     void Start() {
+        todo = new Queue<Action>();
         NavMeshAgent = Agent.GetComponent<NavMeshAgent>();
     }
 
+    void Update() {
+        if (!actionInProgress && todo.Count > 0) {
+            actionInProgress = true;
+            todo.Dequeue()();
+        }
+    }
+
+    public bool IsBusy() {
+        return todo.Count > 0;
+    }
+
+    protected IEnumerator WalkTo(Vector3 destination) {
+        NavMeshAgent.SetDestination(destination);
+        while (Vector3.Distance(transform.position, destination) > NavMeshAgent.stoppingDistance + 1) {
+            NavMeshAgent.SetDestination(destination);
+            yield return new WaitForSeconds(0.2f);
+        }
+        actionInProgress = false;
+    }
+
     protected IEnumerator Say(Expression e, float time) {
-        // TODO: figure this stuff out
-        // var eWithoutParameters = new Container<Expression>(null);
-        // Agent.MentalState.StartCoroutine(Agent.MentalState.ReplaceParameters(e, eWithoutParameters));
-
-        // while (eWithoutParameters.Item == null) {
-        //     yield return null;
-        // }
-
-        // GameObject eContainer = ArgumentContainer.From(eWithoutParameters.Item);
-
         var eContainer = ArgumentContainer.From(e);
         ArgumentContainer eContainerScript = eContainer.GetComponent<ArgumentContainer>();
 
@@ -39,180 +56,102 @@ public class Actuator : MonoBehaviour {
 
         yield return new WaitForSeconds(time);
         Destroy(eContainer);
-        yield break;
+        actionInProgress = false;
     }
 
     // @Note this should be removed when the planner is better.
-    public IEnumerator RespondTo(Expression utterance, Expression speaker) {
+    public void RespondTo(Expression utterance, Expression speaker) {
         if (utterance.Type.Equals(ASSERTION)) {
             if (utterance.Head.Equals(ASSERT.Head)) {
-                Agent.MentalState.ReceiveAssertion(
-                    utterance.GetArgAsExpression(0),
-                    speaker);
-
-                var negativeProofs = new ProofBases();
-                var doneNegative = new Container<bool>(false);
-
-                Agent.MentalState.StartCoroutine(
-                    Agent.MentalState.StreamProofs(
-                        negativeProofs,
-                        new Expression(NOT, utterance.GetArgAsExpression(0)),
-                        doneNegative));
-
-                while (!doneNegative.Item) {
-                    yield return new WaitForSeconds(0.5f);
-                }
-
-                if (negativeProofs.IsEmpty()) {
-                    StartCoroutine(Say(YES, 5));
-                    yield break;
-                } else {
-                    StartCoroutine(Say(NO, 5));
-                }
-
-                
-            }
-            if (utterance.Head.Equals(DENY.Head)) {
+                Agent.MentalState.ReceiveAssertion(utterance.GetArgAsExpression(0), speaker);
+                todo.Enqueue(() => StartCoroutine(Say(YES, 5000)));
+            } else if (utterance.Head.Equals(DENY.Head)) {
                 Agent.MentalState.ReceiveAssertion(
                     new Expression(NOT, utterance.GetArgAsExpression(0)), speaker);
-
-                var positiveProofs = new ProofBases();
-                var donePositive = new Container<bool>(false);
-
-                Agent.MentalState.StartCoroutine(
-                    Agent.MentalState.StreamProofs(
-                        positiveProofs,
-                        new Expression(NOT, utterance.GetArgAsExpression(0)),
-                        donePositive));
-
-                while (!donePositive.Item) {
-                    yield return new WaitForSeconds(0.5f);
-                }
-
-                if (positiveProofs.IsEmpty()) {
-                    StartCoroutine(Say(NO, 5));
-                } else {
-                    StartCoroutine(Say(YES, 5));
-                }
+                todo.Enqueue(() => StartCoroutine(Say(NO, 5000)));
             }
-            yield break;
+            return;
         }
 
         if (utterance.Type.Equals(QUESTION)) {
             if (utterance.Head.Equals(ASK.Head)) {
-                var positiveProofs = new ProofBases();
-                var donePositive = new Container<bool>(false);
-                Agent.MentalState.StartCoroutine(Agent.MentalState.StreamProofs(
-                    positiveProofs,
-                    utterance.GetArgAsExpression(0),
-                    donePositive));
+                var positiveProofs = Agent.MentalState.GetProofs(utterance.GetArgAsExpression(0));
+                var negativeProofs = Agent.MentalState.GetProofs(
+                        new Expression(NOT, utterance.GetArgAsExpression(0)));
 
-                var negativeProofs = new ProofBases();
-                var doneNegative = new Container<bool>(false);
-                
-                Agent.MentalState.StartCoroutine(
-                    Agent.MentalState.StreamProofs(
-                        negativeProofs,
-                        new Expression(NOT, utterance.GetArgAsExpression(0)),
-                        doneNegative));
-
-                while (!donePositive.Item || !doneNegative.Item) {
-                    yield return new WaitForSeconds(0.5f);
+                if (positiveProofs.IsEmpty() && negativeProofs.IsEmpty()) {
+                    todo.Enqueue(() => StartCoroutine(Say(NEGIGN, 5000)));
+                } else if (positiveProofs.IsEmpty()) {
+                    todo.Enqueue(() => StartCoroutine(Say(NO, 5000)));
+                } else if (negativeProofs.IsEmpty()) {
+                    todo.Enqueue(() => StartCoroutine(Say(YES, 5000)));
+                } else {
+                    todo.Enqueue(() => StartCoroutine(Say(POSIGN, 5000)));
                 }
-
-                if (!positiveProofs.IsEmpty()) {
-                    StartCoroutine(Say(YES, 5));
-                    yield break;
-                }
-
-                if (!negativeProofs.IsEmpty()) {
-                    StartCoroutine(Say(NO, 5));
-                    yield break;
-                }
-
-                StartCoroutine(Say(MAYBE, 5));
+                return;
             }
-
-            yield break;
         }
 
         if (utterance.Type.Equals(CONFORMITY_VALUE)) {
             if (utterance.Head.Equals(WOULD.Head)) {
                 var content = utterance.GetArgAsExpression(0);
-                var proofs = new ProofBases();
-                var done = new Container<bool>(false);
+                var abilityProofs = Agent.MentalState.GetProofs(new Expression(IF, content, new Expression(DF, MAKE, content, SELF)));
 
-                Agent.MentalState.StartCoroutine(
-                    Agent.MentalState.StreamProofs(proofs, content, done, ProofType.Plan));
-
-                while (!done.Item) {
-                    yield return new WaitForSeconds(0.5f);
-                }
-
-                if (!proofs.IsEmpty()) {
-                    StartCoroutine(Say(ACCEPT, 5));
-                    Agent.MentalState.ReceiveRequest(content, speaker);
+                if (abilityProofs.IsEmpty()) {
+                    todo.Enqueue(() => StartCoroutine(Say(REFUSE, 5000)));
                 } else {
-                    StartCoroutine(Say(REFUSE, 5));
+                    todo.Enqueue(() => StartCoroutine(Say(ACCEPT, 5000)));
+                    Agent.MentalState.ReceiveRequest(content, speaker);
                 }
             }
-            
-            yield break;
+            return;
         }
-
-        yield break;
     }
 
 
     // @Note we want this to be interruptible
-    public IEnumerator ExecutePlan() {
-        while (true) {
-            List<Expression> plan = new List<Expression>();
-            var done = new Container<bool>(false);
-            Agent.MentalState.StartCoroutine(Agent.MentalState.DecideCurrentPlan(plan, done));
+    public void ExecutePlan() {
+        List<Expression> plan = Agent.MentalState.DecideCurrentPlan();
 
-            while (!done.Item) {
-                yield return null;
+        foreach (Expression action in plan) {
+            if (!action.Head.Equals(WILL.Head)) {
+                throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
             }
 
-            foreach (Expression action in plan) {
-                if (!action.Head.Equals(WILL.Head)) {
-                    throw new Exception("ExecutePlan(): expected sentences to start with 'will'");
-                }
+            // Debug.Log(action);
+            // todo.Enqueue(() => StartCoroutine(Say(action, 5000)));
 
-                // Debug.Log(action);
-                // StartCoroutine(Say(action, 1));
-
-                var content = action.GetArgAsExpression(0);
-
-                if (content.Equals(NEUTRAL)) {
-                    // Debug.Log("Busy doin' nothin'");
-                }
-
-                // at(self, X)
-                else if (content.Head.Equals(AT.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
-                    var destination = content.GetArgAsExpression(1);
-                    // assumption: if we find this in a plan,
-                    // then the location of X should be known.
-                    var location = Agent.MentalState.Locations[destination];
-                    NavMeshAgent.SetDestination(location);
-                    while (Vector3.Distance(transform.position, location) > NavMeshAgent.stoppingDistance + 1) {
-                        location = Agent.MentalState.Locations[destination];
-                        NavMeshAgent.SetDestination(location);
-                        yield return null;
-                    }
-                }
-
-                else if (content.Head.Equals(INFORMED.Head)) {
-                    var message = new Expression(ASSERT, content.GetArgAsExpression(0));
-                    // Debug.Log("saying " + message);
-                    StartCoroutine(Say(message, 1.5f));
-                }
-
-                yield return new WaitForSeconds(2);
+            while (actionInProgress) {
+                Thread.Sleep(1000);
             }
 
-            yield return null;
+            var content = action.GetArgAsExpression(0);
+
+            if (content.Equals(NEUTRAL)) {
+                // Debug.Log("Busy doin' nothin'");
+            }
+
+            // at(self, X)
+            else if (content.Head.Equals(AT.Head) && content.GetArgAsExpression(0).Equals(SELF)) {
+                var destination = content.GetArgAsExpression(1);
+                // assumption: if we find this in a plan,
+                // then the location of X should be known.
+                if (Agent.MentalState.Locations.ContainsKey(destination)) {
+                    todo.Enqueue(() => StartCoroutine(WalkTo(Agent.MentalState.Locations[destination])));
+                } else {
+                    break;
+                }
+            }
+
+            else if (content.Head.Equals(INFORMED.Head)) {
+                var message = new Expression(ASSERT, content.GetArgAsExpression(0));
+                // Debug.Log("saying " + message);
+                todo.Enqueue(() => StartCoroutine(Say(message, 5000)));
+            }
+
+            while (actionInProgress) {
+                Thread.Sleep(1000);
+            }
         }
     }
 

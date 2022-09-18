@@ -44,12 +44,13 @@ public class MentalState : MonoBehaviour {
 
     protected int ParameterID;
 
+    protected int numCalls = 0;
+
     public class KnowledgeState {
         public SortedSet<Expression> Basis;
         public SortedList<Expression, List<InferenceRule>> Rules;
-        public SortedSet<Expression> LemmaPool;
 
-        public KnowledgeState(SortedSet<Expression> basis, SortedList<Expression, List<InferenceRule>> rules, SortedSet<Expression> omegaPool, bool copy = true) {
+        public KnowledgeState(SortedSet<Expression> basis, SortedList<Expression, List<InferenceRule>> rules, bool copy = true) {
             if (copy) {
                 Basis = new SortedSet<Expression>(basis);
                 Rules = new SortedList<Expression, List<InferenceRule>>();
@@ -59,11 +60,9 @@ public class MentalState : MonoBehaviour {
                         Rules[keyAndRules.Key].Add(rule);
                     }
                 }
-                LemmaPool = new SortedSet<Expression>(omegaPool);
             } else {
                 Basis = basis;
                 Rules = rules;
-                LemmaPool = omegaPool;
             }
         }
 
@@ -80,10 +79,6 @@ public class MentalState : MonoBehaviour {
                     str.Append("\t\t" + rule + "\n");
                 }
                 str.Append("\t}\n");
-            }
-            str.Append("]\nOmega Pool [\n");
-            foreach (Expression e in LemmaPool) {
-                str.Append("\t" + e + "\n");
             }
             str.Append("]");
             return str.ToString();
@@ -119,7 +114,7 @@ public class MentalState : MonoBehaviour {
         if (KS != null) {
             throw new Exception("Initialize: mental state already initialized.");
         }
-        KS = new KnowledgeState(new SortedSet<Expression>(), new SortedList<Expression, List<InferenceRule>>(), new SortedSet<Expression>(), false);
+        KS = new KnowledgeState(new SortedSet<Expression>(), new SortedList<Expression, List<InferenceRule>>(), false);
 
         for (int i = 0; i < initialKnowledge.Length; i++) {
             AddToKnowledgeState(KS, initialKnowledge[i]);
@@ -232,764 +227,299 @@ public class MentalState : MonoBehaviour {
         return a;
     }
 
-    private class ProofNode {
-        #region Parameters
-        public readonly Expression Lemma;
-        public readonly KnowledgeState KnowledgeState;
-        public readonly Substitution Substitution;
-        public readonly uint Depth;
-        public readonly ProofNode Parent;
-        public readonly int MeetBasisIndex;
-        public readonly ProofNode OlderSibling;
-        public readonly bool HasYoungerSibling;
-        public readonly bool IsFailure;
-        public readonly Expression Supposition;
-        public readonly Expression Require;
-        #endregion
-
-        #region Variables
-        public List<ProofBasis> YoungerSiblingBases;
-        public ProofBases ChildBases;
-        public bool IsLastChild;
-        #endregion
-
-        public ProofNode(Expression lemma,
-            KnowledgeState knowledgeState,
-            uint depth, ProofNode parent,
-            int meetBasisIndex,
-            Expression require,
-            ProofNode olderSibling = null,
-            bool hasYoungerSibling = false,
-            bool isFailure = false,
-            Expression supposition = null) {
-            Lemma = lemma;
-            KnowledgeState = knowledgeState;
-            Depth = depth;
-            Parent = parent;
-            MeetBasisIndex = meetBasisIndex;
-            OlderSibling = olderSibling;
-            HasYoungerSibling = hasYoungerSibling;
-            IsFailure = isFailure;
-            Supposition = supposition;
-            Require = require;
-
-            YoungerSiblingBases = new List<ProofBasis>();
-            if (!hasYoungerSibling) {
-                YoungerSiblingBases.Add(new ProofBasis());
+    private static ProofBasis TrimmedSubstitution(Expression e, ProofBasis basis) {
+        var variables = e.GetVariables();
+        var trimmedSubstitution = new Substitution();
+        foreach (var assignment in basis.Substitution) {
+            if (variables.Contains(assignment.Key)) {
+                trimmedSubstitution.Add(assignment.Key, assignment.Value);
             }
-            ChildBases = new ProofBases();
-            IsLastChild = false;
         }
-
-        public override string ToString() {
-            return "Proof Node {" +
-                "\n\tlemma: " + Lemma +
-                "\n\tparent: " + (Parent == null ? "ROOT" : Parent.Lemma.ToString()) +
-                "\n\tolderSibling: " + (OlderSibling == null ? "SINGLETON" : OlderSibling.Lemma.ToString()) +
-                "\n\tdepth: " + Depth +
-                "\n\tis Failure: " + IsFailure +
-                "\n\tsupposition: " + Supposition +
-                "\n\trequire: " + Require +
-                "\n}";
-        }
+        return new ProofBasis(basis.Premises.ToList(), trimmedSubstitution);
     }
 
-    // TODO:
-    // - prevent cycles by tracking completed proofs of given lemmas
-    // - conditionals (maybe a different approach than having a list of
-    //   extra suppositions at each proof node?)
-    // - consistent ordering of inferential complexity
-    //   (this was working in BFS but seems messed up by the stack)
-    public IEnumerator StreamProofs(ProofBases bases, Expression conclusion,
-        Container<bool> done, ProofType pt = Proof) {
-        // we can only prove sentences.
-        Debug.Assert(conclusion.Type.Equals(TRUTH_VALUE));
-        // we're going to do a depth-first search
-        // with successively higher bounds on the
-        // depth allowed.
-        uint maxDepth = 0;
-        // we use this to gauge if we've made an
-        // exhaustive search at this level.
-        // If the depth we reach is less than the
-        // maximum, then no further inferences
-        // were attempted.
-        uint reachedDepth = 0;
-        while (reachedDepth + 1 >= maxDepth) {
-            // at the beginning of any iterated step,
-            // we check if we've gone past
-            // our allotted time budget.
-            if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                yield return null;
+    private ProofBases GetProofs(
+        Expression lemma,
+        HashSet<Expression> triedExpressions,
+        KnowledgeState knowledgeState,
+        ProofType pt,
+        Expression require,
+        bool isRequireGate = false,
+        Expression supposition = null,
+        bool isFailure = false) {
+        numCalls++;
+        Debug.Assert(lemma.Type.Equals(TRUTH_VALUE));
+
+        var proofs = new ProofBases();
+
+        if (triedExpressions.Contains(lemma) || numCalls > 1_000_000) {
+            return proofs;
+        }
+        var nextTriedExpressions = new HashSet<Expression>(triedExpressions);
+        nextTriedExpressions.Add(lemma);
+
+        if (lemma.GetVariables().Count == 0) {
+            // closed sentence
+            if (knowledgeState.Basis.Contains(lemma)) {
+                var basis = new ProofBasis();
+                basis.AddPremise(lemma);
+                proofs.Add(basis);
+            }
+        } else {
+            // formula
+            var (bottom, top) = lemma.GetBounds();
+            var satisfiers = knowledgeState.Basis.GetViewBetween(bottom, top);
+
+            foreach (var satisfier in satisfiers) {
+                var unifiers = lemma.Unify(satisfier);
+                foreach (var unifier in unifiers) {
+                    var basis = new ProofBasis(new List<Expression>{satisfier.Substitute(unifier)}, unifier);
+                    proofs.Add(basis);
+                }
+            }
+        }
+
+        // hard-coded rules
+        
+        // star as failure
+        if (lemma.HeadedBy(STAR)) {
+            // @Note we short-circuit and
+            // don't check for explicitly stored stars.
+            // Might need to change
+            return GetProofs(lemma.GetArgAsExpression(0),
+                nextTriedExpressions,
+                knowledgeState, pt, require, isFailure: true, isRequireGate: isRequireGate, supposition: supposition);
+        }
+
+        // de se performative resolution
+        // will(P) |- df(make, P, self)
+        if (pt == Plan && lemma.HeadedBy(DF) &&
+            lemma.GetArgAsExpression(0).HeadedBy(MAKE) &&
+            lemma.GetArgAsExpression(2).Equals(SELF)) {
+            var basis = new ProofBasis();
+            basis.AddPremise(new Expression(WILL, lemma.GetArgAsExpression(1)));
+            proofs.Add(basis);
+        }
+
+        // location
+        if (lemma.HeadedBy(AT)) {
+            var a = lemma.GetArgAsExpression(0);
+            var b = lemma.GetArgAsExpression(1);
+
+            if (Locations.ContainsKey(a) &&
+                Locations.ContainsKey(b)) {
+                var aLocation = Locations[a];
+                var bLocation = Locations[b];
+
+                var dx = aLocation.x - bLocation.x;
+                var dy = aLocation.y - bLocation.y;
+                var dz = aLocation.z - bLocation.z;
+
+                var distance = dx * dx + dy * dy + dz * dz;
+
+                if (distance < 10) {
+                    var basis = new ProofBasis();
+                    basis.AddPremise(lemma);
+                    proofs.Add(basis);
+                }
+            }
+        }
+
+        ProofBases GetProofsFromRule(InferenceRule rule) {
+            var (premises, ruleRequire, ruleSupposition) = rule.Apply(lemma);
+
+            var prevBases = new ProofBases();
+            if (premises == null) {
+                return prevBases;
             }
 
-            // Debug.Log("================================================");
-            // Debug.Log("proving " + conclusion + " at depth=" + maxDepth);
-
-            bases.Clear();
-
-            reachedDepth = 0;
-
-            // we set up our stack for DFS
-            // with the intended
-            var root = new ProofNode(conclusion, KS, 0, null, 0, null);
-            root.ChildBases = bases;
-            root.IsLastChild = true;
-            var stack = new Stack<ProofNode>();
-            stack.Push(root);
-
-            // we go through the stack.
-            while (stack.Count != 0) {
-                if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                    yield return null;
+            var ks = knowledgeState;
+            if (ruleSupposition != null) {
+                ks = new KnowledgeState(knowledgeState.Basis, knowledgeState.Rules);
+                AddToKnowledgeState(ks, ruleSupposition);
+            }
+            
+            prevBases.Add(new ProofBasis());
+            foreach (var premise in premises) {
+                var premiseBases = new ProofBases();
+                foreach (var prevBasis in prevBases) {
+                    var subbedPremise = premise.Substitute(prevBasis.Substitution);
+                    var preMeetBases = GetProofs(
+                        subbedPremise,
+                        nextTriedExpressions,
+                        ks,
+                        pt,
+                        ruleRequire == null ? require : ruleRequire,
+                        isRequireGate: ruleRequire != null,
+                        supposition: ruleSupposition);
+                    var productBases = new ProofBases();
+                    foreach (var preMeetBasis in preMeetBases) {
+                        productBases.Add(new ProofBasis(prevBasis, preMeetBasis));
+                    }
+                    premiseBases = ProofBases.Join(premiseBases, productBases);
                 }
+                prevBases = premiseBases;
+            }
 
-                var current = stack.Pop();
+            var returnBases = new ProofBases();
+            foreach (var prevBasis in prevBases) {
+                returnBases.Add(TrimmedSubstitution(lemma, prevBasis));
+            }
 
-                if (current.Depth > reachedDepth) {
-                    reachedDepth = current.Depth;
+            return returnBases;
+        }
+
+        foreach (var rule in InferenceRule.RULES.Item1) {
+            proofs = ProofBases.Join(proofs, GetProofsFromRule(rule));
+        }
+
+        foreach (var rules in knowledgeState.Rules.Values) {
+            foreach (var rule in rules) {
+                proofs = ProofBases.Join(proofs, GetProofsFromRule(rule));
+            }
+        }
+
+        // factive +
+        // M::[df(F, p, x)] |- p => M |- F(p, x)
+        if (lemma.Head.Type.Equals(INDIVIDUAL_TRUTH_RELATION)) {
+            var df = new Expression(DF,
+                new Expression(lemma.Head),
+                lemma.GetArgAsExpression(0),
+                lemma.GetArgAsExpression(1));
+            var p = lemma.GetArgAsExpression(0);
+
+            proofs = ProofBases.Join(proofs,
+                GetProofs(p, nextTriedExpressions, knowledgeState, pt, df, isRequireGate: true));
+        }
+
+        // de se knowledge transparency
+        // M |-  P => M |-  know(P, self)
+        // M |/- P => M |- ~know(P, self)
+        if (knowledgeState == KS &&
+            (lemma.HeadedBy(KNOW) || lemma.PrejacentHeadedBy(NOT, KNOW))) {
+            var query = lemma.HeadedBy(NOT) ? lemma.GetArgAsExpression(0) : lemma;
+
+            if (query.GetArgAsExpression(1).Equals(SELF)) {
+                proofs = ProofBases.Join(proofs, GetProofs(
+                    query.GetArgAsExpression(0),
+                    nextTriedExpressions,
+                    knowledgeState,
+                    pt,
+                    require,
+                    isFailure: lemma.HeadedBy(NOT)));
+            }
+        }
+
+        // generalized geach introduction
+        // (at least for geaches with truth values
+        // at the end of them)
+        // 
+        // @Note if geached functions with other types
+        // as output are necessary, then we'll need to
+        // recursively descend through an expression
+        // and transform them all
+        // 
+        // R(X1, ..., X2) |- 𝔾_x(R, X->x1, ..., X->x2, x)
+        // P |- G_x(P, x)
+        if ((lemma.Head is Name) && (lemma.Head as Name).ID == "𝔾" ||
+            lemma.HeadedBy(NOT) && (lemma.GetArgAsExpression(0).Head is Name)
+            && (lemma.GetArgAsExpression(0).Head as Name).ID == "𝔾") {
+            var query = lemma.HeadedBy(NOT) ? lemma.GetArgAsExpression(0) : lemma;
+            var head = query.GetArgAsExpression(0);
+            var lift = query.GetArgAsExpression(query.NumArgs - 1);
+            Argument[] appliedArgs = new Expression[query.NumArgs - 2];
+            for (int j = 0; j < appliedArgs.Length; j++) {
+                appliedArgs[j] = new Expression(query.GetArgAsExpression(j + 1), lift);
+            }
+            var ungeached = new Expression(head, appliedArgs);
+            if (lemma.HeadedBy(NOT)) {
+                ungeached = new Expression(NOT, ungeached);
+            }
+            proofs = ProofBases.Join(proofs, GetProofs(ungeached, nextTriedExpressions, knowledgeState, pt, require));
+        }
+
+        // omega + (inductive proof)
+        if (lemma.HeadedBy(OMEGA) || lemma.PrejacentHeadedBy(NOT, OMEGA)) {
+            bool neg = lemma.HeadedBy(NOT);
+            var query = neg ? lemma.GetArgAsExpression(0) : lemma;
+
+            ProofBases baseProofs = null;
+
+            if (!neg) {
+                var fp = new Expression(query.GetArgAsExpression(0), query.GetArgAsExpression(1));
+                baseProofs = GetProofs(fp, nextTriedExpressions, knowledgeState, pt, require);    
+            }
+
+            var fTest  = new Expression(query.GetArgAsExpression(0), TEST);
+            var ffTest = new Expression(query.GetArgAsExpression(0), fTest);
+
+            var ks = new KnowledgeState(knowledgeState.Basis, knowledgeState.Rules);
+            AddToKnowledgeState(ks, fTest);
+
+            var inductiveProofs = GetProofs(ffTest, nextTriedExpressions, ks, pt, fTest,
+                isRequireGate: true, supposition: fTest, isFailure: neg);
+
+            var nextProofs = neg ? inductiveProofs : ProofBases.Meet(baseProofs, inductiveProofs);
+
+            proofs = ProofBases.Join(proofs, nextProofs);
+        }
+
+        if (lemma.Equals(require)) {
+            var reqProofs = new ProofBases();
+            foreach (var basis in proofs) {
+                var reqPremises = new List<Expression>(basis.Premises);
+                reqPremises.Add(new Expression(REQUIRE, require));
+                reqProofs.Add(new ProofBasis(reqPremises, basis.Substitution));
+            }
+            proofs = reqProofs;
+        }
+
+        if (isRequireGate) {
+            var filteredProofs = new ProofBases();
+            var req = new Expression(REQUIRE, require);
+            foreach (var basis in proofs) {
+                var filteredPremises = new List<Expression>(basis.Premises);
+                if (filteredPremises.Remove(req)) {
+                    filteredProofs.Add(new ProofBasis(filteredPremises, basis.Substitution));    
                 }
                 
-                var sends = new List<KeyValuePair<ProofBases, bool>>();
-
-                // Debug.Log("searching " + current);
- 
-                bool allExhaustive = current.YoungerSiblingBases.Count == 0;
-                for (int i = 0; i < current.YoungerSiblingBases.Count; i++) {
-                    if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                        yield return null;
-                    }
-
-                    var youngerSiblingBasis = current.YoungerSiblingBases[i];
-
-                    var currentLemma = current.Lemma.Substitute(youngerSiblingBasis.Substitution);
-
-                    var require = current.Require;
-
-                    if (currentLemma.Equals(require)) {
-                        require = null;
-                    }
-                    
-                    // Debug.Log("current lemma is " + currentLemma);
-                    // Debug.Log("the current knowledge state is " + current.KnowledgeState);
-
-                    // the bases we get from directly
-                    // querying the knowledge base.
-                    var searchBases = new ProofBases();
-
-                    var variables = currentLemma.GetVariables();
-
-                    Expression bottom = null;
-                    Expression top = null;
-
-                    var bottomSubstitution = new Substitution();
-                    var topSubstitution = new Substitution();
-                    foreach (Variable v in variables) {
-                        bottomSubstitution.Add(v, new Expression(new Bottom(v.Type)));
-                        topSubstitution.Add(v, new Expression(new Top(v.Type)));
-                    }
-
-                    bottom = currentLemma.Substitute(bottomSubstitution);
-                    top    = currentLemma.Substitute(topSubstitution);
-                    //
-                    // if there are variables, then get a view of the
-                    // expression in question and check each.
-                    // 
-                    // TODO change CompareTo() re: top/bottom so that
-                    // expressions which would unify with F(x) are
-                    // included within the bounds of bot(bot) and top(top)
-                    // This will involve check partial type application
-                    //
-                    // BUT leave this until there's a geniune use case
-                    // in inference, since the way it occurs now is
-                    // potentially more efficient.
-                    // 
-                    if (variables.Count > 0) {
-                        var range = current.KnowledgeState.Basis.GetViewBetween(bottom, top);
-
-                        foreach (var e in range) {
-                            var matches = currentLemma.Unify(e);
-                            // we have a match
-                            foreach (var match in matches) {
-                                searchBases.Add(new ProofBasis(new List<Expression>{e}, match));
-                            }
-                        }
-                    // if there are no variables
-                    // in the current expression, then simply
-                    // see if the knowledge base contains the expression.
-                    } else if (current.KnowledgeState.Basis.Contains(currentLemma)) {
-                        searchBases.Add(new ProofBasis(new List<Expression>{currentLemma}, new Substitution()));
-                    // these are some base cases that we run programatically.
-                    } else {
-                        // de se performative resolution
-                        // will(P) |- df(make, P, self)
-                        if (pt == Plan && currentLemma.HeadedBy(DF) &&
-                            currentLemma.GetArgAsExpression(0).HeadedBy(MAKE) &&
-                            currentLemma.GetArgAsExpression(2).Equals(SELF)) {
-                            var basis = new ProofBasis();
-                            basis.AddPremise(new Expression(WILL, currentLemma.GetArgAsExpression(1)));
-                            searchBases.Add(basis);
-                        }
-
-                        // if a and b are within 5 meters
-                        // of each other, then M |- at(a, b).
-                        if (currentLemma.HeadedBy(AT)) {
-                            var a = currentLemma.GetArgAsExpression(0);
-                            var b = currentLemma.GetArgAsExpression(1);
-
-                            if (Locations.ContainsKey(a) &&
-                                Locations.ContainsKey(b)) {
-                                var aLocation = Locations[a];
-                                var bLocation = Locations[b];
-
-                                var dx = aLocation.x - bLocation.x;
-                                var dy = aLocation.y - bLocation.y;
-                                var dz = aLocation.z - bLocation.z;
-
-                                var distance = dx * dx + dy * dy + dz * dz;
-
-                                if (distance < 10) {
-                                    var basis = new ProofBasis();
-                                    basis.AddPremise(currentLemma);
-                                    searchBases.Add(basis);
-                                }
-                            }
-                        }
-                    }
-
-                    //
-                    // Slight @Bug: because we pop onto the stack,
-                    // the order of proofs for otherwise equivalent
-                    // can be reversed depending on depth.
-                    // This violates the natural ordering of reasons
-                    // that an NPC will provide to justify their
-                    // answer. We want those reasons to be maximally
-                    // simple (the least amount of inferential remove)
-                    // and consistent (the same answer will yield the
-                    // same reason, if that reason applies in both cases)
-                    // 
-                    // How can we ensure the nodes are pushed in the
-                    // correct order? I already tried to reverse the
-                    // order of the new nodes.
-                    //
-                    
-                    bool exhaustive = false;
-
-                    // we only check against inference rules if
-                    // our search bound hasn't been reached.
-                    if (current.Depth < maxDepth) {
-                        uint nextDepth = current.Depth + 1;
-                        exhaustive = true;
-                        // inferences here
-                        
-                        var newStack = new Stack<ProofNode>();
-
-                        void PushNode(ProofNode pushNode) {
-                            var pushLemma = pushNode.Lemma;
-                            var ancestor = pushNode.Parent;
-                            while (ancestor != null) {
-                                if (ancestor.Lemma.Equals(pushLemma)) {
-                                    return;
-                                }
-                                // @note/TODO for formulas we may
-                                // want to check if the
-                                // lemmas match one another
-                                ancestor = ancestor.Parent;
-                            }
-                            newStack.Push(pushNode);
-                            exhaustive = false;
-                        }
-
-                        // star + 
-                        // M |/- A => M |- *A
-                        if (currentLemma.HeadedBy(STAR)) {
-                            PushNode(new ProofNode(
-                                currentLemma.GetArgAsExpression(0),
-                                current.KnowledgeState,
-                                nextDepth, current, i, require,
-                                isFailure: true));
-                        }
-
-                        // factive -
-                        if (currentLemma.HeadedBy(DF)) {
-                            var factive = new Expression(
-                                currentLemma.GetArgAsExpression(0),
-                                currentLemma.GetArgAsExpression(1),
-                                currentLemma.GetArgAsExpression(2));
-                            PushNode(new ProofNode(factive, current.KnowledgeState, nextDepth, current, i, require));
-                        }
-                        if (currentLemma.HeadedBy(IF) &&
-                            currentLemma.GetArgAsExpression(1).HeadedBy(DF) &&
-                            currentLemma.GetArgAsExpression(0).Equals(
-                                currentLemma.GetArgAsExpression(1).GetArgAsExpression(1))) {
-                            var factive = new Expression(
-                                currentLemma.GetArgAsExpression(1).GetArgAsExpression(0),
-                                currentLemma.GetArgAsExpression(0),
-                                currentLemma.GetArgAsExpression(1).GetArgAsExpression(2));
-                            PushNode(new ProofNode(factive, current.KnowledgeState, nextDepth, current, i, require));
-                        }
-
-                        // contraposed
-                        // @Note I assume every ITR is
-                        // factive by default
-                        if (currentLemma.HeadedBy(NOT) &&
-                            currentLemma.GetArgAsExpression(0).Head.Type.Equals(INDIVIDUAL_TRUTH_RELATION)) {
-                            var factive = currentLemma.GetArgAsExpression(0);
-                            var head = new Expression(factive.Head);
-                            var prop = factive.GetArgAsExpression(0);
-                            var subject = factive.GetArgAsExpression(1);
-                            var df = new Expression(DF, head, prop, subject);
-                            var notDf = new Expression(NOT, df);
-                            var notPIfDf = new Expression(NOT, new Expression(IF, prop, notDf));
-
-                            PushNode(new ProofNode(notDf, current.KnowledgeState, nextDepth, current, i, require));
-                            PushNode(new ProofNode(notPIfDf, current.KnowledgeState, nextDepth, current, i, require));
-                        }
-
-                        // factive +
-                        // M::[df(F, p, x)] |- p => M |- F(p, x)
-                        if (currentLemma.Head.Type.Equals(INDIVIDUAL_TRUTH_RELATION)) {
-                            var df =
-                                new Expression(DF,
-                                    new Expression(currentLemma.Head),
-                                    currentLemma.GetArgAsExpression(0),
-                                    currentLemma.GetArgAsExpression(1));
-
-                            var p = currentLemma.GetArgAsExpression(0);
-                            var pNode = new ProofNode(p, current.KnowledgeState, nextDepth, current, i, df);
-
-                            PushNode(pNode);
-                        }
-                        
-                        // OMEGA MADNESS
-                        // 
-                        // M, omega(F, P) |- Q, M |- omega(F, P) => M |- F(Q)
-                        var xtt = GetUnusedVariable(TRUTH_FUNCTION, currentLemma.GetVariables());
-                        var xt  = GetUnusedVariable(TRUTH_VALUE, currentLemma.GetVariables());
-                        var xttxtFormula = new Expression(new Expression(xtt), new Expression(xt));
-                        var xttxtMatches = xttxtFormula.Unify(currentLemma);
-                        foreach (var xttxtMatch in xttxtMatches) {
-                            // @Note this limits omega proof
-                            // should be replaced with something smarter
-                            // but no way to bound it right now
-                            var omegaBottom = new Expression(OMEGA, xttxtMatch[xtt], new Expression(new Bottom(TRUTH_VALUE)));
-                            var omegaTop    = new Expression(OMEGA, xttxtMatch[xtt], new Expression(new Top(TRUTH_VALUE)));
-
-                            var omegaRange = current.KnowledgeState.LemmaPool.GetViewBetween(omegaBottom, omegaTop);
-                            foreach (var omega in omegaRange) {
-                                var xtIfOmega = new Expression(IF, xttxtMatch[xt], omega);
-                                var omegaNode = new ProofNode(omega, current.KnowledgeState, nextDepth, current, i, require, hasYoungerSibling: true);
-                                var xtIfOmegaNode = new ProofNode(xtIfOmega, current.KnowledgeState, nextDepth, current, i, require, omegaNode);
-
-                                PushNode(xtIfOmegaNode);
-                                PushNode(omegaNode);
-                            }
-                        }
-                        // M |- F(P), M |- Q -> F(Q) => omega(F, P)
-                        // ~F(P) => M |- ~omega(F, P)
-                        // ~(Q -> F(Q)) |- ~omega(F, P)
-                        if (currentLemma.HeadedBy(OMEGA) ||
-                            currentLemma.PrejacentHeadedBy(NOT, OMEGA)) {
-                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
-                            var fp = new Expression(query.GetArgAsExpression(0), query.GetArgAsExpression(1));
-                            var fTestIfTest = new Expression(IF, new Expression(query.GetArgAsExpression(0), TEST), TEST);
-
-                            ProofNode fpNode;
-                            ProofNode fTestIfTestNode;
-                            if (currentLemma.HeadedBy(NOT)) {
-                                fpNode = new ProofNode(new Expression(NOT, fp), current.KnowledgeState, nextDepth, current, i, require);
-                                fTestIfTestNode = new ProofNode(new Expression(NOT, fTestIfTest), current.KnowledgeState, nextDepth, current, i, require);
-                            } else {
-                                fTestIfTestNode = new ProofNode(fTestIfTest, current.KnowledgeState, nextDepth, current, i, require, hasYoungerSibling: true);
-                                fpNode = new ProofNode(fp, current.KnowledgeState, nextDepth, current, i, require, fTestIfTestNode);    
-                            }                            
-
-                            PushNode(fpNode);
-                            PushNode(fTestIfTestNode);
-
-                            // M |-  omega(F, P) => M |-  omega(F, F(P))
-                            // M |- ~omega(F, P) => M |- ~omega(F, F(P))
-                            if (query.GetArgAsExpression(1).HeadedBy(query.GetArgAsExpression(0))) {
-                                var newOmega = new Expression(OMEGA,
-                                    query.GetArgAsExpression(0), query.GetArgAsExpression(1).GetArgAsExpression(0));
-
-                                if (currentLemma.HeadedBy(NOT)) {
-                                    newOmega = new Expression(NOT, newOmega);
-                                }
-
-                                var newOmegaNode = new ProofNode(newOmega, current.KnowledgeState, nextDepth, current, i, require);
-                                PushNode(newOmegaNode);
-                            }
-                        }
-                        
-                        // END OMEGA MADNESS
-                        
-                        // @Note: we only check the above rule
-                        // if we're proving something unconditionally.
-                        // 
-                        // should this be the case? shouldn't we be able
-                        // to say, e.g. that if ~A, we don't know A?
-                        // 
-                        // de se knowledge transparency
-                        // M |- P => M  |- know(P, self)
-                        // M |/- P => M |- ~know(P, self)
-                        if (current.KnowledgeState == KS &&
-                            (currentLemma.HeadedBy(KNOW) || currentLemma.PrejacentHeadedBy(NOT, KNOW))) {
-                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
-
-                            if (query.GetArgAsExpression(1).Equals(SELF)) {
-                                PushNode(new ProofNode(
-                                    query.GetArgAsExpression(0),
-                                    current.KnowledgeState,
-                                    nextDepth, current, i, require,
-                                    isFailure: currentLemma.HeadedBy(NOT)));
-                            }
-                        }
-
-                        // we add a specific rule for de se abilities that are always provable
-                        // I can go anywhere.
-                        // M |- df(make, at(self, X), self) => M |- make(at(self, X), self)
-                        if (currentLemma.HeadedBy(MAKE) &&
-                            currentLemma.GetArgAsExpression(1).Equals(SELF) &&
-                            currentLemma.GetArgAsExpression(0).HeadedBy(AT) &&
-                            currentLemma.GetArgAsExpression(0).GetArgAsExpression(0).Equals(SELF) &&
-                            Locations.ContainsKey(currentLemma.GetArgAsExpression(0).GetArgAsExpression(1))) {
-                            var df = new Expression(DF, MAKE,
-                                currentLemma.GetArgAsExpression(0),
-                                currentLemma.GetArgAsExpression(1));
-
-                            PushNode(new ProofNode(df, current.KnowledgeState, nextDepth, current, i, require));
-                        }                        
-                        // I can inform anyone as long as I'm close enough.
-                        // 
-                        // (what I say also needs to be true, but if I don't believe
-                        // P then I can't actually _try_ to inform x of P, I can only
-                        // try to make them think they're informed of P)
-                        // 
-                        // M |- at(self, x), M |- df(make, informed(P, x), self) =>
-                        // M |- make(informed(P, x), self)
-                        if (currentLemma.HeadedBy(MAKE) &&
-                            currentLemma.GetArgAsExpression(0).HeadedBy(INFORMED) &&
-                            currentLemma.GetArgAsExpression(1).Equals(SELF)) {
-                            var addressee = currentLemma.GetArgAsExpression(0).GetArgAsExpression(1);
-                            var at = new Expression(AT, SELF, addressee);
-                            var df = new Expression(DF, MAKE, currentLemma.GetArgAsExpression(0), currentLemma.GetArgAsExpression(1));
-
-                            var dfNode = new ProofNode(df, current.KnowledgeState,
-                                nextDepth, current, i, require,
-                                hasYoungerSibling: true);
-
-                            var atNode = new ProofNode(at, current.KnowledgeState,
-                                nextDepth, current, i, require, dfNode);
-
-                            PushNode(atNode);
-                            PushNode(dfNode);
-                        }
-                        // M |- make(at(self, X), self) => M |- at(self, X)
-                        // M |- make(informed(P, x), self) => M |- informed(P, x)
-                        if ((currentLemma.HeadedBy(AT) && currentLemma.GetArgAsExpression(0).Equals(SELF)) ||
-                            currentLemma.HeadedBy(INFORMED)) {
-                            var make = new Expression(MAKE, currentLemma, SELF);
-                            PushNode(new ProofNode(make, current.KnowledgeState, nextDepth, current, i, require));
-                        }
-
-                        // end abilities
-
-                        // generalized geach introduction
-                        // (at least for geaches with truth values
-                        // at the end of them)
-                        // 
-                        // @Note if geached functions with other types
-                        // as output are necessary, then we'll need to
-                        // recursively descend through an expression
-                        // and transform them all
-                        // 
-                        // R(X1, ..., X2) |- 𝔾_x(R, X->x1, ..., X->x2, x)
-                        // P |- G_x(P, x)
-                        if ((currentLemma.Head is Name) && (currentLemma.Head as Name).ID == "𝔾" ||
-                            currentLemma.HeadedBy(NOT) && (currentLemma.GetArgAsExpression(0).Head is Name)
-                            && (currentLemma.GetArgAsExpression(0).Head as Name).ID == "𝔾") {
-                            var query = currentLemma.HeadedBy(NOT) ? currentLemma.GetArgAsExpression(0) : currentLemma;
-                            var head = query.GetArgAsExpression(0);
-                            var lift = query.GetArgAsExpression(query.NumArgs - 1);
-                            Argument[] appliedArgs = new Expression[query.NumArgs - 2];
-                            for (int j = 0; j < appliedArgs.Length; j++) {
-                                appliedArgs[j] = new Expression(query.GetArgAsExpression(j + 1), lift);
-                            }
-                            var ungeached = new Expression(head, appliedArgs);
-                            if (currentLemma.HeadedBy(NOT)) {
-                                ungeached = new Expression(NOT, ungeached);
-                            }
-                            PushNode(new ProofNode(ungeached, current.KnowledgeState, nextDepth, current, i, require));
-                        }
-
-                        void SpawnProofNodes(InferenceRule rule) {
-                            var (premises, ruleRequire, supposition) = rule.Apply(currentLemma);
-                            var newRequire = ruleRequire;
-                            var newKnowledgeState = current.KnowledgeState;
-                            if (newRequire == null) {
-                                newRequire = require;
-                            }
-                            if (supposition != null) {
-                                newKnowledgeState =
-                                new KnowledgeState(
-                                    current.KnowledgeState.Basis,
-                                    current.KnowledgeState.Rules,
-                                    current.KnowledgeState.LemmaPool);
-                                AddToKnowledgeState(newKnowledgeState, supposition);
-                            }
-                            if (premises != null) {
-                                if (premises.Count == 0) {
-                                    searchBases.Add(new ProofBasis());
-                                } else if (premises.Count == 1) {
-                                    PushNode(new ProofNode(premises[0], newKnowledgeState,
-                                        nextDepth, current, i, newRequire,
-                                        supposition: supposition));
-                                } else {
-                                    ProofNode nextPremNode = null;
-                                    var nodes = new Stack<ProofNode>();
-                                    for (int j = premises.Count - 1; j >= 0; j--) {
-                                        var curPremNode = new ProofNode(
-                                            premises[j], newKnowledgeState,
-                                            nextDepth, current, i, newRequire,
-                                            nextPremNode, hasYoungerSibling: j > 0,
-                                            supposition: supposition);
-                                        nodes.Push(curPremNode);
-                                        nextPremNode = curPremNode;
-                                    }
-                                    while (nodes.Count > 0 ) {
-                                        PushNode(nodes.Pop());    
-                                    }
-                                }
-                            }
-                        }
-
-                        // PREMISE-CONTRACTIVE RULES
-                        foreach (var rule in InferenceRule.RULES.Item1) {
-                            SpawnProofNodes(rule);
-                        }
-                        // PREMISE-EXPANSIVE RULES
-
-                        // here, we check against rules that
-                        // would otherwise be premise-expansive.
-                        
-                        foreach (var rules in current.KnowledgeState.Rules.Values) {
-                            foreach (var rule in rules) {
-                                SpawnProofNodes(rule);
-                            }
-                        }
-
-                        // END PREMISE-EXPANSIVE RULES
-
-                        // here we reverse the order of new proof nodes.
-                        if (newStack.Count > 0) {
-                            newStack.Peek().IsLastChild = true;
-                            do {
-                                stack.Push(newStack.Pop());
-                            } while (newStack.Count > 0);
-                        }
-                    }
-
-                    allExhaustive = allExhaustive && exhaustive;
-
-                    // we're not going to pass down the child bases this time,
-                    // because we don't have anything to give.
-                    if (searchBases.IsEmpty() &&
-                        !exhaustive &&
-                        current.Depth != maxDepth) {
-                        continue;
-                    }
-
-                    // Debug.Log(currentLemma + " is exhaustive? " + exhaustive);
-
-                    current.ChildBases.Add(searchBases);
-                    sends.Add(new KeyValuePair<ProofBases, bool>(searchBases, exhaustive));
-                }
-
-                int meetBasisIndex = 0;
-                // TODO fix this condition so that an empty bases gets sent only when
-                // it constitutes the last possible search for an assumption.
-                if (sends.Count == 0 && current.IsLastChild && (current.Depth == maxDepth || allExhaustive)) {
-                    // Debug.Log(current);
-                }
-                if (sends.Count == 0 &&
-                    (!current.IsFailure || current.YoungerSiblingBases.Count > 0) &&
-                    current.IsLastChild &&
-                    (current.Depth == maxDepth || allExhaustive)) {
-                    sends.Add(new KeyValuePair<ProofBases, bool>(new ProofBases(), true));
-                    meetBasisIndex = -1;
-                }
-
-                for (int i = 0; i < sends.Count; i++) {
-                    ProofNode merge = current;
-                    ProofBases sendBases = sends[i].Key;
-                    bool exhaustive = sends[i].Value;
-
-                    // pass on the bases and merge them all the way to
-                    // its ancestral node.
-                    while (merge != null) {
-                        if (FrameTimer.FrameDuration >= TIME_BUDGET) {
-                            yield return null;
-                        }
-
-                        // Debug.Log("merging " + merge);
-
-                        // this is the basis which gave us this assignment -
-                        // we want to meet with this one, and none of the others.
-                        var meetBasis = meetBasisIndex == -1 ? new ProofBasis() : merge.YoungerSiblingBases[meetBasisIndex];
-
-                        // trim each of the merged bases to
-                        // discard unused variable assignments.
-                        foreach (var sendBasis in sendBases) {
-                            var trimmedSubstitution = new Substitution();
-                            foreach (var assignment in sendBasis.Substitution) {
-                                if (merge.Lemma.HasOccurenceOf(assignment.Key)) {
-                                    trimmedSubstitution.Add(assignment.Key, assignment.Value);
-                                }
-                            }
-
-                            if (merge.Substitution != null) {
-                                foreach (var assignment in merge.Substitution) {
-                                    trimmedSubstitution.Add(assignment.Key, assignment.Value);
-                                }
-                            }
-
-                            sendBasis.Substitution = trimmedSubstitution;
-                        }
-
-                        // trim antecedents of conditionals.
-                        // TODO make this more robust for if
-                        // the merge lemma is a formula
-                        if (merge.Require != null && !merge.Require.Equals(merge.Parent.Require)) {
-                            var trimmedBases = new ProofBases();
-
-                            foreach (var sendBasis in sendBases) {
-                                var trimmedBasis = new ProofBasis(new List<Expression>(), new Substitution(sendBasis.Substitution));
-                                bool hasRequiredPremise = false;
-                                foreach (var premise in sendBasis.Premises) {
-                                    if (premise.Equals(new Expression(REQUIRE, merge.Require))) {
-                                        hasRequiredPremise = true;
-                                        continue;
-                                    }
-                                    if (premise.Equals(merge.Require)) {
-                                        hasRequiredPremise = true;
-                                    }
-                                    if (!premise.Equals(merge.Supposition)) {
-                                        trimmedBasis.AddPremise(premise);
-                                    }
-
-                                }
-                                if (hasRequiredPremise) {
-                                    trimmedBases.Add(trimmedBasis);
-                                }
-                            }
-                            
-                            if (!sendBases.IsEmpty()) {
-                                sendBases = trimmedBases;
-                                if (merge.Parent == null && merge.OlderSibling == null) {
-                                    // Debug.Log(merge.ChildBases + " -> " + sendBases);
-                                    merge.ChildBases.Clear();
-                                    merge.ChildBases.Add(sendBases);
-                                }
-                            }
-                        }
-
-                        // this is the fully assigned formula,
-                        // the proofs of which we're merging.
-                        var mergeLemma = meetBasis == null ? merge.Lemma : merge.Lemma.Substitute(meetBasis.Substitution);
-
-                        ProofBases productBases = new ProofBases();
-
-                        if (merge.IsFailure) {
-                            // Debug.Log("current: " + current);
-                            // Debug.Log("merge: " +  merge);
-                            // Debug.Log(current.Lemma + " send bases are empty? " + sendBases.IsEmpty());
-                            // Debug.Log(sendBases);
-                            // Debug.Log(current.Lemma + " child bases are empty? " + merge.ChildBases.IsEmpty());
-                            // Debug.Log(merge.ChildBases);
-                            // Debug.Log("exhaustive? " + exhaustive);
-                            // Debug.Log("depth is max? " + (current.Depth == maxDepth));
-                            // Debug.Log("last child? " + merge.IsLastChild);
-                            // no refutation
-                            if (sendBases.IsEmpty() &&
-                                merge.ChildBases.IsEmpty() &&
-                                ((exhaustive ||
-                                 current.Depth == maxDepth) &&
-                                 current.IsLastChild)) {
-                                // we can safely assume the content of
-                                // this assumption node
-                                var assumptionBasis = new ProofBasis();
-                                if (merge.Parent != null && merge.Parent.Lemma.PrejacentHeadedBy(NOT, IF)) {
-                                    assumptionBasis.AddPremise(merge.Parent.Lemma);
-                                } else {
-                                    assumptionBasis.AddPremise(new Expression(STAR, mergeLemma));
-                                }
-
-                                var productBasis = new ProofBasis(meetBasis, assumptionBasis);
-                                productBases.Add(productBasis);
-                            }
-                            // otherwise, if there's a refutation,
-                            // or if it's too early too tell,
-                            // don't send anything
-                        } else {
-                            var joinBases = sendBases;
-                            if (!joinBases.IsEmpty() && meetBasis != null) {
-
-                                // here, we merge the bases from siblings and
-                                // children. sibling bases ^ child bases
-
-                                // we form the product of our
-                                // meet basis and child bases.
-                                foreach (var joinBasis in joinBases) {
-                                    var productBasis = new ProofBasis(meetBasis, joinBasis);
-                                    if (merge.Lemma.Equals(merge.Require) && merge.Require.Equals(merge.Parent.Require)) {
-                                        productBasis.AddPremise(new Expression(REQUIRE, merge.Require));
-                                    }
-                                    productBases.Add(productBasis);
-                                }
-                            }
-                        }
-
-                        // Debug.Log("the product bases are " + productBases);
-
-                        // if (productBases.IsEmpty() &&
-                        //     !exhaustive &&
-                        //     current.Depth != maxDepth) {
-                        //     break;
-                        // }
-
-                        // we pass on our new bases to the older sibling
-                        // if we have one, to the parent otherwise.
-                        if (merge.OlderSibling != null) {
-                            foreach (var productBasis in productBases) {
-                                merge.OlderSibling.YoungerSiblingBases.Add(productBasis);
-                            }
-                            break;
-                        }
-
-                        if (merge.Parent != null) {
-                            // Debug.Log(merge.Parent.Lemma + " bases added " + productBases);
-                            merge.Parent.ChildBases.Add(productBases);
-                            sendBases = productBases;
-                        }
-
-                        // if (merge.Parent == null && merge.OlderSibling == null) {
-                        //     Debug.Log(merge.Lemma + " bases added " + productBases);
-                        //     merge.ChildBases.Add(productBases);
-                        // }
-
-                        meetBasisIndex = merge.MeetBasisIndex;
-
-                        merge = merge.Parent;
-                    }
-
-                    meetBasisIndex = i + 1;
-                }
             }
-            // increment the upper bound and go again.
-            maxDepth++;
+            proofs = filteredProofs;
         }
-        done.Item = true;
-        yield break;
+
+        if (supposition != null) {
+            var trimmedProofs = new ProofBases();
+            foreach (var basis in proofs) {
+                var trimmedPremises = new List<Expression>(basis.Premises);
+                trimmedPremises.Remove(supposition);
+                trimmedProofs.Add(new ProofBasis(trimmedPremises, basis.Substitution));
+            }
+
+            proofs = trimmedProofs;
+        }
+
+        if (isFailure) {
+            if (proofs.IsEmpty()) {
+                var basis = new ProofBasis();
+                if (supposition != null) {
+                    basis.AddPremise(new Expression(NOT, new Expression(IF, lemma, supposition)));
+                } else if (isRequireGate && require != null) {
+                    basis.AddPremise(new Expression(NOT, new Expression(THEREFORE, lemma, require)));
+                } else {
+                    basis.AddPremise(new Expression(STAR, lemma));        
+                }
+                
+                proofs.Add(basis);
+            } else {
+                proofs = new ProofBases();
+            }
+        }
+
+        return proofs;
+    }
+
+    public ProofBases GetProofs(Expression lemma, ProofType pt = Proof) {
+        return GetProofs(lemma, new HashSet<Expression>(), KS, pt, null);
     }
 
     public void AddNamedPercept(Expression name, Vector3 location) {
@@ -1049,10 +579,6 @@ public class MentalState : MonoBehaviour {
         knowledgeState.Rules[key].Add(rule);
     }
 
-    private void AddToLemmaPool(KnowledgeState knowledgeState, Expression lemma) {
-        knowledgeState.LemmaPool.Add(lemma);
-    }
-
     public bool AddToKnowledgeState(KnowledgeState knowledgeState, Expression knowledge, bool firstCall = true, Expression trace = null) {
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
         Debug.Assert(firstCall || trace != null);
@@ -1101,7 +627,11 @@ public class MentalState : MonoBehaviour {
 
             if (instantiatedRule != null) {
                 AddRule(knowledgeState, signature, instantiatedRule);
+                var negKnowledge = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : new Expression(NOT, knowledge);
                 foreach (var conclusion in instantiatedRule.Conclusions) {
+                    if (conclusion.Matches(negKnowledge)) {
+                        continue;
+                    }
                     AddToKnowledgeState(knowledgeState, conclusion, false, signature);
                 }
             }
@@ -1122,11 +652,10 @@ public class MentalState : MonoBehaviour {
         }
 
         if (knowledge.HeadedBy(OMEGA)) {
-            var functor = new Expression(knowledge.GetArgAsExpression(0), knowledge.GetArgAsExpression(1));
-            AddToKnowledgeState(knowledgeState, functor, false, signature);
+            var st = new Expression(GetUnusedVariable(TRUTH_VALUE, knowledge.GetVariables()));
             AddRule(knowledgeState, signature,
-                new InferenceRule(new List<Expression>{knowledge}, new List<Expression>{functor}));
-            AddToLemmaPool(knowledgeState, knowledge);
+                new InferenceRule(new List<Expression>{st},
+                    new List<Expression>{new Expression(knowledge.GetArgAsExpression(0), st)}));
         }
 
         // general geach elimination
@@ -1164,26 +693,11 @@ public class MentalState : MonoBehaviour {
     }
 
     // a direct assertion.
-    public IEnumerator ReceiveAssertion(Expression content, Expression speaker) {
-        // check if the content would make our mental state inconsistent
-        var notContentBases = new ProofBases();
-        var notContentDone  = new Container<bool>(false);
-        StartCoroutine(StreamProofs(notContentBases, new Expression(NOT, content), notContentDone));
-
-        while (!notContentDone.Item) {
-            yield return null;
-        }
-
-        if (!notContentBases.IsEmpty()) {
-            Debug.Log("Found inconsistency for " + content + "! Aborting.");
-            yield break;
-        }
-
+    public void ReceiveAssertion(Expression content, Expression speaker) {
         AddToKnowledgeState(KS, new Expression(MAKE, new Expression(INFORMED, content, SELF), speaker));
-        yield break;
     }
 
-    public bool ReceiveRequest(Expression content, Expression speaker) {
+    public void ReceiveRequest(Expression content, Expression speaker) {
         // the proposition we add here, we want to be the equivalent to
         // knowledge in certain ways. So, for example, knows(p, S) -> p
         // in the same way that X(p, S) -> good(p).
@@ -1191,7 +705,7 @@ public class MentalState : MonoBehaviour {
         // Right now, we literally have this as S knows that p is good,
         // but this feels somehow not aesthetically pleasing to me. I'll
         // try it out for now.
-        return AddToKnowledgeState(KS, new Expression(OMEGA, VERY, new Expression(GOOD, content)));
+        ReceiveAssertion(new Expression(OMEGA, VERY, new Expression(GOOD, content)), speaker);
     }
 
     public static Expression Conjunctify(List<Expression> set) {
@@ -1254,22 +768,13 @@ public class MentalState : MonoBehaviour {
         return sum;
     }
 
-    public IEnumerator EstimateValueFor(
-        Expression goal, List<Expression> goods,
-        List<Expression> estimates, Container<bool> done) {
+    public List<Expression> EstimateValueFor(Expression goal, List<Expression> goods) {
         // first, we get all the goods we can prove from
         // our goal. These are in the running to approximate
         // the value of the goal.
         List<Expression> goodsFromGoal = new List<Expression>();
         foreach (var good in goods) {
-            var goodFromGoalBases = new ProofBases();
-            var goodFromGoalDone  = new Container<bool>(false);
-
-            StartCoroutine(StreamProofs(goodFromGoalBases, new Expression(IF, good, goal), goodFromGoalDone));
-
-            while (!goodFromGoalDone.Item) {
-                yield return null;
-            }
+            var goodFromGoalBases = GetProofs(new Expression(IF, good, goal));
 
             if (!goodFromGoalBases.IsEmpty()) {
                 goodsFromGoal.Add(good);
@@ -1298,14 +803,7 @@ public class MentalState : MonoBehaviour {
                 // beats any of the old prospective infimums.
                 // If it does, then we remove the old infimum
                 // from the set of infimums.
-                var infFromGoodBases = new ProofBases();
-                var infFromGoodDone  = new Container<bool>(false);
-
-                StartCoroutine(StreamProofs(infFromGoodBases, new Expression(IF, oldInfimum, good), infFromGoodDone));
-
-                while (!infFromGoodDone.Item) {
-                    yield return null;
-                }
+                var infFromGoodBases = GetProofs(new Expression(IF, oldInfimum, good));
 
                 if (!infFromGoodBases.IsEmpty()) {
                     continue;
@@ -1318,14 +816,7 @@ public class MentalState : MonoBehaviour {
                 // next we see if the old beats the good at issue.
                 // if it does, then we stop checking, as this
                 // good will not be used in our estimation.
-                var goodFromInfBases = new ProofBases();
-                var goodFromInfDone  = new Container<bool>(false);
-
-                StartCoroutine(StreamProofs(goodFromInfBases, new Expression(IF, good, oldInfimum), goodFromInfDone));
-
-                while (!goodFromInfDone.Item) {
-                    yield return null;
-                }
+                var goodFromInfBases = GetProofs(new Expression(IF, good, oldInfimum));
 
                 if (!goodFromInfBases.IsEmpty()) {
                     isInfimumSoFar = false;
@@ -1340,19 +831,13 @@ public class MentalState : MonoBehaviour {
             newInfimums = new List<Expression>();
         }
 
-        estimates.AddRange(oldInfimums);
-        done.Item = true;
+        return oldInfimums;
     }
 
-    public IEnumerator DecideCurrentPlan(List<Expression> plan, Container<bool> done) {
-        var goodProofs = new ProofBases();
-        var goodDone = new Container<bool>(false);
+    public List<Expression> DecideCurrentPlan() {
         // we're going to get our domain of goods by trying to prove
         // good(p) and seeing what it assigns to p.
-        StartCoroutine(StreamProofs(goodProofs, new Expression(GOOD, ST), goodDone));
-        while (!goodDone.Item) {
-            yield return null;
-        }
+        var goodProofs = GetProofs(new Expression(GOOD, ST));
 
         var evaluativeBase = new Dictionary<Expression, List<int>>();
         var goods = new List<Expression>();
@@ -1373,23 +858,13 @@ public class MentalState : MonoBehaviour {
             var good = goodAndValueOfGood.Key;
             var valueOfGood = goodAndValueOfGood.Value;
 
-            var proofBases = new ProofBases();
-            var proofDone = new Container<bool>(false);
-            StartCoroutine(StreamProofs(proofBases, good, proofDone, Proof));
-            while (!proofDone.Item) {
-                yield return null;
-            }
+            var proofBases = GetProofs(good, Proof);
 
             if (!proofBases.IsEmpty()) {
                 continue;
             }
 
-            var planBases = new ProofBases();
-            var planDone = new Container<bool>(false);
-            StartCoroutine(StreamProofs(planBases, good, planDone, Plan));
-            while (!planDone.Item) {
-                yield return null;
-            }
+            var planBases = GetProofs(good, Plan);
 
             // we have a feasible plan. So, we take
             // the joint value of making all the
@@ -1417,18 +892,8 @@ public class MentalState : MonoBehaviour {
                         costConjunction.Add(new Expression(NOT, conjunct));
                     }
 
-                    var benefitEstimates = new List<Expression>();
-                    var benefitEstimationDone = new Container<bool>(false);
-
-                    var costEstimates = new List<Expression>();
-                    var costEstimationDone = new Container<bool>(false);
-
-                    StartCoroutine(EstimateValueFor(Conjunctify(benefitConjunction), goods, benefitEstimates, benefitEstimationDone));
-                    StartCoroutine(EstimateValueFor(Conjunctify(costConjunction), goods, costEstimates, costEstimationDone));
-
-                    while (!benefitEstimationDone.Item || !costEstimationDone.Item) {
-                        yield return null;
-                    }
+                    var benefitEstimates = EstimateValueFor(Conjunctify(benefitConjunction), goods);
+                    var costEstimates = EstimateValueFor(Conjunctify(costConjunction), goods);
 
                     var positiveValueForThisPlan = new List<int>();
                     var negativeValueForThisPlan = new List<int>();
@@ -1458,9 +923,6 @@ public class MentalState : MonoBehaviour {
                 }
             }
         }
-        plan.AddRange(bestPlan);
-        done.Item = true;
-        yield break;
+        return bestPlan;
     }
 }
-;
