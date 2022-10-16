@@ -59,19 +59,28 @@ public class Testing : MonoBehaviour {
         var ff = new Expression(new Name(INDIVIDUAL, "f"));
         var gg = new Expression(new Name(INDIVIDUAL, "g"));
 
-        MentalState.Initialize(new Expression[]{});
+        MentalState.Initialize(new Expression[]{
+            new Expression(IDENTITY, aa, bb),
+            new Expression(IDENTITY, bb, cc),
+            new Expression(ROUND, aa),
+            new Expression(RED, aa),
+            // TODO fix unwanted infinite loop
+        });
 
-        Expression nv = VERUM;
+        // Expression nv = VERUM;
 
-        for (int i = 0; i < 10_000; i++) {
-            nv = new Expression(NOT, nv);
-        }
+        // for (int i = 0; i < 10_000; i++) {
+        //     nv = new Expression(NOT, nv);
+        // }
 
         thread = new Thread(() => {
-            // while (true) {
-            //     PrintProofs(MentalState, nv);
-            //     Thread.Sleep(1000);
-            // }
+            // PrintProofs(MentalState, new Expression(IDENTITY, aa, aa));
+            // PrintProofs(MentalState, new Expression(IDENTITY, aa, bb));
+            // PrintProofs(MentalState, new Expression(IDENTITY, bb, aa));
+            // PrintProofs(MentalState, new Expression(IDENTITY, aa, cc));
+            PrintProofs(MentalState, new Expression(ROUND, cc));
+            PrintProofs(MentalState, new Expression(SOME, RED, ROUND));
+            PrintProofs(MentalState, new Expression(RED, XE));
         });
 
         thread.Start();

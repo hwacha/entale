@@ -216,6 +216,12 @@ public class InferenceRule
             instantiatedRequire,
             instantiatedSupposition);
 
+        foreach (var premise in Premises) {
+            if (premise.HeadedBy(IDENTITY)) {
+                return instantiatedRule;
+            }
+        }
+
         if (instantiatedRule.IsExpansive()) {
             return null;
         }
@@ -311,12 +317,28 @@ public class InferenceRule
         new InferenceRule(new List<Expression>{new Expression(OMEGA, FTF, ST)},
             new List<Expression>{new Expression(FTF, ST)}),
         // contraposition causes problems, IsExpansive() should rule it out
-        // new InferenceRule(new List<Expression>{new Expression(OMEGA, FTF, ST)},
-        //     new List<Expression>{new Expression(OMEGA, FTF, new Expression(FTF, ST))}),
+        new InferenceRule(new List<Expression>{new Expression(OMEGA, FTF, ST)},
+            new List<Expression>{new Expression(OMEGA, FTF, new Expression(FTF, ST))}),
 
         // =
+        // reflexivity
         new InferenceRule(new List<Expression>{}, new List<Expression>{new Expression(IDENTITY, XE, XE)}),
-        new InferenceRule(new List<Expression>{new Expression(IDENTITY, YE, XE)}, new List<Expression>{new Expression(IDENTITY, XE, YE)}),
+
+        // @note substitution rules are working now,
+        // but they lead to a lot of calls and don't
+        // have the right variables exposed in the
+        // substitution for formula proofs.
+
+        // right substitution
+        new InferenceRule(
+            new List<Expression>{new Expression(IDENTITY, XE, YE), new Expression(FET, XE)},
+            new List<Expression>{new Expression(FET, YE)}),
+        // left substitution
+        new InferenceRule(
+            new List<Expression>{new Expression(IDENTITY, XE, YE), new Expression(FET, YE)},
+            new List<Expression>{new Expression(FET, XE)}),
+
+        // nonidentity assumption
         new InferenceRule(
             new List<Expression>{new Expression(STAR,new Expression(IDENTITY, XE, YE))},
             new List<Expression>{new Expression(NOT, new Expression(IDENTITY, XE, YE))}),

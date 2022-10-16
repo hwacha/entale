@@ -44,6 +44,7 @@ public class MentalState : MonoBehaviour {
 
     protected int ParameterID;
 
+    public static int MAX_CALLS = 10_000;
     protected int numCalls = 0;
 
     public class KnowledgeState {
@@ -252,7 +253,7 @@ public class MentalState : MonoBehaviour {
 
         var proofs = new ProofBases();
 
-        if (triedExpressions.Contains(lemma) || numCalls > 1_000_000) {
+        if (triedExpressions.Contains(lemma) || numCalls > MAX_CALLS) {
             return proofs;
         }
         var nextTriedExpressions = new HashSet<Expression>(triedExpressions);
@@ -580,6 +581,13 @@ public class MentalState : MonoBehaviour {
     }
 
     public bool AddToKnowledgeState(KnowledgeState knowledgeState, Expression knowledge, bool firstCall = true, Expression trace = null) {
+        if (firstCall) {
+            numCalls = 0;
+        }
+        numCalls++;
+        if (numCalls > MAX_CALLS) {
+            return false;
+        }
         Debug.Assert(knowledge.Type.Equals(TRUTH_VALUE));
         Debug.Assert(firstCall || trace != null);
 
@@ -624,7 +632,6 @@ public class MentalState : MonoBehaviour {
 
         foreach (var rule in InferenceRule.RULES.Item2) {
             var instantiatedRule = rule.Instantiate(knowledge);
-
             if (instantiatedRule != null) {
                 AddRule(knowledgeState, signature, instantiatedRule);
                 var negKnowledge = knowledge.HeadedBy(NOT) ? knowledge.GetArgAsExpression(0) : new Expression(NOT, knowledge);
@@ -632,7 +639,9 @@ public class MentalState : MonoBehaviour {
                     if (conclusion.Matches(negKnowledge)) {
                         continue;
                     }
-                    AddToKnowledgeState(knowledgeState, conclusion, false, signature);
+                    if (conclusion.Head is not Variable) {
+                        AddToKnowledgeState(knowledgeState, conclusion, false, signature);
+                    }
                 }
             }
         }
