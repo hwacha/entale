@@ -100,7 +100,13 @@ public class ArgumentContainer : MonoBehaviour {
                 // Do nothing, already set
             }
 
-            gameObject.GetComponent<Renderer>().material.SetColor("_Color", ColorsByType[fillType]);
+            var fillColor = new Color(0, 0, 0, 1);
+
+            try {
+                fillColor = ColorsByType[fillType];
+            } catch (System.Exception e) {}
+
+            gameObject.GetComponent<Renderer>().material.SetColor("_Color", fillColor);
 
             foreach (Transform childArgumentContainer in gameObject.transform) {
                 ArgumentContainer childArgumentContainerScript =
@@ -134,7 +140,10 @@ public class ArgumentContainer : MonoBehaviour {
                 symbol.layer = LayerMask.NameToLayer("Pre-render Expression");
 
                 var head = ((Expression) Argument).Head;
-                var nameString = head is Name ? ((Name) head).ID : "";
+                var nameString = (head is Name) ? ((Name) head).ID : "";
+                if (nameString == "*") {
+                    nameString = "star";
+                }
                 Texture2D symbolTexture =
                     Resources.Load<Texture2D>("Textures/Symbols/" + nameString);
 
@@ -186,10 +195,16 @@ public class ArgumentContainer : MonoBehaviour {
             northBorder.layer = LayerMask.NameToLayer("Pre-render Expression");
             southBorder.layer = LayerMask.NameToLayer("Pre-render Expression");
 
-            westBorder.GetComponent<Renderer>().material.SetColor("_Color", ColorsByType[fillType]);
-            eastBorder.GetComponent<Renderer>().material.SetColor("_Color", ColorsByType[fillType]);
-            northBorder.GetComponent<Renderer>().material.SetColor("_Color", ColorsByType[fillType]);
-            southBorder.GetComponent<Renderer>().material.SetColor("_Color", ColorsByType[fillType]);
+            var fillColor = new Color(0, 0, 0, 1);
+
+            try {
+                fillColor = ColorsByType[fillType];
+            } catch (System.Exception e) {}
+
+            westBorder.GetComponent<Renderer>().material.SetColor("_Color", fillColor);
+            eastBorder.GetComponent<Renderer>().material.SetColor("_Color", fillColor);
+            northBorder.GetComponent<Renderer>().material.SetColor("_Color", fillColor);
+            southBorder.GetComponent<Renderer>().material.SetColor("_Color", fillColor);
 
             foreach (Transform childArgumentContainer in gameObject.transform) {
                 ArgumentContainer childArgumentContainerScript =

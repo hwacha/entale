@@ -54,6 +54,7 @@ public class RenderingOptions {
             [TRUTH_CONFORMITY_FUNCTION] = new Color(0.4f, 0.5f, 0.5f, 1),
             [RELATION_2_REDUCER] = new Color(0.8f, 0.6f, 0.3f, 1),
             [INDIVIDUAL_TRUTH_RELATION] = new Color(0.6f, 0.3f, 0.2f, 1),
+            [MISC] = new Color(0.5f, 0.4f, 0.1f, 1),
         };
     #endregion
 

@@ -10,6 +10,6 @@ public abstract class Icons {
     }
 
     public static Sprite GetIcon(Name name) {
-        return Resources.Load<Sprite>("Textures/Symbols/" + name.ID) as Sprite;
+        return Resources.Load<Sprite>("Textures/Symbols/" + (name.ID == "*" ? "star" : name.ID)) as Sprite;
     }
 }

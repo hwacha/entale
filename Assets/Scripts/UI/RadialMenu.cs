@@ -22,22 +22,11 @@ public class RadialMenu : MonoBehaviour {
             [TRUTH_VALUE] = new HashSet<Name>{
                 VERUM.Head as Name,
                 FALSUM.Head as Name,
-                // NEUTRAL.Head as Name
+                NEUTRAL.Head as Name
             },
-            // [ASSERTION] = new HashSet<Name>(){
-            //     YES.Head as Name,
-            //     NO.Head  as Name
-            // },
-            // [CONFORMITY_VALUE] = new HashSet<Name>(){
-            //     ACCEPT.Head as Name,
-            //     REFUSE.Head as Name
-            // },
             [TRUTH_ASSERTION_FUNCTION] = new HashSet<Name>(){
                 ASSERT.Head as Name,
                 DENY.Head as Name
-            },
-            [TRUTH_QUESTION_FUNCTION] = new HashSet<Name>(){
-                ASK.Head as Name
             },
             [TRUTH_CONFORMITY_FUNCTION] = new HashSet<Name>(){
                 WILL.Head as Name,
@@ -50,43 +39,50 @@ public class RadialMenu : MonoBehaviour {
                 THIS.Head as Name
             },
             [PREDICATE] = new HashSet<Name>(){
-                RED.Head  as Name,
-                BLUE.Head as Name,
+                RED.Head    as Name,
+                BLUE.Head   as Name,
                 YELLOW.Head as Name,
                 TOMATO.Head as Name,
                 BANANA.Head as Name
             },
             [RELATION_2] = new HashSet<Name>(){
                 IDENTITY.Head as Name,
-                AT.Head       as Name
-            },
-            [DETERMINER] = new HashSet<Name>(){
-                SELECTOR.Head as Name
+                AT.Head       as Name,
+                YIELDS.Head   as Name,
             },
             [TRUTH_FUNCTION] = new HashSet<Name>(){
-                TRULY.Head as Name,
-                NOT.Head as Name,
-                VERY.Head as Name,
-                GOOD.Head as Name,
-                PAST.Head as Name,
-                FUTURE.Head as Name
+                TRULY.Head  as Name,
+                NOT.Head    as Name,
+                STAR.Head   as Name,
+                VERY.Head   as Name,
+                GOOD.Head   as Name,
+                PAST.Head   as Name,
+                FUTURE.Head as Name,
             },
             [TRUTH_FUNCTION_2] = new HashSet<Name>(){
-                AND.Head as Name,
-                OR.Head  as Name,
-                IF.Head  as Name,
+                AND.Head       as Name,
+                OR.Head        as Name,
+                IF.Head        as Name,
+                THEREFORE.Head as Name,
+                SINCE.Head     as Name,
+                UNTIL.Head     as Name,
             },
             [INDIVIDUAL_TRUTH_RELATION] = new HashSet<Name>(){
-                // BELIEVE.Head as Name,
                 KNOW.Head as Name,
-            },
-            [TRUTH_FUNCTOR] = new HashSet<Name>(){
-                OMEGA.Head as Name
+                MAKE.Head as Name,
             },
             [QUANTIFIER] = new HashSet<Name>(){
                 SOME.Head as Name,
-                ALL.Head as Name
-            }
+                ALL.Head  as Name
+            },
+            [MISC] = new HashSet<Name>(){
+                ASK.Head as Name,
+                SELECTOR.Head as Name,
+                OMEGA.Head as Name,
+                ITSELF.Head   as Name,
+                CONVERSE.Head as Name,
+                Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION).Head as Name,
+            },
         };
     List<RadialMenuItem> radialMenuItems = new List<RadialMenuItem>(); 
 

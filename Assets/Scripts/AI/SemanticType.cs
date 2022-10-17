@@ -49,6 +49,7 @@ public abstract class SemanticType : IComparable<SemanticType> {
     public static readonly AtomicType CONFORMITY_VALUE = new C();
     public static readonly AtomicType ASSERTION = new A();
     public static readonly AtomicType QUESTION = new Q();
+    public static readonly AtomicType MISC     = new Misc();
 
     // references to common functional types.
     public static readonly FunctionalType PREDICATE =
@@ -422,3 +423,6 @@ public class A : AtomicType {
         return "a";
     }
 }
+
+// just for the radial menu
+public class Misc : AtomicType {}
