@@ -956,6 +956,9 @@ public class Expression : Argument, IComparable<Expression> {
     public static readonly Expression UNTIL  = new Expression(new Name(TRUTH_FUNCTION_2, "until"));
     // public static readonly Expression BEFORE = new Expression(new Name(TRUTH_FUNCTION_2, "before"));
     // public static readonly Expression AFTER  = new Expression(new Name(TRUTH_FUNCTION_2, "after"));
+    
+    // four-place truth function
+    public static readonly Expression BETTER_BY_MORE = new Expression(new Name(TRUTH_FUNCTION_4, "better_by_more"));
 
     // truth-conformity relations
     // "will" is interpreted as an instruction for the actuator in LOT

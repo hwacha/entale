@@ -42,6 +42,7 @@ public class RenderingOptions {
             [DETERMINER]  = new Color(0.8f, 0.3f, 0.7f, 1),
             [QUANTIFIER]  = new Color(0.6f, 0.3f, 0.9f, 1),
             [QUANTIFIER_PHRASE] = new Color(0.4f, 0.5f, 0.6f, 1),
+            [TRUTH_FUNCTION_4] = new Color(1f, 0.5f, 0, 1),
             [TRUTH_FUNCTION_2] = new Color(0.1f, 0.9f, 0.86f, 1),
             [TRUTH_FUNCTION] = new Color(0.7f, 0.7f, 0.86f, 1),
             [TRUTH_FUNCTOR]  = new Color(0.5f, 0.5f, 0.9f, 1),

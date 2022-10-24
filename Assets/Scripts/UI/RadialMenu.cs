@@ -81,6 +81,7 @@ public class RadialMenu : MonoBehaviour {
                 OMEGA.Head as Name,
                 ITSELF.Head   as Name,
                 CONVERSE.Head as Name,
+                BETTER_BY_MORE.Head as Name,
                 Expression.Geach(INDIVIDUAL, TRUTH_FUNCTION).Head as Name,
             },
         };
