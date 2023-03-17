@@ -74,10 +74,10 @@ public class Testing : MonoBehaviour {
         // }
 
         thread = new Thread(() => {
-            // PrintProofs(MentalState, new Expression(IDENTITY, aa, aa));
-            // PrintProofs(MentalState, new Expression(IDENTITY, aa, bb));
-            // PrintProofs(MentalState, new Expression(IDENTITY, bb, aa));
-            // PrintProofs(MentalState, new Expression(IDENTITY, aa, cc));
+            PrintProofs(MentalState, new Expression(IDENTITY, aa, aa));
+            PrintProofs(MentalState, new Expression(IDENTITY, aa, bb));
+            PrintProofs(MentalState, new Expression(IDENTITY, bb, aa));
+            PrintProofs(MentalState, new Expression(IDENTITY, aa, cc));
             PrintProofs(MentalState, new Expression(ROUND, cc));
             PrintProofs(MentalState, new Expression(SOME, RED, ROUND));
             PrintProofs(MentalState, new Expression(RED, XE));

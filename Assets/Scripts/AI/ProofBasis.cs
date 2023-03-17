@@ -101,7 +101,7 @@ public class ProofBasis {
         s.Append("> with {");
         foreach (KeyValuePair<Variable, Expression> assignment in Substitution) {
             s.Append(assignment.Key);
-            s.Append(" -> ");
+            s.Append(" <- ");
             s.Append(assignment.Value);
             s.Append(", ");
         }
