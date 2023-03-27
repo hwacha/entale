@@ -6,11 +6,11 @@ https://user-images.githubusercontent.com/6621013/126084500-c607889f-d8ab-4b7e-8
 ## How To Use
 
 ### Controls
-Use ``WASD`` to **move** and the mouse to look around. To bring up the **workspace** press ``TAB``. To bring up the **word** menu press ``TAB`` again. To add a word, hover over an option to select a type with a mouse ``Click``, and then hover over an option to select a word. To exit either menu press ``Escape``.
+Controls are currently best on a Playstation controller. Use the `Left Analog Stick` to move and `Right Analog Stick` to look around. Press `X` to jump.
 
-When in the **workspace** use WASD or the ``Arrow Keys`` to focus on an expression. To **select** an expression, press ``Enter``. When an expression is selected, you can **use** it by pressing ``Q`` or you can combine it with another expression by pressing ``Enter`` on an open argument slot.
+Press `Square` to pull up the language workspace. There, press `Square` to bring up a radial menu to select a word to place onto the workspace. While in the radial menu, use the `Left Analog Stick` to highlight a word or word type, and press `X` to select it. In the workspace, move the cursor with the directional pad, and press `X` to select a word. When a word is selected, a new cursor will show argument slots where the selected expression may be placed. Press `X` to combine the expressions accordingly. While in the workspace or word menu, you may press `Circle` to return to the previous menu or to the game.
 
-If you've pressed ``Q`` on an expression, the workspace should disappear and you'll have the expression in front of you. You can **say** this expression to an NPC by looking at an NPC and pressing ``Q``.
+You may also press `Triangle` when an expression is selected to equip the expression. With an expression equipped, press `Triangle` while looking at an NPC to say the equipped expression to them. You may also press `Square` to place the equipped expression back in the workspace.  Pressing `Circle` will unequip an equipped word without placing it back in the workspace.
 
 ### How to Play
 Use the workspace to combine expressions and form sentences to say to NPCs. These sentences all mean something different, and will have a different effect on the NPC. You can make requests, ask questions, or assert facts about the game world. The NPC will respond accordingly.
